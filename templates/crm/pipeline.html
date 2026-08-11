@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Contact pipeline · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">People</p><h1>Contact pipeline</h1><p>A simple view from first inquiry through active or closed work.</p></div><div class="actions"><a class="button" href="{% url 'contact_list' %}">List view</a><a class="button primary" href="{% url 'contact_create' %}">New contact</a></div></div>
+<div class="pipeline-board">
+  {% for column in columns %}<section class="pipeline-column"><div class="pipeline-title"><h2>{{ column.label }}</h2><span>{{ column.contacts|length }}</span></div><div class="pipeline-cards">{% for contact in column.contacts %}<a class="pipeline-card" href="{% url 'contact_detail' contact.pk %}"><strong>{{ contact }}</strong><span>{{ contact.email|default:contact.phone|default:"No contact details" }}</span><small>{{ contact.assigned_to|default:"Unassigned" }}</small></a>{% empty %}<p class="column-empty">No contacts</p>{% endfor %}</div></section>{% endfor %}
+</div>
+{% endblock %}

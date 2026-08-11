@@ -1,0 +1,25 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.sqlite3-*
+*.sqlite3.*
+media/
+staticfiles/
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
+*.log
+dist/
+build/
+*.egg-info/
+
+# Private exports and operator backups never belong in source control.
+exports/
+backups/
+*.sql
+*.sql.gz

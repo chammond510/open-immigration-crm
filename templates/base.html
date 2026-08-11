@@ -1,0 +1,63 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}Open Immigration CRM{% endblock %}</title>
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+<body class="{% if not user.is_authenticated %}signed-out{% endif %}">
+  {% if user.is_authenticated %}
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <span class="brand-mark">OI</span>
+          <span><strong>{{ firm_profile.short_name|default:firm_profile.name|default:"Open Immigration CRM" }}</strong><small>Practice workspace</small></span>
+        </div>
+        <nav aria-label="Primary navigation">
+          <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>Overview</a>
+          <a href="{% url 'contact_list' %}" {% if 'contact' in request.resolver_match.url_name or request.resolver_match.url_name == 'pipeline' %}aria-current="page"{% endif %}>Contacts</a>
+          <a href="{% url 'matter_list' %}" {% if 'matter' in request.resolver_match.url_name or 'checklist' in request.resolver_match.url_name or 'document' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Matters</a>
+          <a href="{% url 'work_list' %}" {% if 'work' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Work</a>
+          <a href="{% url 'intake_workspace' %}" {% if 'intake' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Intake</a>
+        </nav>
+        <div class="sidebar-bottom">
+          {% if user.is_superuser %}
+            <a href="{% url 'firm_settings' %}">Firm settings</a>
+            <a href="{% url 'admin:index' %}">Administration</a>
+          {% endif %}
+          <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button class="quiet-button" type="submit">Sign out</button>
+          </form>
+          <a class="source-link" href="https://github.com/chammond510/open-immigration-crm">Source · AGPL-3.0 · No warranty</a>
+        </div>
+      </aside>
+      <div class="workspace">
+        <header class="topbar">
+          <button class="menu-button" type="button" aria-controls="sidebar" aria-expanded="false" data-menu-toggle>Menu</button>
+          <form class="global-search" action="{% url 'search' %}" method="get" role="search">
+            <label class="sr-only" for="global-q">Search contacts and matters</label>
+            <input id="global-q" name="q" type="search" value="{{ request.GET.q|default:'' }}" placeholder="Search contacts or matters">
+          </form>
+          <span class="user-chip">{{ user.get_full_name|default:user.username }}</span>
+        </header>
+        <main id="main-content">
+          {% if messages %}
+            <div class="messages" aria-live="polite">
+              {% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}
+            </div>
+          {% endif %}
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+  {% else %}
+    <main id="main-content">{% block signed_out_content %}{% endblock %}</main>
+  {% endif %}
+</body>
+</html>

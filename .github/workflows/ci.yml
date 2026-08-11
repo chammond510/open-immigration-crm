@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_USER: opencrm
+          POSTGRES_PASSWORD: testing-only-password
+          POSTGRES_DB: opencrm
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U opencrm -d opencrm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DEBUG: "False"
+      SECRET_KEY: ci-only-secret-key-000000000000000000000000000000000000000
+      ALLOWED_HOSTS: crm.example.test
+      CSRF_TRUSTED_ORIGINS: https://crm.example.test
+      DATABASE_URL: postgresql://opencrm:testing-only-password@127.0.0.1:5432/opencrm
+      SECURE_HSTS_INCLUDE_SUBDOMAINS: "True"
+      SECURE_HSTS_PRELOAD: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - run: pip install --requirement requirements-dev.lock
+      - run: ./scripts/check_privacy.sh
+      - run: ./scripts/check_scope.sh
+      - run: ruff check .
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py collectstatic --noinput
+      - run: coverage run manage.py test
+      - run: coverage report
+      - run: python manage.py check --deploy
+      - run: pip-audit --requirement requirements.lock --no-deps --disable-pip
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag open-immigration-crm:ci .
