@@ -75,6 +75,7 @@ class SecurityHelperTests(TestCase):
         SESSION_COOKIE_SECURE=False,
         CSRF_COOKIE_SECURE=False,
         CSRF_TRUSTED_ORIGINS=[],
+        DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}},
     )
     def test_production_configuration_check_flags_unsafe_defaults(self):
         ids = {finding.id for finding in production_configuration_check(None)}

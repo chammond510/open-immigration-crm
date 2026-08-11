@@ -31,6 +31,7 @@ jobs:
       ALLOWED_HOSTS: crm.example.test
       CSRF_TRUSTED_ORIGINS: https://crm.example.test
       DATABASE_URL: postgresql://opencrm:testing-only-password@127.0.0.1:5432/opencrm
+      SECURE_SSL_REDIRECT: "False"
       SECURE_HSTS_INCLUDE_SUBDOMAINS: "True"
       SECURE_HSTS_PRELOAD: "True"
     steps:
@@ -49,6 +50,8 @@ jobs:
       - run: coverage run manage.py test
       - run: coverage report
       - run: python manage.py check --deploy
+        env:
+          SECURE_SSL_REDIRECT: "True"
       - run: pip-audit --requirement requirements.lock --no-deps --disable-pip
 
   container:
