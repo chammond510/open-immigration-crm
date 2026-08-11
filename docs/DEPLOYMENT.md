@@ -52,7 +52,10 @@ python manage.py check --deploy
 
 Then start `gunicorn config.wsgi:application` (the included `scripts/start.sh` does this). Run migrations once as a release job—not independently in every web process. Check `/health/` through the private load-balancer path; it intentionally reveals only `ok` and does not test every dependency.
 
-Create the first administrator through an isolated release/console job:
+Create the first administrator before the service is reachable by anyone but you. Two paths:
+
+- **Setup screen:** while no accounts exist, the application serves a one-time administrator-creation page and the login page redirects to it. It disables permanently once the first account exists. Complete it immediately after the first start; do not leave an account-less installation reachable on a shared network.
+- **Console job**, for scripted or headless installs:
 
 ```bash
 python manage.py bootstrap_admin \

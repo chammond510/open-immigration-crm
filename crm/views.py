@@ -2,8 +2,9 @@ import csv
 from urllib.parse import quote
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import user_passes_test
-from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
@@ -20,6 +21,7 @@ from .forms import (
     ContactForm,
     DocumentUploadForm,
     FirmProfileForm,
+    FirstRunSetupForm,
     IntakeFormConfigForm,
     IntakeInviteForm,
     MatterForm,
@@ -63,6 +65,46 @@ def optional_record(model, raw_pk):
         return model.objects.filter(pk=raw_pk).first()
     except (ValidationError, ValueError):
         return None
+
+
+def installation_has_accounts():
+    return get_user_model().objects.exists()
+
+
+class FirstRunAwareLoginView(LoginView):
+    """Send a pristine installation to first-run setup instead of a dead end."""
+
+    template_name = "registration/login.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not installation_has_accounts():
+            return redirect("first_run_setup")
+        return super().dispatch(request, *args, **kwargs)
+
+
+@require_http_methods(["GET", "POST"])
+def first_run_setup(request):
+    """One-time administrator creation; disabled once any account exists."""
+    if installation_has_accounts():
+        return redirect("login")
+    form = FirstRunSetupForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            firm = FirmProfile.objects.select_for_update().filter(pk=1).first()
+            if firm is None:
+                FirmProfile.objects.create(pk=1)
+                FirmProfile.objects.select_for_update().get(pk=1)
+            if installation_has_accounts():
+                return redirect("login")
+            user = form.save(commit=False)
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        audit(request, "user.first_admin_created", user)
+        messages.success(request, "Administrator account created.")
+        return redirect("dashboard")
+    return render(request, "crm/first_run_setup.html", {"form": form})
 
 
 superuser_required = user_passes_test(

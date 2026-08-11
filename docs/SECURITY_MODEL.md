@@ -9,6 +9,7 @@ The system can hold names, contact information, birth dates, addresses, national
 ## Controls provided by the application
 
 - Staff authentication through Django's mature session framework
+- A first-run setup screen that permanently disables once the first account exists
 - Login rate limiting with a temporary lockout after repeated failures
 - Superuser restriction for exports, firm settings, and destructive record/file actions
 - CSRF protection on state-changing browser requests
@@ -38,12 +39,13 @@ The system can hold names, contact information, birth dates, addresses, national
 2. Unique 50+ character Django secret; never reuse a checked-in/example value.
 3. PostgreSQL with least-privilege credentials and encrypted connections/storage.
 4. Restricted network exposure. Prefer VPN/zero-trust access over an unrestricted public login page.
-5. MFA at the access layer and individual named staff accounts.
-6. Prompt OS, container, Python dependency, PostgreSQL, and application patching.
-7. Encrypted, tested, offsite backups of both database and media files.
-8. Monitoring for authentication anomalies, server errors, disk capacity, backup failure, and certificate expiry.
-9. A documented offboarding process that disables staff accounts immediately.
-10. A tested incident-response plan appropriate for attorney/client information.
+5. Complete first-run setup (or create the administrator from the console) before the service is reachable by anyone else.
+6. MFA at the access layer and individual named staff accounts.
+7. Prompt OS, container, Python dependency, PostgreSQL, and application patching.
+8. Encrypted, tested, offsite backups of both database and media files.
+9. Monitoring for authentication anomalies, server errors, disk capacity, backup failure, and certificate expiry.
+10. A documented offboarding process that disables staff accounts immediately.
+11. A tested incident-response plan appropriate for attorney/client information.
 
 ## Intake link handling
 

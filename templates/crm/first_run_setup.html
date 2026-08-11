@@ -1,0 +1,21 @@
+{% extends "public_base.html" %}
+{% block title %}Set up · Open Immigration CRM{% endblock %}
+{% block public_content %}
+<div class="login-shell">
+  <section class="login-panel">
+    <div class="brand login-brand"><span class="brand-mark">OI</span><span><strong>Open Immigration CRM</strong><small>First-run setup</small></span></div>
+    <div class="login-copy">
+      <p class="eyebrow">One-time setup</p>
+      <h1>Create the administrator account</h1>
+      <p>This page appears only while the installation has no accounts and disables itself permanently once the first account exists.</p>
+    </div>
+    <form method="post" class="stacked-form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+      {% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+      <button class="button primary wide" type="submit">Create administrator</button>
+    </form>
+    <p class="fine-print">Use a long, unique password from a password manager, and complete setup immediately after installation.</p>
+  </section>
+</div>
+{% endblock %}

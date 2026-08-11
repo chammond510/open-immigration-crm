@@ -32,14 +32,12 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 # Put the generated value in SECRET_KEY and change POSTGRES_PASSWORD in .env.
 docker compose build
 docker compose run --rm web ./scripts/release.sh
-docker compose run --rm web python manage.py bootstrap_admin \
-  --username admin --email you@example.com --password 'use-a-unique-long-password'
 docker compose up -d
 ```
 
-Open [http://localhost:8000](http://localhost:8000). The Compose port binds only to the host loopback interface. Production requires an HTTPS reverse proxy; see [Deployment](docs/DEPLOYMENT.md).
+Open [http://localhost:8000](http://localhost:8000) and create the administrator account on the one-time setup screen; it disables itself permanently once the first account exists. (Scripted installs can use `python manage.py bootstrap_admin` instead.) The Compose port binds only to the host loopback interface. Production requires an HTTPS reverse proxy; see [Deployment](docs/DEPLOYMENT.md).
 
-To evaluate with fictional records after creating the administrator:
+To evaluate with fictional records after creating the administrator (replace `admin` with the username you created):
 
 ```bash
 docker compose run --rm web python manage.py seed_demo --username admin

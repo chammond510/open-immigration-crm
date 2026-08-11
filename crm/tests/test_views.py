@@ -2,6 +2,7 @@ import tempfile
 from datetime import timedelta
 from pathlib import Path
 
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -31,16 +32,17 @@ class AuthenticationTests(TestCase):
         self.assertEqual(response.content, b"ok")
 
     def test_anonymous_redirected_and_nonstaff_forbidden_from_workspace(self):
-        response = self.client.get(reverse("dashboard"))
-        self.assertRedirects(response, f"{reverse('login')}?next=/")
         user = make_user("notstaff", superuser=False)
         user.is_staff = False
         user.save()
+        response = self.client.get(reverse("dashboard"))
+        self.assertRedirects(response, f"{reverse('login')}?next=/")
         self.client.force_login(user)
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 302)
 
     def test_security_headers_on_login(self):
+        make_user()
         response = self.client.get(reverse("login"))
         self.assertEqual(response.status_code, 200)
         self.assertIn("default-src 'self'", response["Content-Security-Policy"])
@@ -393,6 +395,51 @@ class IntakeViewTests(TestCase):
             self.client.get(reverse("public_intake", args=[expired_token])).status_code,
             410,
         )
+
+
+class FirstRunSetupTests(TestCase):
+    def test_login_redirects_to_setup_when_no_accounts_exist(self):
+        response = self.client.get(reverse("login"))
+        self.assertRedirects(response, reverse("first_run_setup"))
+
+    def test_setup_creates_superuser_once_then_disables(self):
+        response = self.client.post(
+            reverse("first_run_setup"),
+            {
+                "username": "founder",
+                "email": "founder@example.test",
+                "password1": "First-Setup-Password-88!",
+                "password2": "First-Setup-Password-88!",
+            },
+        )
+        self.assertRedirects(response, reverse("dashboard"))
+        User = get_user_model()
+        user = User.objects.get(username="founder")
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(
+            AuditLog.objects.filter(action="user.first_admin_created", user=user).exists()
+        )
+        self.client.logout()
+        self.assertRedirects(self.client.get(reverse("first_run_setup")), reverse("login"))
+        response = self.client.post(
+            reverse("first_run_setup"),
+            {
+                "username": "second",
+                "password1": "Second-Setup-Password-88!",
+                "password2": "Second-Setup-Password-88!",
+            },
+        )
+        self.assertRedirects(response, reverse("login"))
+        self.assertEqual(User.objects.count(), 1)
+
+    def test_setup_rejects_weak_password(self):
+        response = self.client.post(
+            reverse("first_run_setup"),
+            {"username": "founder", "password1": "short", "password2": "short"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(get_user_model().objects.exists())
 
 
 class AccountSecurityTests(TestCase):

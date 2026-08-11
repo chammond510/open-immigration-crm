@@ -4,7 +4,7 @@ from django.http import HttpResponse
 from django.urls import include, path
 from django.views.generic import RedirectView
 
-from crm.views import AuditedPasswordChangeView
+from crm.views import AuditedPasswordChangeView, FirstRunAwareLoginView
 
 
 def health(request):
@@ -19,11 +19,7 @@ urlpatterns = [
         name="favicon",
     ),
     path("admin/", admin.site.urls),
-    path(
-        "accounts/login/",
-        auth_views.LoginView.as_view(template_name="registration/login.html"),
-        name="login",
-    ),
+    path("accounts/login/", FirstRunAwareLoginView.as_view(), name="login"),
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
     path(
         "accounts/password-change/",

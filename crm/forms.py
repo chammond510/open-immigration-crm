@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import UserCreationForm
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -21,6 +22,14 @@ from .validators import validate_document
 
 DATE_INPUT = forms.DateInput(attrs={"type": "date"})
 DATETIME_INPUT = forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M")
+
+
+class FirstRunSetupForm(UserCreationForm):
+    """Creates the first administrator while the installation has no accounts."""
+
+    class Meta(UserCreationForm.Meta):
+        model = get_user_model()
+        fields = ("username", "email")
 
 
 class ContactForm(forms.ModelForm):
