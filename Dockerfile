@@ -1,4 +1,4 @@
-FROM python:3.12.11-slim-bookworm AS runtime
+FROM python:3.14.0-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
