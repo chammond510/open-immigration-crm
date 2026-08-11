@@ -17,12 +17,6 @@ A focused, self-hosted practice workspace for small immigration law firms. It ke
 - CSV and portable JSON export paths
 - PostgreSQL production path and SQLite-only local evaluation path
 
-## Intentionally not included
-
-AI assistants, generated legal work, invoicing or payment processing, email or calendar sync, cloud-drive sync, text messaging, e-signature, document automation, marketing, reporting suites, background queues, public APIs, and vendor-specific deployment code. Time tracking records durations only; money never enters the system.
-
-This is a product boundary, not a backlog accident. A smaller system is easier for a firm to understand, secure, operate, and audit.
-
 ## Quick start with Docker
 
 Requirements: Docker with Compose.
