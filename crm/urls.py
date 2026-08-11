@@ -28,6 +28,9 @@ urlpatterns = [
     path("work/", views.work_list, name="work_list"),
     path("work/new/", views.work_create, name="work_create"),
     path("work/<int:pk>/toggle/", views.work_toggle, name="work_toggle"),
+    path("time/start/", views.timer_start, name="timer_start"),
+    path("time/stop/", views.timer_stop, name="timer_stop"),
+    path("time/<int:pk>/delete/", views.time_entry_delete, name="time_entry_delete"),
     path("matters/<uuid:matter_pk>/checklist/new/", views.checklist_add, name="checklist_add"),
     path("checklist/<int:pk>/toggle/", views.checklist_toggle, name="checklist_toggle"),
     path(

@@ -14,6 +14,7 @@ from .models import (
     IntakeSubmission,
     Matter,
     MatterParty,
+    TimeEntry,
     WorkItem,
 )
 from .validators import validate_document
@@ -38,6 +39,13 @@ class WorkItemAdmin(admin.ModelAdmin):
     list_display = ("title", "kind", "scheduled_for", "assigned_to", "is_completed")
     list_filter = ("kind", "priority", "is_completed")
     search_fields = ("title", "description")
+
+
+@admin.register(TimeEntry)
+class TimeEntryAdmin(admin.ModelAdmin):
+    list_display = ("user", "matter", "contact", "started_at", "stopped_at", "note")
+    list_filter = ("user",)
+    search_fields = ("note", "matter__matter_number", "contact__last_name")
 
 
 class DocumentAdminForm(forms.ModelForm):

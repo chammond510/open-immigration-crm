@@ -4,7 +4,7 @@ Read this before storing real client information.
 
 ## Protected assets
 
-The system can hold names, contact information, birth dates, addresses, nationality and immigration information, A-numbers, receipt numbers, attorney notes, deadlines, intake answers, and uploaded documents. Treat the entire database, media volume, logs, exports, and backups as confidential.
+The system can hold names, contact information, birth dates, addresses, nationality and immigration information, A-numbers, receipt numbers, attorney notes, deadlines, time records, intake answers, and uploaded documents. Treat the entire database, media volume, logs, exports, and backups as confidential.
 
 ## Controls provided by the application
 

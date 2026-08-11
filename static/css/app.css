@@ -256,3 +256,16 @@ input[type="file"] { padding: 6px; }
   .copy-field { grid-template-columns: 1fr; }
   .public-source { position: static; padding: 0 15px 14px; text-align: center; }
 }
+
+.timer-chip { display: flex; align-items: center; gap: 8px; margin-left: auto; padding: 5px 6px 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgb(255 255 255 / 70%); }
+.timer-chip + .user-chip { margin-left: 0; }
+.timer-elapsed { font-variant-numeric: tabular-nums; font-weight: 650; }
+.timer-target { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.timer-note { width: 150px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; background: transparent; }
+.actions form { display: contents; }
+@media (max-width: 800px) {
+  .timer-note { display: none; }
+}
+@media (max-width: 640px) {
+  .timer-target { display: none; }
+}

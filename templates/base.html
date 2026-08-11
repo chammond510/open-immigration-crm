@@ -45,6 +45,17 @@
             <label class="sr-only" for="global-q">Search contacts and matters</label>
             <input id="global-q" name="q" type="search" value="{{ request.GET.q|default:'' }}" placeholder="Search contacts or matters">
           </form>
+          {% if running_timer %}
+            <form class="timer-chip" action="{% url 'timer_stop' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <span class="timer-elapsed" data-timer-started="{{ running_timer.started_at|date:'c' }}">{{ running_timer.duration_display }}</span>
+              <span class="timer-target">{{ running_timer.target_label }}</span>
+              <label class="sr-only" for="timer-note">Time entry note</label>
+              <input class="timer-note" id="timer-note" name="note" maxlength="500" placeholder="Note (optional)">
+              <button class="button" type="submit">Stop</button>
+            </form>
+          {% endif %}
           <span class="user-chip">{{ user.get_full_name|default:user.username }}</span>
         </header>
         <main id="main-content">

@@ -349,6 +349,71 @@ class WorkItem(models.Model):
         return self.title
 
 
+class TimeEntry(models.Model):
+    """Tracked working time tied to a matter or contact. Not an invoice."""
+
+    matter = models.ForeignKey(
+        Matter,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="time_entries",
+    )
+    contact = models.ForeignKey(
+        Contact,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="time_entries",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="time_entries",
+    )
+    started_at = models.DateTimeField(default=timezone.now, db_index=True)
+    stopped_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        verbose_name_plural = "time entries"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(stopped_at__isnull=True),
+                name="crm_one_running_timer_per_user",
+            )
+        ]
+
+    def clean(self):
+        if not self.contact_id and not self.matter_id:
+            raise ValidationError("A time entry must be linked to a contact or matter.")
+
+    @property
+    def is_running(self):
+        return self.stopped_at is None
+
+    @property
+    def duration(self):
+        end = self.stopped_at or timezone.now()
+        return end - self.started_at
+
+    @property
+    def duration_display(self):
+        minutes = int(self.duration.total_seconds() // 60)
+        return f"{minutes // 60}:{minutes % 60:02d}"
+
+    @property
+    def target_label(self):
+        if self.matter_id:
+            return self.matter.matter_number
+        return self.contact.full_name
+
+    def __str__(self):
+        return f"{self.duration_display} · {self.target_label}"
+
+
 class ChecklistItem(models.Model):
     matter = models.ForeignKey(Matter, on_delete=models.CASCADE, related_name="checklist")
     title = models.CharField(max_length=255)

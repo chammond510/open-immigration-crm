@@ -20,6 +20,7 @@ from crm.models import (
     IntakeSubmission,
     Matter,
     MatterParty,
+    TimeEntry,
     WorkItem,
 )
 
@@ -30,6 +31,7 @@ MODELS: tuple[type[Model], ...] = (
     MatterParty,
     Activity,
     WorkItem,
+    TimeEntry,
     ChecklistItem,
     Document,
     IntakeForm,

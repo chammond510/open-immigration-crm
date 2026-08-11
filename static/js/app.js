@@ -15,6 +15,21 @@ document.querySelectorAll("form[data-confirm]").forEach((form) => {
   });
 });
 
+const timerElapsed = document.querySelector("[data-timer-started]");
+
+if (timerElapsed) {
+  const startedAt = new Date(timerElapsed.dataset.timerStarted);
+  const renderElapsed = () => {
+    const totalSeconds = Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
+    timerElapsed.textContent = `${hours}:${minutes}:${seconds}`;
+  };
+  renderElapsed();
+  setInterval(renderElapsed, 1000);
+}
+
 const copyButton = document.querySelector("[data-copy-button]");
 const copySource = document.querySelector("[data-copy-source]");
 

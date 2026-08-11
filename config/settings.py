@@ -93,6 +93,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "crm.context_processors.firm_profile",
+                "crm.context_processors.running_timer",
             ],
         },
     }

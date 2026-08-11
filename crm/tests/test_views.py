@@ -4,6 +4,7 @@ from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -19,6 +20,7 @@ from crm.models import (
     IntakeSubmission,
     Matter,
     MatterParty,
+    TimeEntry,
     WorkItem,
 )
 
@@ -395,6 +397,61 @@ class IntakeViewTests(TestCase):
             self.client.get(reverse("public_intake", args=[expired_token])).status_code,
             410,
         )
+
+
+class TimeTrackingTests(TestCase):
+    def setUp(self):
+        self.user = make_user()
+        self.client.force_login(self.user)
+        self.contact = make_contact(self.user)
+        self.matter = make_matter(self.contact, self.user)
+
+    def test_start_switch_and_stop_timer(self):
+        response = self.client.post(reverse("timer_start"), {"matter": str(self.matter.pk)})
+        self.assertRedirects(response, reverse("matter_detail", args=[self.matter.pk]))
+        entry = TimeEntry.objects.get(user=self.user, stopped_at__isnull=True)
+        self.assertEqual(entry.matter, self.matter)
+        self.assertEqual(entry.contact, self.contact)
+        dashboard = self.client.get(reverse("dashboard"))
+        self.assertContains(dashboard, "data-timer-started")
+        other = make_contact(self.user, first_name="Lina", last_name="Sample")
+        self.client.post(reverse("timer_start"), {"contact": str(other.pk)})
+        entry.refresh_from_db()
+        self.assertIsNotNone(entry.stopped_at)
+        self.assertEqual(
+            TimeEntry.objects.filter(user=self.user, stopped_at__isnull=True).count(), 1
+        )
+        self.client.post(reverse("timer_stop"), {"note": "Drafted declaration"})
+        self.assertFalse(TimeEntry.objects.filter(stopped_at__isnull=True).exists())
+        self.assertTrue(TimeEntry.objects.filter(note="Drafted declaration").exists())
+        self.assertTrue(AuditLog.objects.filter(action="timer.started").exists())
+        self.assertTrue(AuditLog.objects.filter(action="timer.stopped").exists())
+
+    def test_timer_requires_target_and_staff(self):
+        response = self.client.post(reverse("timer_start"), {})
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertFalse(TimeEntry.objects.exists())
+        self.client.logout()
+        response = self.client.post(reverse("timer_start"), {"matter": str(self.matter.pk)})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response.url)
+        self.assertFalse(TimeEntry.objects.exists())
+
+    def test_one_running_timer_per_user_constraint(self):
+        TimeEntry.objects.create(matter=self.matter, contact=self.contact, user=self.user)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            TimeEntry.objects.create(matter=self.matter, contact=self.contact, user=self.user)
+
+    def test_matter_page_shows_time_total(self):
+        TimeEntry.objects.create(
+            matter=self.matter,
+            contact=self.contact,
+            user=self.user,
+            started_at=timezone.now() - timedelta(minutes=90),
+            stopped_at=timezone.now(),
+        )
+        response = self.client.get(reverse("matter_detail", args=[self.matter.pk]))
+        self.assertContains(response, "total 1:30")
 
 
 class FirstRunSetupTests(TestCase):

@@ -40,6 +40,7 @@ from .models import (
     IntakeSubmission,
     Matter,
     MatterParty,
+    TimeEntry,
     WorkItem,
 )
 from .services import add_activity, audit
@@ -69,6 +70,11 @@ def optional_record(model, raw_pk):
 
 def installation_has_accounts():
     return get_user_model().objects.exists()
+
+
+def time_total_display(entries):
+    total_minutes = sum(int(entry.duration.total_seconds() // 60) for entry in entries)
+    return f"{total_minutes // 60}:{total_minutes % 60:02d}"
 
 
 class FirstRunAwareLoginView(LoginView):
@@ -215,6 +221,8 @@ def contact_detail(request, pk):
         "matters": contact.matters.select_related("assigned_to"),
         "activities": contact.activities.select_related("created_by")[:30],
         "work_items": contact.work_items.select_related("matter", "assigned_to")[:20],
+        "time_entries": contact.time_entries.select_related("user")[:50],
+        "time_total": time_total_display(contact.time_entries.all()),
         "activity_form": ActivityForm(
             instance=Activity(contact=contact),
             initial={"occurred_at": timezone.localtime().strftime("%Y-%m-%dT%H:%M")},
@@ -329,6 +337,8 @@ def matter_detail(request, pk):
         "work_items": matter.work_items.select_related("contact", "assigned_to")[:20],
         "checklist": matter.checklist.select_related("completed_by"),
         "documents": matter.documents.select_related("contact", "uploaded_by"),
+        "time_entries": matter.time_entries.select_related("user")[:50],
+        "time_total": time_total_display(matter.time_entries.all()),
         "party_form": MatterPartyForm(),
         "activity_form": ActivityForm(
             instance=Activity(contact=matter.primary_contact, matter=matter),
@@ -471,6 +481,73 @@ def work_toggle(request, pk):
     if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
         return redirect(next_url)
     return redirect("work_list")
+
+
+@staff_required
+@require_POST
+def timer_start(request):
+    matter = optional_record(Matter, request.POST.get("matter"))
+    contact = optional_record(Contact, request.POST.get("contact"))
+    if matter and contact is None:
+        contact = matter.primary_contact
+    if not matter and not contact:
+        messages.error(request, "Link the timer to a contact or matter.")
+        return redirect("dashboard")
+    with transaction.atomic():
+        running = (
+            TimeEntry.objects.select_for_update()
+            .filter(user=request.user, stopped_at__isnull=True)
+            .first()
+        )
+        if running:
+            running.stopped_at = timezone.now()
+            running.save(update_fields=["stopped_at"])
+            messages.info(request, f"Previous timer stopped at {running.duration_display}.")
+        entry = TimeEntry.objects.create(matter=matter, contact=contact, user=request.user)
+    audit(request, "timer.started", entry)
+    messages.success(request, "Timer started.")
+    next_url = request.POST.get("next", "")
+    if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    if matter:
+        return redirect("matter_detail", pk=matter.pk)
+    return redirect("contact_detail", pk=contact.pk)
+
+
+@staff_required
+@require_POST
+def timer_stop(request):
+    entry = TimeEntry.objects.filter(user=request.user, stopped_at__isnull=True).first()
+    if entry:
+        entry.stopped_at = timezone.now()
+        note = request.POST.get("note", "").strip()
+        if note:
+            entry.note = note[:500]
+        entry.save(update_fields=["stopped_at", "note"])
+        audit(request, "timer.stopped", entry, detail=entry.duration_display)
+        messages.success(request, f"Timer stopped at {entry.duration_display}.")
+    else:
+        messages.info(request, "No timer is running.")
+    next_url = request.POST.get("next", "")
+    if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    return redirect("dashboard")
+
+
+@superuser_required
+@require_POST
+def time_entry_delete(request, pk):
+    entry = get_object_or_404(TimeEntry, pk=pk)
+    matter_pk = entry.matter_id
+    contact_pk = entry.contact_id
+    audit(request, "time_entry.deleted", entry, detail=str(entry))
+    entry.delete()
+    messages.success(request, "Time entry deleted.")
+    if matter_pk:
+        return redirect("matter_detail", pk=matter_pk)
+    if contact_pk:
+        return redirect("contact_detail", pk=contact_pk)
+    return redirect("dashboard")
 
 
 @staff_required
