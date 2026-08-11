@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Contacts · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">People</p><h1>Contacts</h1><p>Leads, prospective clients, current clients, and former clients.</p></div><div class="actions"><a class="button" href="{% url 'pipeline' %}">Pipeline board</a><a class="button primary" href="{% url 'contact_create' %}">New contact</a></div></div>
+<form class="filter-bar" method="get"><input type="search" name="q" value="{{ query }}" placeholder="Name, email, phone, or A-number"><select name="stage"><option value="">All stages</option>{% for key,label in contacts.model.Stage.choices %}<option value="{{ key }}" {% if selected_stage == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="button" type="submit">Filter</button></form>
+<section class="panel flush-panel">
+  {% if contacts %}<div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Stage</th><th>Owner</th><th>Updated</th></tr></thead><tbody>
+  {% for contact in contacts %}<tr><td><a class="primary-link" href="{% url 'contact_detail' contact.pk %}">{{ contact.full_name }}</a><small>{{ contact.get_status_display }}</small></td><td>{{ contact.email|default:"—" }}<small>{{ contact.phone|default:"" }}</small></td><td><span class="badge {{ contact.stage }}">{{ contact.get_stage_display }}</span></td><td>{{ contact.assigned_to|default:"Unassigned" }}</td><td>{{ contact.updated_at|date:"M j, Y" }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="empty-state"><h3>No contacts found</h3><p>Adjust the filter or create a contact.</p></div>{% endif %}
+</section>
+{% endblock %}

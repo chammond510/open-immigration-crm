@@ -1,0 +1,18 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}Secure intake{% endblock %}</title>
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="signed-out">
+  <main id="main-content">{% block public_content %}{% endblock %}</main>
+  <footer class="public-source">
+    <a href="https://github.com/chammond510/open-immigration-crm">Source code · AGPL-3.0 · No warranty</a>
+  </footer>
+</body>
+</html>

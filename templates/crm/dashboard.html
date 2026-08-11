@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Overview · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><p class="eyebrow">{{ today|date:"l, F j" }}</p><h1>Practice overview</h1><p>What needs attention across your active work.</p></div>
+  <div class="actions"><a class="button" href="{% url 'contact_create' %}">New contact</a><a class="button primary" href="{% url 'matter_create' %}">New matter</a></div>
+</div>
+<div class="metrics">
+  <a href="{% url 'matter_list' %}"><strong>{{ open_matters }}</strong><span>Open matters</span></a>
+  <a href="{% url 'contact_list' %}"><strong>{{ active_contacts }}</strong><span>Active contacts</span></a>
+  <a href="{% url 'work_list' %}"><strong class="{% if overdue_count %}danger-text{% endif %}">{{ overdue_count }}</strong><span>Overdue items</span></a>
+</div>
+<div class="dashboard-grid">
+  <section class="panel span-two">
+    <div class="section-heading"><div><h2>Upcoming work</h2><p>Open tasks, deadlines, and appointments.</p></div><a href="{% url 'work_create' %}">Add work</a></div>
+    {% if open_work %}
+      <div class="record-list">
+        {% for item in open_work %}
+          <div class="record-row"><span class="kind-dot {{ item.kind }}"></span><div class="record-main"><strong>{{ item.title }}</strong><span>{% if item.matter %}<a href="{% url 'matter_detail' item.matter.pk %}">{{ item.matter.matter_number }}</a>{% elif item.contact %}<a href="{% url 'contact_detail' item.contact.pk %}">{{ item.contact }}</a>{% endif %}</span></div><div class="record-meta {% if item.is_overdue %}danger-text{% endif %}">{% if item.scheduled_for %}{{ item.scheduled_for|date:"M j, g:i a" }}{% else %}Unscheduled{% endif %}</div></div>
+        {% endfor %}
+      </div>
+    {% else %}<div class="empty-state"><h3>No open work</h3><p>Add a task, deadline, or appointment when you are ready.</p></div>{% endif %}
+  </section>
+  <section class="panel">
+    <div class="section-heading"><div><h2>Contact pipeline</h2><p>Current stage totals.</p></div><a href="{% url 'pipeline' %}">View board</a></div>
+    <div class="pipeline-summary">
+      {% for stage in pipeline %}<a href="{% url 'contact_list' %}?stage={{ stage.key }}"><span>{{ stage.label }}</span><strong>{{ stage.count }}</strong></a>{% endfor %}
+    </div>
+  </section>
+  <section class="panel span-three">
+    <div class="section-heading"><div><h2>Recently updated matters</h2><p>The latest case activity.</p></div><a href="{% url 'matter_list' %}">All matters</a></div>
+    {% if recent_matters %}
+      <div class="table-wrap"><table><thead><tr><th>Matter</th><th>Client</th><th>Status</th><th>Owner</th><th>Updated</th></tr></thead><tbody>
+        {% for matter in recent_matters %}<tr><td><a class="primary-link" href="{% url 'matter_detail' matter.pk %}">{{ matter.matter_number }}</a><small>{{ matter.title }}</small></td><td>{{ matter.primary_contact }}</td><td><span class="badge {{ matter.status }}">{{ matter.get_status_display }}</span></td><td>{{ matter.assigned_to|default:"Unassigned" }}</td><td>{{ matter.updated_at|date:"M j" }}</td></tr>{% endfor %}
+      </tbody></table></div>
+    {% else %}<div class="empty-state"><h3>No matters yet</h3><p>Create a contact, then open their first matter.</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}

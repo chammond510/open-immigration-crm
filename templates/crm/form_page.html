@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow">Record editor</p><h1>{{ title }}</h1></div></div>
+  <form method="post" class="panel stacked-form" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="form-grid">
+      {% for field in form %}<div class="field {% if field.field.widget.input_type == 'textarea' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+    </div>
+    <div class="form-actions"><button class="button primary" type="submit">{{ submit_label|default:"Save" }}</button><a class="button" href="{% url 'dashboard' %}">Cancel</a></div>
+  </form>
+</div>
+{% endblock %}

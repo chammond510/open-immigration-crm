@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Secure link created · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page"><div class="page-heading"><div><p class="eyebrow">One-time display</p><h1>Secure intake link created</h1><p>Copy this link now. Only its hash is stored, so it cannot be shown again.</p></div></div><section class="panel"><dl class="summary-list"><dt>Contact</dt><dd>{{ invite.contact }}</dd><dt>Form</dt><dd>{{ invite.intake_form }}</dd><dt>Expires</dt><dd>{{ invite.expires_at|date:"F j, Y · g:i a" }}</dd></dl><div class="copy-field"><label class="sr-only" for="intake-link">Secure intake link</label><input id="intake-link" type="text" value="{{ intake_url }}" readonly data-copy-source><button class="button primary" type="button" data-copy-button>Copy link</button></div><p class="fine-print">Send it through a communication method your firm has independently approved. The CRM does not send email or text messages.</p><div class="form-actions"><a class="button" href="{% url 'intake_workspace' %}">Back to intake</a></div></section></div>
+{% endblock %}
