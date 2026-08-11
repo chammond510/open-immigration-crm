@@ -1,4 +1,6 @@
+from django import forms
 from django.contrib import admin
+from django.core.files.uploadedfile import UploadedFile
 
 from .models import (
     Activity,
@@ -14,6 +16,7 @@ from .models import (
     MatterParty,
     WorkItem,
 )
+from .validators import validate_document
 
 
 @admin.register(Contact)
@@ -37,6 +40,38 @@ class WorkItemAdmin(admin.ModelAdmin):
     search_fields = ("title", "description")
 
 
+class DocumentAdminForm(forms.ModelForm):
+    """Admin uploads pass the same content checks as the staff upload view."""
+
+    class Meta:
+        model = Document
+        fields = ["matter", "contact", "title", "category", "file"]
+
+    def clean_file(self):
+        uploaded = self.cleaned_data["file"]
+        if isinstance(uploaded, UploadedFile):
+            self.detected_mime = validate_document(uploaded)
+        return uploaded
+
+
+@admin.register(Document)
+class DocumentAdmin(admin.ModelAdmin):
+    form = DocumentAdminForm
+    list_display = ("title", "matter", "category", "created_at", "uploaded_by")
+    list_filter = ("category",)
+    search_fields = ("title", "original_filename", "matter__matter_number")
+    readonly_fields = ("original_filename", "mime_type", "size_bytes", "uploaded_by", "created_at")
+
+    def save_model(self, request, obj, form, change):
+        uploaded = form.cleaned_data.get("file")
+        if isinstance(uploaded, UploadedFile):
+            obj.original_filename = uploaded.name[:255]
+            obj.mime_type = getattr(form, "detected_mime", obj.mime_type)
+            obj.size_bytes = uploaded.size
+            obj.uploaded_by = request.user
+        super().save_model(request, obj, form, change)
+
+
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
     list_display = ("created_at", "user", "action", "target_type", "target_id")
@@ -58,7 +93,6 @@ admin.site.register(FirmProfile)
 admin.site.register(MatterParty)
 admin.site.register(Activity)
 admin.site.register(ChecklistItem)
-admin.site.register(Document)
 admin.site.register(IntakeForm)
 admin.site.register(IntakeInvite)
 admin.site.register(IntakeSubmission)

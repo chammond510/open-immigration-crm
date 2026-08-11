@@ -24,8 +24,15 @@ DATABASE_URL=postgresql://user:password@database-host:5432/database?sslmode=requ
 SESSION_COOKIE_SECURE=True
 CSRF_COOKIE_SECURE=True
 SECURE_SSL_REDIRECT=True
+TRUST_X_FORWARDED_PROTO=True
 TIME_ZONE=America/Chicago
 ```
+
+`TRUST_X_FORWARDED_PROTO=True` tells the application to believe the reverse
+proxy's `X-Forwarded-Proto: https` header. Set it only behind a proxy that
+always overwrites that header; leaving it unset on a proxied deployment makes
+`SECURE_SSL_REDIRECT` loop, and setting it on a directly exposed server lets
+clients spoof HTTPS.
 
 The application sends a one-year HSTS policy in production. Set
 `SECURE_HSTS_INCLUDE_SUBDOMAINS=True` and `SECURE_HSTS_PRELOAD=True` only after
@@ -55,6 +62,16 @@ python manage.py bootstrap_admin \
 ```
 
 Do not put the password in reusable shell history. Change it immediately if the platform logs command arguments.
+
+## Sign-in lockout
+
+Repeated failed sign-ins lock the username and client address pair for a cooling-off period (default: five failures, fifteen minutes; tune with `AXES_FAILURE_LIMIT` and `AXES_COOLOFF_MINUTES`). Clear a lockout early with:
+
+```bash
+python manage.py axes_reset
+```
+
+Lockout tracking uses the same proxy-aware client address as the audit log, so the reverse proxy must append the real client address to `X-Forwarded-For`. Lockout slows online guessing; it does not replace MFA or network-layer access controls.
 
 ## Reverse proxy
 

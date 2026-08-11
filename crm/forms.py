@@ -193,6 +193,8 @@ class IntakeFormConfigForm(forms.ModelForm):
         lines = [line for line in lines if line]
         if len(lines) > 40:
             raise forms.ValidationError("An intake form may contain at most 40 questions.")
+        if any(len(line) > 300 for line in lines):
+            raise forms.ValidationError("Keep each question under 300 characters.")
         return lines
 
     def save(self, commit=True):
@@ -252,6 +254,7 @@ class PublicIntakeForm(forms.Form):
             self.fields[question["key"]] = forms.CharField(
                 label=question["label"],
                 required=False,
+                max_length=5000,
                 widget=forms.Textarea(attrs={"rows": 3}),
             )
 

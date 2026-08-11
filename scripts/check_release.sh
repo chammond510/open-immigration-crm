@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
 
+# Local tooling runs with the inert development settings; the deploy check
+# at the end overrides them with production-shaped values.
+export DEBUG=true
+
 ./scripts/check_privacy.sh
 ./scripts/check_scope.sh
 .venv/bin/ruff check .

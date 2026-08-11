@@ -30,6 +30,7 @@
             <a href="{% url 'firm_settings' %}">Firm settings</a>
             <a href="{% url 'admin:index' %}">Administration</a>
           {% endif %}
+          <a href="{% url 'password_change' %}">Change password</a>
           <form action="{% url 'logout' %}" method="post">
             {% csrf_token %}
             <button class="quiet-button" type="submit">Sign out</button>

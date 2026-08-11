@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -49,7 +50,8 @@ class ManagementCommandTests(TestCase):
             call_command("export_portable_data", str(output))
             payload = json.loads(output.read_text())
             self.assertTrue(any(row["model"] == "crm.contact" for row in payload))
-            self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+            if os.name == "posix":
+                self.assertEqual(output.stat().st_mode & 0o777, 0o600)
             with self.assertRaises(CommandError):
                 call_command("export_portable_data", str(output))
 

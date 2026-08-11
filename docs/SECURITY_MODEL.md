@@ -9,6 +9,7 @@ The system can hold names, contact information, birth dates, addresses, national
 ## Controls provided by the application
 
 - Staff authentication through Django's mature session framework
+- Login rate limiting with a temporary lockout after repeated failures
 - Superuser restriction for exports, firm settings, and destructive record/file actions
 - CSRF protection on state-changing browser requests
 - Secure/HTTP-only/SameSite cookies and HTTPS redirect/HSTS when production settings are enabled

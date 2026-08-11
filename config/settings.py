@@ -5,6 +5,7 @@ provide its own secret, hosts, database, and TLS-facing configuration.
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
@@ -20,7 +21,9 @@ def env_bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-DEBUG = env_bool("DEBUG", True)
+# Development mode is opt-in: without configuration the application refuses to
+# start rather than serving client data with debug defaults.
+DEBUG = env_bool("DEBUG", False)
 SECRET_KEY = os.environ.get("SECRET_KEY", "development-only-key-open-immigration-crm")
 
 if not DEBUG and (
@@ -28,7 +31,10 @@ if not DEBUG and (
     or SECRET_KEY == "development-only-key-open-immigration-crm"
     or len(SECRET_KEY) < 50
 ):
-    raise ImproperlyConfigured("Production requires SECRET_KEY with at least 50 characters.")
+    raise ImproperlyConfigured(
+        "Production requires SECRET_KEY with at least 50 characters. "
+        "For local development, set DEBUG=true to use the inert development key."
+    )
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -51,6 +57,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "axes",
     "crm.apps.CrmConfig",
 ]
 
@@ -64,6 +71,12 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "crm.middleware.SecurityHeadersMiddleware",
+    "axes.middleware.AxesMiddleware",
+]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -117,10 +130,23 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# Lock a username+address pair after repeated sign-in failures. Operators can
+# tune the limits or clear a lockout with `python manage.py axes_reset`.
+AXES_ENABLED = env_bool("AXES_ENABLED", True)
+AXES_FAILURE_LIMIT = int(os.environ.get("AXES_FAILURE_LIMIT", "5"))
+AXES_COOLOFF_TIME = timedelta(minutes=int(os.environ.get("AXES_COOLOFF_MINUTES", "15")))
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_TEMPLATE = "registration/locked_out.html"
+AXES_CLIENT_IP_CALLABLE = "crm.services.client_ip"
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = os.environ.get("TIME_ZONE", "America/Chicago")
@@ -160,7 +186,11 @@ CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", not DEBUG)
 SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Trust X-Forwarded-Proto only when a TLS-terminating proxy is declared;
+# trusting it on a directly exposed server lets clients spoof "https".
+if env_bool("TRUST_X_FORWARDED_PROTO", False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"

@@ -95,6 +95,17 @@ class WorkspaceViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Site administration")
 
+    def test_malformed_optional_query_ids_do_not_error(self):
+        urls = [
+            reverse("matter_create") + "?contact=not-a-uuid",
+            reverse("work_create") + "?matter=not-a-uuid",
+            reverse("work_create") + "?contact=%27%22",
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+
     def test_create_and_update_contact(self):
         create = self.client.post(
             reverse("contact_create"),
@@ -381,4 +392,35 @@ class IntakeViewTests(TestCase):
         self.assertEqual(
             self.client.get(reverse("public_intake", args=[expired_token])).status_code,
             410,
+        )
+
+
+class AccountSecurityTests(TestCase):
+    def test_login_lockout_after_repeated_failures(self):
+        make_user("target")
+        url = reverse("login")
+        for _ in range(5):
+            self.client.post(url, {"username": "target", "password": "wrong-password"})
+        locked = self.client.post(url, {"username": "target", "password": "wrong-password"})
+        self.assertEqual(locked.status_code, 429)
+        still_locked = self.client.post(
+            url, {"username": "target", "password": "Testing-Password-Only-42!"}
+        )
+        self.assertEqual(still_locked.status_code, 429)
+        self.assertContains(locked, "temporarily locked", status_code=429)
+
+    def test_password_change_flow_and_audit(self):
+        user = make_user()
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("password_change"),
+            {
+                "old_password": "Testing-Password-Only-42!",
+                "new_password1": "Another-Testing-Password-77!",
+                "new_password2": "Another-Testing-Password-77!",
+            },
+        )
+        self.assertRedirects(response, reverse("password_change_done"))
+        self.assertTrue(
+            AuditLog.objects.filter(action="user.password_changed", user=user).exists()
         )

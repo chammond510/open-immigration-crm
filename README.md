@@ -55,6 +55,7 @@ Python 3.12+ is required.
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements-dev.lock
+export DEBUG=true  # development mode is opt-in; without it the app refuses to start unconfigured
 python manage.py migrate
 python manage.py bootstrap_admin --username admin --password 'use-a-unique-long-password'
 python manage.py runserver
@@ -64,7 +65,7 @@ Run the complete local release gate with `./scripts/check_release.sh`.
 
 ## Security position
 
-This application stores highly sensitive information. It provides authenticated staff access, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** provide field-level database encryption, tenant isolation, built-in MFA, SSO, malware scanning, or a managed backup service. Use full-disk/database encryption, MFA at the identity or network layer, a trusted private network when possible, and encrypted offsite backups.
+This application stores highly sensitive information. It provides authenticated staff access, login rate limiting with temporary lockout, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** provide field-level database encryption, tenant isolation, built-in MFA, SSO, malware scanning, or a managed backup service. Use full-disk/database encryption, MFA at the identity or network layer, a trusted private network when possible, and encrypted offsite backups.
 
 Read [Security model](docs/SECURITY_MODEL.md), [Privacy](docs/PRIVACY.md), and [Backup and restore](docs/BACKUP_RESTORE.md) before using real information. Report vulnerabilities privately under [SECURITY.md](SECURITY.md).
 

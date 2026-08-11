@@ -3,11 +3,13 @@ from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.views import PasswordChangeView
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -51,6 +53,16 @@ def csv_safe(value):
     if text.startswith(("=", "+", "-", "@", "\t", "\r")):
         return f"'{text}"
     return text
+
+
+def optional_record(model, raw_pk):
+    """Resolve an optional record id from a query string, ignoring bad values."""
+    if not raw_pk:
+        return None
+    try:
+        return model.objects.filter(pk=raw_pk).first()
+    except (ValidationError, ValueError):
+        return None
 
 
 superuser_required = user_passes_test(
@@ -238,9 +250,9 @@ def matter_list(request):
 @require_http_methods(["GET", "POST"])
 def matter_create(request):
     initial = {"assigned_to": request.user}
-    contact_id = request.GET.get("contact", "").strip()
-    if contact_id:
-        initial["primary_contact"] = Contact.objects.filter(pk=contact_id).first()
+    contact = optional_record(Contact, request.GET.get("contact", "").strip())
+    if contact:
+        initial["primary_contact"] = contact
     form = MatterForm(request.POST or None, initial=initial)
     if form.is_valid():
         matter = form.save()
@@ -387,10 +399,12 @@ def work_list(request):
 @require_http_methods(["GET", "POST"])
 def work_create(request):
     initial = {"assigned_to": request.user}
-    if request.GET.get("matter"):
-        initial["matter"] = Matter.objects.filter(pk=request.GET["matter"]).first()
-    if request.GET.get("contact"):
-        initial["contact"] = Contact.objects.filter(pk=request.GET["contact"]).first()
+    matter = optional_record(Matter, request.GET.get("matter"))
+    if matter:
+        initial["matter"] = matter
+    contact = optional_record(Contact, request.GET.get("contact"))
+    if contact:
+        initial["contact"] = contact
     form = WorkItemForm(request.POST or None, initial=initial)
     if form.is_valid():
         item = form.save()
@@ -740,3 +754,13 @@ def export_csv(request):
         )
     audit(request, "data.exported", detail="contacts_and_matters_csv")
     return response
+
+
+class AuditedPasswordChangeView(PasswordChangeView):
+    template_name = "registration/password_change_form.html"
+    success_url = reverse_lazy("password_change_done")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        audit(self.request, "user.password_changed", self.request.user)
+        return response

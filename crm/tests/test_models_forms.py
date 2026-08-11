@@ -154,6 +154,26 @@ class FormTests(TestCase):
         self.assertTrue(form.is_valid())
         self.assertEqual(form.answers["q1-goal"]["answer"], "A response")
 
+    def test_intake_builder_rejects_overlong_questions(self):
+        form = IntakeFormConfigForm(
+            data={
+                "name": "Our intake",
+                "questions_text": "x" * 301,
+                "is_active": "on",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("questions_text", form.errors)
+
+    def test_public_form_caps_answer_length(self):
+        intake_form = IntakeForm.objects.create(
+            name="Questions",
+            questions=[{"key": "q1-goal", "label": "What is your goal?"}],
+        )
+        form = PublicIntakeForm(data={"q1-goal": "x" * 5001}, intake_form=intake_form)
+        self.assertFalse(form.is_valid())
+        self.assertIn("q1-goal", form.errors)
+
 
 class DocumentValidationTests(TestCase):
     def test_pdf_png_and_jpeg_magic(self):

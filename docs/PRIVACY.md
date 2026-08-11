@@ -19,4 +19,4 @@ Collect only what the firm needs. Avoid placing full client stories or document 
 
 ## Exports and deletion
 
-Superusers can download a limited contacts/matters CSV. `python manage.py export_portable_data output.json` exports CRM database objects to a new mode-0600 JSON file and refuses to overwrite an existing path; uploaded file bytes must be copied separately. Django admin exposes individual record management, but relational protections may require deleting dependent records in a deliberate order. There is intentionally no bulk-delete button.
+Superusers can download a limited contacts/matters CSV. `python manage.py export_portable_data output.json` exports CRM database objects to a new mode-0600 JSON file (POSIX file modes; on other platforms protect the output directory yourself) and refuses to overwrite an existing path; uploaded file bytes must be copied separately. Django admin exposes individual record management, but relational protections may require deleting dependent records in a deliberate order. There is intentionally no bulk-delete button.
