@@ -1,4 +1,4 @@
-Django>=5.2,<5.3
+Django>=6.1,<6.2
 dj-database-url>=3,<4
 django-axes>=8.0,<9
 gunicorn>=23,<24
