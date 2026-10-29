@@ -32,6 +32,25 @@ class FirstRunSetupForm(UserCreationForm):
         fields = ("username", "email")
 
 
+class TwoFactorCodeForm(forms.Form):
+    code = forms.CharField(
+        label="Authentication code",
+        max_length=20,
+        widget=forms.TextInput(attrs={"autocomplete": "one-time-code", "autofocus": True}),
+    )
+
+
+class TwoFactorDisableForm(forms.Form):
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
+    )
+    code = forms.CharField(
+        label="Authentication code",
+        max_length=20,
+        widget=forms.TextInput(attrs={"autocomplete": "one-time-code"}),
+    )
+
+
 class ContactForm(forms.ModelForm):
     class Meta:
         model = Contact
@@ -294,4 +313,5 @@ class FirmProfileForm(forms.ModelForm):
             "postal_code",
             "country",
             "matter_prefix",
+            "require_two_factor",
         ]

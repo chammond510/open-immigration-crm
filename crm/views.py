@@ -1,6 +1,7 @@
 import csv
 from urllib.parse import quote
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import user_passes_test
@@ -27,6 +28,8 @@ from .forms import (
     MatterForm,
     MatterPartyForm,
     PublicIntakeForm,
+    TwoFactorCodeForm,
+    TwoFactorDisableForm,
     WorkItemForm,
 )
 from .models import (
@@ -41,9 +44,29 @@ from .models import (
     Matter,
     MatterParty,
     TimeEntry,
+    TwoFactorDevice,
     WorkItem,
 )
 from .services import add_activity, audit
+from .two_factor import (
+    ACCEPTED,
+    ACCEPTED_RECOVERY,
+    LOCKED,
+    SESSION_PENDING_KEY,
+    SESSION_VERIFIED_KEY,
+    check_second_factor,
+    confirm_device,
+    confirmed_device,
+    firm_requires_two_factor,
+    format_secret,
+    generate_secret,
+    issuer_name,
+    provisioning_uri,
+    qr_code_data_uri,
+    remaining_recovery_codes,
+    replace_recovery_codes,
+    reset_two_factor,
+)
 
 staff_required = user_passes_test(
     lambda user: user.is_active and user.is_staff,
@@ -86,6 +109,170 @@ class FirstRunAwareLoginView(LoginView):
         if not installation_has_accounts():
             return redirect("first_run_setup")
         return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        """Hold enrolled users at the second step instead of signing them in."""
+        user = form.get_user()
+        if confirmed_device(user) is None:
+            return super().form_valid(form)
+        self.request.session.cycle_key()
+        self.request.session[SESSION_PENDING_KEY] = {
+            "user_id": user.pk,
+            "backend": user.backend,
+            "next": self.get_redirect_url(),
+            "started_at": timezone.now().timestamp(),
+        }
+        return redirect("two_factor_verify")
+
+
+def lockout_minutes():
+    return int(settings.AXES_COOLOFF_TIME.total_seconds() // 60)
+
+
+def lockout_message():
+    return f"Too many incorrect codes. Try again in {lockout_minutes()} minutes."
+
+
+@require_http_methods(["GET", "POST"])
+def two_factor_verify(request):
+    """Second sign-in step: an authenticator code or a single-use recovery code."""
+    pending = request.session.get(SESSION_PENDING_KEY) or {}
+    age = timezone.now().timestamp() - pending.get("started_at", 0)
+    user = None
+    if pending and age <= settings.TWO_FACTOR_LOGIN_TIMEOUT.total_seconds():
+        user = get_user_model().objects.filter(pk=pending["user_id"], is_active=True).first()
+    if user is None:
+        request.session.pop(SESSION_PENDING_KEY, None)
+        if pending:
+            messages.error(request, "Your sign-in expired. Sign in again.")
+        return redirect("login")
+
+    form = TwoFactorCodeForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        outcome = check_second_factor(user, form.cleaned_data["code"])
+        if outcome in (ACCEPTED, ACCEPTED_RECOVERY):
+            del request.session[SESSION_PENDING_KEY]
+            login(request, user, backend=pending["backend"])
+            request.session[SESSION_VERIFIED_KEY] = True
+            if outcome == ACCEPTED_RECOVERY:
+                remaining = remaining_recovery_codes(user)
+                audit(request, "user.recovery_code_used", user, f"{remaining} remaining")
+                messages.info(
+                    request,
+                    f"You signed in with a recovery code. {remaining} unused codes remain; "
+                    "create a new set under Two-factor sign-in if you are running low.",
+                )
+            else:
+                audit(request, "user.two_factor_verified", user)
+            return redirect(pending["next"] or settings.LOGIN_REDIRECT_URL)
+        if outcome == LOCKED:
+            request.session.pop(SESSION_PENDING_KEY, None)
+            audit(request, "user.two_factor_locked", user)
+            messages.error(
+                request,
+                "Too many incorrect codes. Two-factor sign-in is locked for "
+                f"{lockout_minutes()} minutes.",
+            )
+            return redirect("login")
+        audit(request, "user.two_factor_failed", user)
+        form.add_error("code", "That code was not accepted. Codes change every 30 seconds.")
+    return render(request, "registration/two_factor_verify.html", {"form": form})
+
+
+@staff_required
+@require_http_methods(["GET", "POST"])
+def two_factor_settings(request):
+    device, _ = TwoFactorDevice.objects.get_or_create(
+        user=request.user, defaults={"secret": generate_secret()}
+    )
+    if device.is_confirmed:
+        return render(
+            request,
+            "crm/two_factor_settings.html",
+            {
+                "device": device,
+                "remaining_codes": remaining_recovery_codes(request.user),
+                "firm_requires": firm_requires_two_factor(),
+                "regenerate_form": TwoFactorCodeForm(prefix="regenerate"),
+                "disable_form": TwoFactorDisableForm(prefix="disable"),
+            },
+        )
+
+    form = TwoFactorCodeForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        codes = confirm_device(device, form.cleaned_data["code"])
+        if codes is not None:
+            request.session.cycle_key()
+            request.session[SESSION_VERIFIED_KEY] = True
+            audit(request, "user.two_factor_enabled", request.user)
+            return render(
+                request,
+                "crm/two_factor_recovery_codes.html",
+                {"codes": codes, "first_setup": True},
+            )
+        form.add_error(
+            "code", "That code did not match. Check the time on your phone and use the newest code."
+        )
+    uri = provisioning_uri(device.secret, account=request.user.get_username(), issuer=issuer_name())
+    return render(
+        request,
+        "crm/two_factor_setup.html",
+        {
+            "form": form,
+            "qr_code": qr_code_data_uri(uri),
+            "secret": format_secret(device.secret),
+            "firm_requires": firm_requires_two_factor(),
+        },
+    )
+
+
+@staff_required
+@require_POST
+def two_factor_recovery_codes(request):
+    form = TwoFactorCodeForm(request.POST, prefix="regenerate")
+    outcome = check_second_factor(request.user, form.data.get("regenerate-code", ""))
+    if form.is_valid() and outcome in (ACCEPTED, ACCEPTED_RECOVERY):
+        codes = replace_recovery_codes(request.user)
+        audit(request, "user.recovery_codes_replaced", request.user)
+        return render(request, "crm/two_factor_recovery_codes.html", {"codes": codes})
+    if outcome == LOCKED:
+        messages.error(request, lockout_message())
+    else:
+        messages.error(
+            request, "That code was not accepted, so your recovery codes did not change."
+        )
+    return redirect("two_factor_settings")
+
+
+@staff_required
+@require_POST
+def two_factor_disable(request):
+    if firm_requires_two_factor():
+        messages.error(
+            request, "Your firm requires two-factor sign-in, so it cannot be turned off."
+        )
+        return redirect("two_factor_settings")
+    form = TwoFactorDisableForm(request.POST, prefix="disable")
+    # Check the rate-limited code before the password so the form cannot be
+    # used to guess passwords.
+    outcome = check_second_factor(request.user, form.data.get("disable-code", ""))
+    if (
+        form.is_valid()
+        and outcome in (ACCEPTED, ACCEPTED_RECOVERY)
+        and request.user.check_password(form.cleaned_data["password"])
+    ):
+        reset_two_factor(request.user)
+        request.session.pop(SESSION_VERIFIED_KEY, None)
+        audit(request, "user.two_factor_disabled", request.user)
+        messages.success(request, "Two-factor sign-in is off for your account.")
+        return redirect("dashboard")
+    if outcome == LOCKED:
+        messages.error(request, lockout_message())
+    else:
+        messages.error(
+            request, "Your password or code was not accepted, so two-factor sign-in is still on."
+        )
+    return redirect("two_factor_settings")
 
 
 @require_http_methods(["GET", "POST"])

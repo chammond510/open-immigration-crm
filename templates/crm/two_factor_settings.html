@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Two-factor sign-in · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow">Account security</p><h1>Two-factor sign-in</h1><p>On since {{ device.confirmed_at|date:"N j, Y" }}. You have {{ remaining_codes }} unused recovery code{{ remaining_codes|pluralize }}.</p></div></div>
+  <form method="post" action="{% url 'two_factor_recovery_codes' %}" class="panel stacked-form">
+    {% csrf_token %}
+    <div><h2>Create new recovery codes</h2><p class="muted">Your current recovery codes stop working as soon as new ones are created.</p></div>
+    <div class="field"><label for="{{ regenerate_form.code.id_for_label }}">Authentication code</label>{{ regenerate_form.code }}</div>
+    <div class="form-actions"><button class="button" type="submit">Create new recovery codes</button></div>
+  </form>
+  {% if firm_requires %}
+    <p class="panel muted">Your firm requires two-factor sign-in. If you lose your phone and your recovery codes, ask an administrator to reset it.</p>
+  {% else %}
+    <form method="post" action="{% url 'two_factor_disable' %}" class="panel stacked-form">
+      {% csrf_token %}
+      <div><h2>Turn off two-factor sign-in</h2><p class="muted">Your account will be protected by your password alone.</p></div>
+      <div class="field"><label for="{{ disable_form.password.id_for_label }}">Password</label>{{ disable_form.password }}</div>
+      <div class="field"><label for="{{ disable_form.code.id_for_label }}">Authentication code</label>{{ disable_form.code }}</div>
+      <div class="form-actions"><button class="button" type="submit">Turn off two-factor sign-in</button></div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

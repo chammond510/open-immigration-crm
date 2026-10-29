@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 
+from .fields import EncryptedTextField
+
 
 class FirmProfile(models.Model):
     """Single-firm identity and numbering configuration."""
@@ -25,6 +27,11 @@ class FirmProfile(models.Model):
     matter_prefix = models.CharField(max_length=12, default="MAT")
     matter_sequence_year = models.PositiveIntegerField(default=0)
     matter_sequence_value = models.PositiveIntegerField(default=0)
+    require_two_factor = models.BooleanField(
+        "Require two-factor sign-in for all staff",
+        default=False,
+        help_text="Staff without two-factor sign-in must set it up before using the CRM.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -591,3 +598,45 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action} at {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class TwoFactorDevice(models.Model):
+    """A staff member's authenticator-app secret; unconfirmed until a code verifies it."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="two_factor_device",
+    )
+    secret = EncryptedTextField()
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_used_counter = models.PositiveBigIntegerField(default=0)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "two-factor device"
+
+    @property
+    def is_confirmed(self):
+        return self.confirmed_at is not None
+
+    def __str__(self):
+        return f"Two-factor device for {self.user}"
+
+
+class RecoveryCode(models.Model):
+    """A single-use fallback for a lost authenticator; only its SHA-256 hash is stored."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="two_factor_recovery_codes",
+    )
+    code_hash = models.CharField(max_length=64, unique=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Recovery code for {self.user}"

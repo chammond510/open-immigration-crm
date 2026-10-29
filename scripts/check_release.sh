@@ -16,6 +16,7 @@ export DEBUG=true
 
 DEBUG=False \
 SECRET_KEY=release-check-secret-key-000000000000000000000000000000000000 \
+FIELD_ENCRYPTION_KEYS=cmVsZWFzZS1jaGVjay1maWVsZC1rZXktMDAwMDAwMDA= \
 ALLOWED_HOSTS=crm.example.test \
 CSRF_TRUSTED_ORIGINS=https://crm.example.test \
 DATABASE_URL=postgresql://unused:unused@127.0.0.1:9/unused \

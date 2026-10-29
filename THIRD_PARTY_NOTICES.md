@@ -4,10 +4,13 @@ Open Immigration CRM depends on unmodified open-source Python packages. The lock
 
 Key runtime projects:
 
+- cryptography — Apache-2.0 OR BSD-3-Clause
 - Django — BSD-3-Clause
+- django-axes — MIT
 - dj-database-url — BSD-3-Clause
 - Gunicorn — MIT
 - psycopg — LGPL-3.0-only (library exception applies to linked applications; consult upstream terms)
+- segno — BSD-3-Clause
 - WhiteNoise — MIT
 
 Container examples also use official Python and PostgreSQL images under their respective upstream terms. This notice is informational and does not replace the license files distributed by those projects.

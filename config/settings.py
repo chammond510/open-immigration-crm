@@ -4,6 +4,8 @@ The development defaults are intentionally local and inert. Production must
 provide its own secret, hosts, database, and TLS-facing configuration.
 """
 
+import base64
+import binascii
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -35,6 +37,34 @@ if not DEBUG and (
         "Production requires SECRET_KEY with at least 50 characters. "
         "For local development, set DEBUG=true to use the inert development key."
     )
+
+# Field-level encryption for stored secrets such as two-factor keys. The first
+# key encrypts and every listed key can decrypt. To rotate, put a new key first,
+# run `python manage.py rotate_field_encryption`, then remove the old key.
+DEVELOPMENT_FIELD_ENCRYPTION_KEY = base64.urlsafe_b64encode(
+    b"development-only-field-key-00000"
+).decode()
+FIELD_ENCRYPTION_KEYS = [
+    key.strip() for key in os.environ.get("FIELD_ENCRYPTION_KEYS", "").split(",") if key.strip()
+]
+if DEBUG and not FIELD_ENCRYPTION_KEYS:
+    FIELD_ENCRYPTION_KEYS = [DEVELOPMENT_FIELD_ENCRYPTION_KEY]
+if not DEBUG and (
+    not FIELD_ENCRYPTION_KEYS or DEVELOPMENT_FIELD_ENCRYPTION_KEY in FIELD_ENCRYPTION_KEYS
+):
+    raise ImproperlyConfigured(
+        "Production requires FIELD_ENCRYPTION_KEYS. Generate a key with: python3 -c "
+        '"import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"'
+    )
+for _key in FIELD_ENCRYPTION_KEYS:
+    try:
+        _decoded = base64.urlsafe_b64decode(_key.encode())
+    except (binascii.Error, ValueError):
+        _decoded = b""
+    if len(_decoded) != 32:
+        raise ImproperlyConfigured(
+            "Each FIELD_ENCRYPTION_KEYS value must be 32 random bytes in URL-safe base64."
+        )
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -69,6 +99,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "crm.middleware.TwoFactorMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "crm.middleware.SecurityHeadersMiddleware",
     "axes.middleware.AxesMiddleware",
@@ -148,6 +179,11 @@ AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = "registration/locked_out.html"
 AXES_CLIENT_IP_CALLABLE = "crm.services.client_ip"
+
+# Two-factor sign-in. Repeated incorrect codes lock the second step for the
+# same cool-off period as a password lockout.
+TWO_FACTOR_FAILURE_LIMIT = int(os.environ.get("TWO_FACTOR_FAILURE_LIMIT", "5"))
+TWO_FACTOR_LOGIN_TIMEOUT = timedelta(minutes=5)
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = os.environ.get("TIME_ZONE", "America/Chicago")

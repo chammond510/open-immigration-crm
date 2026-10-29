@@ -9,6 +9,7 @@
       <h1>Sign in</h1>
       <p>Use the account provided by your system administrator.</p>
     </div>
+    {% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}
     {% if form.errors %}<div class="message error">The username or password was not recognized.</div>{% endif %}
     <form method="post" class="stacked-form">
       {% csrf_token %}

@@ -28,6 +28,8 @@ jobs:
     env:
       DEBUG: "False"
       SECRET_KEY: ci-only-secret-key-000000000000000000000000000000000000000
+      # base64 of "ci-only-field-encryption-key-000"; protects only CI test data.
+      FIELD_ENCRYPTION_KEYS: Y2ktb25seS1maWVsZC1lbmNyeXB0aW9uLWtleS0wMDA=
       ALLOWED_HOSTS: crm.example.test
       CSRF_TRUSTED_ORIGINS: https://crm.example.test
       DATABASE_URL: postgresql://opencrm:testing-only-password@127.0.0.1:5432/opencrm

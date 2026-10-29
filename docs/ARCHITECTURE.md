@@ -32,6 +32,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
+- `TwoFactorDevice` holds a user's authenticator secret, encrypted with `FIELD_ENCRYPTION_KEYS`; `RecoveryCode` stores only SHA-256 hashes of single-use recovery codes.
 
 ## Trust boundaries
 

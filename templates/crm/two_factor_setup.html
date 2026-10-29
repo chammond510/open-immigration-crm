@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Set up two-factor sign-in · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow">Account security</p><h1>Set up two-factor sign-in</h1><p>After your password, you will also enter a code from an authenticator app on your phone, such as 1Password, Google Authenticator, Microsoft Authenticator, or your phone's built-in password manager.</p></div></div>
+  <section class="panel stacked-form">
+    <div>
+      <h2>1. Scan this code with your authenticator app</h2>
+      <img class="qr-code" src="{{ qr_code }}" alt="QR code for adding this account to an authenticator app" width="220" height="220">
+    </div>
+    <div>
+      <h2>Or enter this key by hand</h2>
+      <p class="secret-key">{{ secret }}</p>
+      <small class="muted">Keep this key private. Anyone with it can create your codes.</small>
+    </div>
+    <form method="post" class="stacked-form">
+      {% csrf_token %}
+      <div class="field"><label for="{{ form.code.id_for_label }}">2. Enter the 6-digit code the app shows</label>{{ form.code }}{% for error in form.code.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+      <div class="form-actions"><button class="button primary" type="submit">Turn on two-factor sign-in</button>{% if not firm_requires %}<a class="button" href="{% url 'dashboard' %}">Not now</a>{% endif %}</div>
+    </form>
+  </section>
+</div>
+{% endblock %}

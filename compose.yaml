@@ -23,6 +23,7 @@ services:
     environment:
       DEBUG: "False"
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      FIELD_ENCRYPTION_KEYS: ${FIELD_ENCRYPTION_KEYS:?Set FIELD_ENCRYPTION_KEYS in .env}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
       SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-False}
