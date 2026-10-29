@@ -1,6 +1,6 @@
 # Open Immigration CRM
 
-A focused, self-hosted practice workspace for small immigration law firms. It keeps the essential loop—people, matters, work, documents, checklists, and secure intake—without AI, billing, communications providers, or a maze of integrations.
+A focused, self-hosted practice workspace for small immigration law firms. Its core keeps the essential loop—people, matters, work, documents, checklists, and secure intake—small enough for a firm to understand, operate, and audit. Integrations with the services a firm already uses are being added as optional connectors that stay off until the firm connects them.
 
 > **Early release:** evaluate carefully before storing real client information. The operators of each installation are responsible for security, backups, retention, professional-responsibility compliance, and the legal content they create.
 
@@ -16,6 +16,19 @@ A focused, self-hosted practice workspace for small immigration law firms. It ke
 - Audit records for important actions
 - CSV and portable JSON export paths
 - PostgreSQL production path and SQLite-only local evaluation path
+
+## Core and connectors
+
+Core is everything listed above. It works on its own, makes no outbound calls to outside services, and includes no AI.
+
+Connectors are in development; see the [connector plan](docs/CONNECTOR_PLAN.md). Each one will link the CRM to a service the firm chooses, such as a phone system, mailbox, calendar, payment processor, e-signature service, or AI model, and automate work staff can already do by hand. Connectors are designed to be:
+
+- **Optional.** Nothing is connected on a new installation, and every feature keeps a manual path.
+- **Provider-neutral.** Core code talks to a capability such as "phone" or "payments", and each provider is an adapter in `connectors/`. Core never imports provider code; `scripts/check_scope.sh` enforces this.
+- **Explicit about data.** Each connector states what it sends and receives, and a superuser acknowledges that before turning it on.
+- **Cautious by default.** Anything a connector would send out starts in preview mode, and AI features are opt-in and off by default.
+
+No connector has shipped yet.
 
 ## Quick start with Docker
 
@@ -58,7 +71,7 @@ Run the complete local release gate with `./scripts/check_release.sh`.
 
 ## Security position
 
-This application stores highly sensitive information. It provides authenticated staff access, login rate limiting with temporary lockout, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** provide field-level database encryption, tenant isolation, built-in MFA, SSO, malware scanning, or a managed backup service. Use full-disk/database encryption, MFA at the identity or network layer, a trusted private network when possible, and encrypted offsite backups.
+This application stores highly sensitive information. It provides authenticated staff access, login rate limiting with temporary lockout, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** provide field-level database encryption, tenant isolation, built-in MFA, SSO, malware scanning, or a managed backup service. Use full-disk/database encryption, MFA at the identity or network layer, a trusted private network when possible, and encrypted offsite backups. Encrypted credential storage and built-in two-factor sign-in are planned to land before the first connector ships.
 
 Read [Security model](docs/SECURITY_MODEL.md), [Privacy](docs/PRIVACY.md), and [Backup and restore](docs/BACKUP_RESTORE.md) before using real information. Report vulnerabilities privately under [SECURITY.md](SECURITY.md).
 

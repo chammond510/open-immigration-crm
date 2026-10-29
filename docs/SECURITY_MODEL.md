@@ -47,6 +47,16 @@ The system can hold names, contact information, birth dates, addresses, national
 10. A documented offboarding process that disables staff accounts immediately.
 11. A tested incident-response plan appropriate for attorney/client information.
 
+## Connectors (planned)
+
+No connector has shipped. Field-level encryption for stored credentials and built-in two-factor sign-in will be added first, and the limitations above will be updated when they land. Connectors change the risk picture in these ways:
+
+- **Data leaves the installation.** Each connector sends data to a provider the firm chooses. The connect screen lists what is sent and received, and a superuser must acknowledge it. The firm remains responsible for evaluating each provider and its data-use terms. Consumer and business AI plans often have different terms.
+- **Some features need public reachability.** Provider webhooks and the MCP endpoint must be reachable from the provider's network. Expose only those paths through the reverse proxy, use polling where a provider supports it, or leave those connectors off.
+- **More credentials to protect.** Connection credentials will be stored encrypted, scoped to the capabilities the firm turns on, and deleted on disconnect. Store and back up the encryption keys separately from the database.
+- **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models will pass an outbound policy and start in preview mode.
+- **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings.
+
 ## Intake link handling
 
 An intake URL is sensitive. Send it only to its intended recipient, keep expiry short, revoke it if misdirected, and do not place it in analytics or third-party link shorteners. The default referrer policy and CSP reduce browser leakage, but the recipient's device and delivery channel remain outside this application's control.
