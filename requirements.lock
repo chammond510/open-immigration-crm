@@ -21,7 +21,7 @@ psycopg==3.2.13
     # via -r requirements.in
 psycopg-binary==3.2.13 ; implementation_name != 'pypy'
     # via psycopg
-sqlparse==0.5.5
+sqlparse==0.6.0
     # via django
 typing-extensions==4.16.0 ; python_full_version < '3.13'
     # via psycopg
