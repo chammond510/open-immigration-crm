@@ -31,6 +31,7 @@
             <a href="{% url 'admin:index' %}">Administration</a>
           {% endif %}
           <a href="{% url 'password_change' %}">Change password</a>
+          <a href="{% url 'two_factor_settings' %}">Two-factor sign-in</a>
           <form action="{% url 'logout' %}" method="post">
             {% csrf_token %}
             <button class="quiet-button" type="submit">Sign out</button>

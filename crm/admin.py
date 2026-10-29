@@ -15,8 +15,11 @@ from .models import (
     Matter,
     MatterParty,
     TimeEntry,
+    TwoFactorDevice,
     WorkItem,
 )
+from .services import audit
+from .two_factor import reset_two_factor
 from .validators import validate_document
 
 
@@ -95,6 +98,30 @@ class AuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(TwoFactorDevice)
+class TwoFactorDeviceAdmin(admin.ModelAdmin):
+    """Deleting a device resets two-factor sign-in so its owner can enroll again."""
+
+    list_display = ("user", "confirmed_at", "locked_until", "created_at")
+    search_fields = ("user__username", "user__email")
+    fields = ("user", "confirmed_at", "failed_attempts", "locked_until", "created_at")
+    readonly_fields = fields
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def delete_model(self, request, obj):
+        reset_two_factor(obj.user)
+        audit(request, "user.two_factor_reset", obj.user, "Reset from administration")
+
+    def delete_queryset(self, request, queryset):
+        for device in queryset.select_related("user"):
+            self.delete_model(request, device)
 
 
 admin.site.register(FirmProfile)

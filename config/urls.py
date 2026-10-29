@@ -4,7 +4,14 @@ from django.http import HttpResponse
 from django.urls import include, path
 from django.views.generic import RedirectView
 
-from crm.views import AuditedPasswordChangeView, FirstRunAwareLoginView
+from crm.views import (
+    AuditedPasswordChangeView,
+    FirstRunAwareLoginView,
+    two_factor_disable,
+    two_factor_recovery_codes,
+    two_factor_settings,
+    two_factor_verify,
+)
 
 
 def health(request):
@@ -18,8 +25,18 @@ urlpatterns = [
         RedirectView.as_view(url="/static/favicon.svg", permanent=True),
         name="favicon",
     ),
+    # The admin's own login form would skip two-factor sign-in, so send it to ours.
+    path("admin/login/", RedirectView.as_view(pattern_name="login", query_string=True)),
     path("admin/", admin.site.urls),
     path("accounts/login/", FirstRunAwareLoginView.as_view(), name="login"),
+    path("accounts/login/verify/", two_factor_verify, name="two_factor_verify"),
+    path("accounts/two-factor/", two_factor_settings, name="two_factor_settings"),
+    path(
+        "accounts/two-factor/recovery-codes/",
+        two_factor_recovery_codes,
+        name="two_factor_recovery_codes",
+    ),
+    path("accounts/two-factor/disable/", two_factor_disable, name="two_factor_disable"),
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
     path(
         "accounts/password-change/",

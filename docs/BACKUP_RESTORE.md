@@ -2,6 +2,8 @@
 
 A usable backup contains the PostgreSQL database **and** the private media volume from a coordinated recovery point. Protect backup material as strictly as the live system.
 
+Also keep `FIELD_ENCRYPTION_KEYS` in your secret manager, apart from these backups. A restored database needs the same key to read stored secrets such as two-factor keys; without it, every user's two-factor sign-in must be reset.
+
 ## Compose evaluation backup
 
 From the repository directory:

@@ -10,10 +10,14 @@ cachecontrol==0.14.4
     # via pip-audit
 certifi==2026.7.22
     # via requests
+cffi==2.1.1 ; platform_python_implementation != 'PyPy'
+    # via cryptography
 charset-normalizer==3.4.9
     # via requests
 coverage==7.15.4
     # via -r requirements-dev.in
+cryptography==50.0.2
+    # via -r requirements.in
 cyclonedx-python-lib==11.11.1
     # via pip-audit
 defusedxml==0.7.1
@@ -64,6 +68,8 @@ psycopg-binary==3.2.13 ; implementation_name != 'pypy'
     # via psycopg
 py-serializable==2.1.0
     # via cyclonedx-python-lib
+pycparser==3.12 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+    # via cffi
 pygments==2.20.0
     # via rich
 pyparsing==3.3.2
@@ -76,6 +82,8 @@ rich==15.0.0
     # via pip-audit
 ruff==0.16.2
     # via -r requirements-dev.in
+segno==1.6.6
+    # via -r requirements.in
 sortedcontainers==2.4.0
     # via cyclonedx-python-lib
 sqlparse==0.6.0

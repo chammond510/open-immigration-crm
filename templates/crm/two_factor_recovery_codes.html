@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Recovery codes · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow">Account security</p><h1>{% if first_setup %}Two-factor sign-in is on{% else %}New recovery codes{% endif %}</h1><p>Save these recovery codes in your password manager or another safe place. Each one works once, if you lose your phone. They will not be shown again{% if not first_setup %}, and your previous codes no longer work{% endif %}.</p></div></div>
+  <section class="panel stacked-form">
+    <ul class="recovery-codes">
+      {% for code in codes %}<li>{{ code }}</li>{% endfor %}
+    </ul>
+    <div class="form-actions"><a class="button primary" href="{% url 'dashboard' %}">I saved my recovery codes</a></div>
+  </section>
+</div>
+{% endblock %}

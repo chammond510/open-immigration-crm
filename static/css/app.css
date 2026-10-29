@@ -217,6 +217,12 @@ input[type="file"] { padding: 6px; }
 .login-copy { margin-bottom: 24px; }
 .login-copy p:last-child { margin-bottom: 0; color: var(--muted); }
 .login-panel .fine-print, .public-card > .fine-print { margin-top: 18px; text-align: center; }
+.login-panel .message { margin-bottom: 14px; }
+
+.qr-code { display: block; width: 220px; height: 220px; margin-top: 8px; border: 1px solid var(--line); border-radius: 6px; background: white; image-rendering: pixelated; }
+.secret-key, .recovery-codes { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; letter-spacing: .06em; }
+.secret-key { margin: 6px 0; word-break: break-all; }
+.recovery-codes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; margin: 0; padding: 0; list-style: none; }
 
 @media (max-width: 1050px) {
   .app-shell { grid-template-columns: 1fr; }

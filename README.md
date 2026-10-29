@@ -13,6 +13,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Firm-created per-matter checklists—zero legal templates ship with the project
 - Private PDF, DOCX, PNG, and JPEG document storage
 - Blank intake-form builder with expiring, revocable, single-use links
+- Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff
 - Audit records for important actions
 - CSV and portable JSON export paths
 - PostgreSQL production path and SQLite-only local evaluation path
@@ -38,6 +39,8 @@ Requirements: Docker with Compose.
 cp .env.example .env
 python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 # Put the generated value in SECRET_KEY and change POSTGRES_PASSWORD in .env.
+python3 -c "import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+# Put this value in FIELD_ENCRYPTION_KEYS and keep a copy apart from your backups.
 docker compose build
 docker compose run --rm web ./scripts/release.sh
 docker compose up -d
@@ -71,7 +74,7 @@ Run the complete local release gate with `./scripts/check_release.sh`.
 
 ## Security position
 
-This application stores highly sensitive information. It provides authenticated staff access, login rate limiting with temporary lockout, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** provide field-level database encryption, tenant isolation, built-in MFA, SSO, malware scanning, or a managed backup service. Use full-disk/database encryption, MFA at the identity or network layer, a trusted private network when possible, and encrypted offsite backups. Encrypted credential storage and built-in two-factor sign-in are planned to land before the first connector ships.
+This application stores highly sensitive information. It provides authenticated staff access, optional or firm-required two-factor sign-in, login rate limiting with temporary lockout, encryption of stored secrets, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** encrypt client records at the field level, and it does not provide tenant isolation, SSO, malware scanning, or a managed backup service. Use full-disk/database encryption, a trusted private network when possible, and encrypted offsite backups.
 
 Read [Security model](docs/SECURITY_MODEL.md), [Privacy](docs/PRIVACY.md), and [Backup and restore](docs/BACKUP_RESTORE.md) before using real information. Report vulnerabilities privately under [SECURITY.md](SECURITY.md).
 

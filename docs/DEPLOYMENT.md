@@ -18,6 +18,7 @@ Set at least:
 ```text
 DEBUG=False
 SECRET_KEY=<unique random value of at least 50 characters>
+FIELD_ENCRYPTION_KEYS=<generated encryption key>
 ALLOWED_HOSTS=crm.example.org
 CSRF_TRUSTED_ORIGINS=https://crm.example.org
 DATABASE_URL=postgresql://user:password@database-host:5432/database?sslmode=require
@@ -38,6 +39,18 @@ The application sends a one-year HSTS policy in production. Set
 `SECURE_HSTS_INCLUDE_SUBDOMAINS=True` and `SECURE_HSTS_PRELOAD=True` only after
 confirming every subdomain is permanently HTTPS and you understand the browser
 preload program; both options intentionally default to `False`.
+
+## Encryption key
+
+`FIELD_ENCRYPTION_KEYS` encrypts stored secrets, such as each user's two-factor key. The application refuses to start in production without it. Generate one with:
+
+```bash
+python3 -c "import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+```
+
+Store it in your secret manager and back it up separately from database backups. A database backup without its key cannot reveal those secrets, and a lost key cannot be recovered: every user's two-factor sign-in would have to be reset.
+
+To rotate, put a new key first and keep the old one after a comma (`FIELD_ENCRYPTION_KEYS=new,old`), restart, run `python manage.py rotate_field_encryption`, then remove the old key and restart again.
 
 Do not place production secrets in `.env` on a shared workstation or in Git. Use the secret facility of your deployment system. Set file and directory permissions so only the application identity can read the media volume.
 
@@ -74,7 +87,19 @@ Repeated failed sign-ins lock the username and client address pair for a cooling
 python manage.py axes_reset
 ```
 
-Lockout tracking uses the same proxy-aware client address as the audit log, so the reverse proxy must append the real client address to `X-Forwarded-For`. Lockout slows online guessing; it does not replace MFA or network-layer access controls.
+Lockout tracking uses the same proxy-aware client address as the audit log, so the reverse proxy must append the real client address to `X-Forwarded-For`. Lockout slows online guessing; it does not replace two-factor sign-in or network-layer access controls.
+
+## Two-factor sign-in
+
+Each user can turn on two-factor sign-in under **Two-factor sign-in** in the sidebar, using any authenticator app. A superuser can require it for all staff in **Firm settings**; staff without it are then sent to set it up before they can use the CRM. Five incorrect codes in a row lock the second step for the same cooling-off period as a password lockout (tune with `TWO_FACTOR_FAILURE_LIMIT`).
+
+If someone loses their phone and their recovery codes, reset their two-factor sign-in from the console, or delete their entry under **Two-factor devices** in administration:
+
+```bash
+python manage.py reset_two_factor <username>
+```
+
+They can then sign in with their password and set it up again. Both paths are recorded in the audit log.
 
 ## Reverse proxy
 
@@ -82,4 +107,4 @@ Terminate TLS at the proxy and forward only to the private Gunicorn port. Preser
 
 ## Upgrade and rollback
 
-Read release notes and back up first. Database migrations may be one-way. Prefer roll-forward with a corrective release; if rollback is required, restore both database and media from the same pre-upgrade recovery point. Never restore one without the other.
+Read release notes and back up first. Releases that add two-factor sign-in require `FIELD_ENCRYPTION_KEYS`; set it before upgrading, or the application will not start. Database migrations may be one-way. Prefer roll-forward with a corrective release; if rollback is required, restore both database and media from the same pre-upgrade recovery point. Never restore one without the other.
