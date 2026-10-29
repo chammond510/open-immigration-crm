@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir --requirement requirements.lock
 COPY --chown=crm:crm . .
 RUN DEBUG=False \
     SECRET_KEY=build-only-secret-key-not-used-at-runtime-00000000000000000000 \
+    FIELD_ENCRYPTION_KEYS=YnVpbGQtb25seS1maWVsZC1rZXktbm90LXJ1bnRpbWU= \
     ALLOWED_HOSTS=localhost \
     python manage.py collectstatic --noinput
 
