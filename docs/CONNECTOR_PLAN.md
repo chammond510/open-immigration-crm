@@ -1,0 +1,493 @@
+# Connector framework plan
+
+Status: draft, updated 2026-10-29 with decisions and AI access. Not committed.
+
+## Goal
+
+Make Open Immigration CRM connectable to the products firms already use, without making it hard
+to run or audit. A new installation shows every automated feature as **"Connect your …"**, and the
+firm picks its own provider for each one from a large, visible catalog: phone system, email,
+calendar, payments, e-signature, AI and more.
+
+The CRM should stay fully usable with nothing connected. A connection automates work that staff
+can already do by hand.
+
+## Principles
+
+1. **Manual first.** Every feature works without a connection. Calls can be logged and payments
+   recorded by hand. A connection only adds automation.
+2. **Capabilities, not vendors.** Core code talks to a capability, such as `phone` or `payments`.
+   Vendors are adapters behind that interface. Core never imports a vendor module.
+3. **Honest catalog.** Each tile is labeled Ready, Beta or Wanted. A tile is never marked Ready
+   unless it has a maintainer and passing contract tests.
+4. **Disclose data flows.** Each connector says in plain language what it sends and what it
+   receives. A superuser acknowledges that before it is enabled, and the acknowledgment is
+   audited.
+5. **Safe outbound defaults.** Anything that leaves the CRM (sending email or texts, charging a
+   card, writing a calendar event, calling an AI model) starts in preview mode and passes a policy
+   check.
+6. **Fail closed.** If a webhook signature, credential or scope is missing or invalid, the request
+   is rejected. That includes development settings.
+7. **Self-hosting stays simple.** No Redis or broker. There is one optional worker process, and it
+   is needed only once something is connected.
+
+## Phase 0: reset the product boundary
+
+The repo described a core with no integrations. These files change together, in one reviewed
+pull request, before any connector code lands:
+
+| File | Change |
+|---|---|
+| `README.md` | Add a "Core and connectors" section: core stays small, connectors are optional and off until connected, and none has shipped yet. |
+| `docs/ROADMAP.md` | Move integrations from non-goals to a connector roadmap. Keep the real non-goals: autonomous legal work, shipped legal content, multi-tenant SaaS, queue infrastructure and telemetry. |
+| `CONTRIBUTING.md` | Add a connector contribution path: manifest, contract tests, fixtures, a named maintainer and license rules. |
+| `docs/ARCHITECTURE.md` | Describe the planned framework, connector packages, worker and public paths. |
+| `docs/SECURITY_MODEL.md` | Describe how connectors change the risk picture, and the controls that must land before the first one ships. |
+| `docs/PRIVACY.md` | State that connectors send data only to providers the firm connects, and that telemetry stays excluded. |
+| `scripts/check_scope.sh` | Provider names are allowed only in `connectors/`, queue infrastructure stays banned everywhere, and core must not import from `connectors/`. |
+| `scripts/check_privacy.sh` | Already provider-neutral: firm markers live in an ignored `check_privacy.local`. Add API-key formats for AI, payment and OAuth providers. |
+
+## Capabilities and catalog
+
+**Ready at 1.0** = shipped and tested. **Later** = Beta or Wanted tiles. Bold names are adapters
+that already exist in the firm's private CRM and would be ported.
+
+| Capability | Works by hand in core | When connected | Ready at 1.0 | Later |
+|---|---|---|---|---|
+| Phone | Log calls | Calls are logged automatically, with recordings and recaps | **Dialpad**, Twilio | RingCentral, Aircall, Zoom Phone, Vonage, 8x8, Nextiva, Telnyx, Teams Phone |
+| Texting and messaging | Log texts | Send and receive texts; STOP opt-out handling | **Twilio**, Dialpad | RingCentral, WhatsApp Business, Telnyx |
+| Mailbox | Log emails | Inbox matched to contacts; send from the CRM | **Google Workspace**, **Microsoft 365**, IMAP/SMTP | Zoho Mail |
+| System email | Staff copy intake links by hand | The CRM emails intake links, reminders and 2FA backup codes | SMTP | Postmark, Amazon SES, SendGrid, Mailgun |
+| Calendar | Appointments as work items | Two-way calendar sync | **Google**, **Microsoft 365** | CalDAV |
+| Scheduling | Create consults by hand | Bookings create the contact and appointment | **Calendly**, Cal.com | Acuity, Microsoft Bookings, Zoom Scheduler |
+| Video meetings | Paste a link | A meeting link is created with the appointment | Zoom | Teams, Google Meet, Jitsi |
+| Payments | Record payments; invoice PDFs | Payment links and card/ACH; separates trust from operating funds | **LawPay**, Stripe | Square, PayPal, Headnote, Confido Legal |
+| Accounting | CSV export | Invoices and payments pushed to the books | — | QuickBooks Online, Xero, FreshBooks |
+| Document storage | Private local storage | Matter folders mirrored to the firm's drive | **Google Drive** | OneDrive/SharePoint, Dropbox, Box, Egnyte |
+| E-signature | Upload the signed copy | Send for signature; the signed PDF is filed automatically | Documenso | DocuSign, Dropbox Sign, Adobe Acrobat Sign, BoldSign |
+| AI models | — (off) | Firm-chosen model for drafts, summaries and prep memos | **OpenAI** and **Anthropic** (API keys), OpenRouter, any OpenAI-compatible endpoint (covers local models) | ChatGPT plan through Sign in with ChatGPT (Beta until OpenAI confirms), Azure OpenAI, Gemini, AWS Bedrock, Google Vertex AI |
+| Translation | — | Translate client messages and intake answers | — | DeepL, Google Cloud Translation, or an AI model |
+| Legal research | — | Authority search from a matter | **BIA Edge**, CourtListener | others |
+| Case status | Enter status by hand | Receipt numbers checked automatically, with alerts | **USCIS Case Status API** | Visa Bulletin (public data), USCIS processing times |
+| Shipping | Paste a tracking number | Delivery of filing packages tracked | — | USPS, FedEx, UPS |
+| Lead capture | Create leads by hand | Website and ad leads arrive as contacts | Signed website-form webhook | WordPress form plugins, Google and Meta lead forms, Google Local Services Ads |
+| Marketing analytics | — | Spend and source reporting | — | **Google Ads**, **GA4**, Meta Ads |
+| Sign-in (SSO) | Local accounts + TOTP | Sign in with the firm's identity provider | Generic OIDC with Google and Microsoft Entra presets | Okta, JumpCloud |
+| Migration | CSV import | Move records over from an old system | CSV templates | Docketwise, INSZoom, Clio, MyCase, LawLogix |
+
+Some pieces are core features rather than connectors, but they make the CRM connectable from the
+outside: a REST API with scoped tokens, signed outbound webhooks (which n8n, Zapier and Make can
+use) and an MCP server. The MCP server is also how firms use their own Claude or ChatGPT
+subscriptions with the CRM; see "AI access".
+
+## Architecture
+
+### Layout
+
+```text
+crm/                      core app; never imports vendor code
+crm/connect/              framework: registry, models, policy, webhooks, OAuth, jobs, UI
+connectors/<key>/         first-party connectors, one package each, optional
+connectors/catalog.toml   Wanted and Beta entries that have no code yet
+```
+
+Third-party connectors install as Python packages and register through an entry point
+(`open_immigration_crm.connectors`). The registry merges three sources: first-party connectors,
+installed packages and `catalog.toml`.
+
+Each connector declares its vendor SDK as an optional extra, for example
+`pip install open-immigration-crm[stripe]`. The default is plain HTTPS through one shared client,
+and tests use its built-in mock transport.
+
+### Connector definition
+
+Every connector is declarative. The catalog, the connect flow and the data-flow disclosure are all
+rendered from these definitions:
+
+```python
+@register
+class DialpadConnector(Connector):
+    key = "dialpad"
+    name = "Dialpad"
+    maturity = Maturity.READY
+    maintainers = ["@handle"]
+    capabilities = {Capability.PHONE, Capability.TEXTING}
+    auth = ApiKeyAuth(docs_url="https://...")
+    connection_scope = ConnectionScope.FIRM
+    data_flows = DataFlows(
+        version=1,
+        receives=["call records", "recording links", "text messages", "call recaps"],
+        sends=["text messages staff approve"],
+    )
+    logo = "connectors/dialpad/logo.svg"
+
+    def adapter(self, connection: Connection) -> PhoneAdapter: ...
+```
+
+Logos are bundled locally, which fits the current `img-src 'self'` CSP. A tile with no logo
+shows a monogram. A "not affiliated with or endorsed by" notice appears on the Connections page.
+
+### Core tables
+
+| Model | Purpose |
+|---|---|
+| `Connection` | One connected account. Holds the connector key (a registry string, not a choices enum), a label, firm or per-user scope with an owner, a status, the enabled capabilities, encrypted credentials, non-secret config, granted scopes, a hashed webhook token, an encrypted webhook secret, a preview-mode flag, the data-flow acknowledgment (who, when, which version) and last success/error. |
+| `ConnectorApp` | Instance-level OAuth client ID and encrypted secret for "bring your own app" providers. Superuser only. |
+| `ExternalRef` | Generic link from a CRM record (content type plus a string object ID, so UUID and integer keys both work) to a provider ID, with thread/parent ID and etag. Unique per connection and external ID. Replaces the per-type reference tables in the firm CRM. |
+| `SyncRun` | Connection, capability, cursor, start and finish times, counts and a redacted error. |
+| `WebhookEvent` | Connection, provider event ID or body hash (unique for idempotency), signature result, minimized and encrypted payload, processing status and attempts. |
+| `OutboundRequest` | Every outbound action, with actor, automation flag, policy decision code, preview flag, result and provider reference. |
+| `WorkerHeartbeat` | Lets the UI warn when syncs are paused because the worker is not running. |
+
+New core models for the manual-first features are listed under "Features that work without
+connectors" below.
+
+### Capability interfaces
+
+Each capability has a typed interface and normalized records, generalizing the firm CRM's
+`NormalizedMessage` and `NormalizedCalendarEvent`:
+
+```python
+class PhoneAdapter(Protocol):
+    def verify_webhook(self, request: HttpRequest) -> bool: ...
+    def parse_event(self, payload: dict) -> list[NormalizedCall | NormalizedText]: ...
+    def calls_since(self, cursor: SyncCursor) -> Iterable[NormalizedCall]: ...
+    def send_text(self, *, to: str, body: str) -> ProviderRef: ...
+```
+
+Every interface method a connector supports must pass a shared contract test for that
+capability.
+
+### Authentication modes
+
+| Mode | Used for | New-user experience |
+|---|---|---|
+| API key or token | Dialpad, Twilio, Stripe, OpenAI, Anthropic, BIA Edge, Calendly | Paste a key, the CRM runs a test call, done |
+| OAuth with the firm's own app | Google, Microsoft, Zoom, DocuSign, QuickBooks | A wizard shows the exact redirect URI and scopes to copy into the provider console, then "Sign in with …" |
+| Hosted connection broker (optional, later) | Same OAuth providers | One-click sign-in, built after Phase 4; see "Decisions" |
+| Per-user AI plan | ChatGPT plan through Sign in with ChatGPT | Each staff member clicks "Continue with ChatGPT"; see "AI access" |
+| One-click pay-per-use AI | OpenRouter (OAuth with PKCE) | The user signs in and OpenRouter issues a key that the user controls |
+| Public data | Visa Bulletin, processing times | "Turn on" with no credentials |
+| Inbound webhook | Website forms, generic sources | The CRM generates a URL and a signing secret |
+
+OAuth uses PKCE and a hashed one-time `state`, and asks only for the scopes of the capabilities
+the firm turns on. Google Workspace firms can mark their own app as internal, which avoids
+Google's verification for restricted Gmail scopes.
+
+### Webhooks
+
+- One endpoint: `/hooks/<connection token>/<capability>/`.
+- Each connector verifies its own signatures (HMAC, JWT, or Microsoft Graph `clientState` with
+  the subscription ID).
+- Invalid or unsigned requests are rejected in every environment.
+- Events are stored minimized, deduplicated by event ID, answered with a fast 2xx and processed
+  by the worker.
+
+**Reachability conflicts with the current security advice**, which tells firms to keep the CRM
+behind a VPN. Document three options:
+
+1. Expose only `/hooks/` publicly through the reverse proxy.
+2. Use polling, for providers that support it.
+3. Relay events through the broker, if one is built.
+
+The connect flow tells the firm which of these each connector needs.
+
+### Background jobs
+
+Use the `django-tasks` backport on Django 5.2 LTS, with its database-backed backend and a
+`worker` service in `compose.yaml`. It has the same API as `django.tasks` in Django 6.x, so
+moving to the next LTS later only changes imports. Verify the backport's current state before
+adopting it.
+
+A small scheduler command queues periodic syncs. With no active connections, the worker does
+nothing, and installations without connections can leave it out.
+
+### Outbound policy
+
+This generalizes `safety.py` from the firm CRM to every outbound action. Checks run in this
+order, and each result is recorded on `OutboundRequest`:
+
+1. Environment kill switch
+2. Connection is active and the capability is enabled
+3. Preview mode (new connections start here; a superuser turns on live sending)
+4. Actor role: manual sends can be restricted to admins
+5. Recipient rules: SMS opt-out, missing consent, recipient not linked to a contact
+6. Rate limits
+
+AI requests go through the same gate. Each AI feature is opt-in, and AI output is labeled as a
+draft that needs attorney review.
+
+### Matching into CRM records
+
+- Phone numbers are normalized to E.164 and emails are lowercased, both indexed on `Contact`.
+- Unmatched calls, texts and emails go to a "Needs matching" queue. Creating a lead from an
+  unknown caller is a setting, off by default.
+- Every synced record carries an `ExternalRef`, so re-syncs update rather than duplicate.
+- A dedupe tool ships from the start. The firm CRM needed `dedupe_appointments` after the fact.
+
+## AI access
+
+All AI features are opt-in and off by default. A superuser turns on each feature separately
+(consult prep memos, task suggestions, the assistant). Nothing goes to a model until both the
+feature and an AI connection are on.
+
+Firms can power AI in four ways. This reflects each vendor's published rules as of 2026-10-29:
+
+| Path | Who pays | Scope | Usable by a self-hosted web app today |
+|---|---|---|---|
+| Bring the CRM into Claude or ChatGPT through the MCP server | The user's own Claude or ChatGPT plan | Per user | Yes. Claude custom connectors work on Free (one connector), Pro, Max, Team and Enterprise. ChatGPT allows custom MCP servers, subject to workspace policy. |
+| Sign in with ChatGPT, using plan usage | The user's ChatGPT plan | Per user | Not confirmed; see below |
+| OpenRouter sign-in | OpenRouter pay-per-use credits | Per user or firm-wide | Yes |
+| API key or local model | The firm | Firm-wide | Yes |
+
+### Claude subscriptions: through the MCP server only
+
+Anthropic does not allow the "sign in with your Claude plan" approach. Its Claude Code legal and
+compliance page bars third-party apps from:
+- offering Claude.ai login,
+- routing requests through Free, Pro or Max plan credentials,
+- storing or passing along Claude.ai credentials or session tokens.
+
+Developers are told to use API keys from Claude Console or a supported cloud provider.
+
+So the CRM will not offer a Claude sign-in and will not accept pasted Claude subscription tokens.
+A firm that wants to use its Claude plan adds the CRM's MCP server as a custom connector in
+Claude. Claude does the AI work under the user's own plan and calls the CRM's tools, so the CRM
+never holds Anthropic credentials. For Claude inside the CRM's own features, the firm uses an
+Anthropic API key, or Claude through AWS Bedrock or Google Vertex AI. The Anthropic tile says all
+of this.
+
+### ChatGPT plans: build behind a flag, confirm with OpenAI
+
+Sign in with ChatGPT lets a signed-in user's requests run against their own ChatGPT plan. The
+developer docs name Plus and Pro. What the docs describe:
+
+- **Who can use it.** Plan usage is offered for "open-source and locally hosted apps." A paid or
+  remotely hosted app is directed to OpenAI's interest form instead.
+- **Callback.** The OAuth callback must be a loopback address on `127.0.0.1`. For an app on a
+  remote server, the user signs in on their own computer and the credentials are copied to the
+  server. The docs do not describe a web app on the firm's own domain with many staff signing in
+  from their browsers. On that copied-credentials path, OpenAI says it cannot yet revoke plan
+  access for a single server.
+- **Registration.** Each registration is tied to one user and one workspace. There is no client
+  secret. The flow uses PKCE and a stable host ID. Access tokens last one hour, and refresh
+  tokens last 30 days and rotate on each refresh.
+- **Requests.** Requests go to the Responses API with `store: false` and streaming. Function
+  tools work. Hosted tools such as file search and code interpreter do not.
+- **Limits and errors.** Users set per-app limits in their ChatGPT settings. Plus users share a
+  five-hour limit across every app they use. A limit error stops the request, and OpenAI never
+  switches to another billing method.
+- **Not stated.** The docs say nothing on retention or confidentiality beyond `store: false`, or
+  on whether Business and Enterprise workspaces are eligible.
+
+The plan for this path:
+
+1. Ask OpenAI the questions under "Open questions".
+2. Meanwhile, build the connector as Beta behind a flag:
+   - a per-user `Connection`,
+   - token refresh that never runs twice at once,
+   - OpenAI's required "Continue with ChatGPT" button, plus a "Using ChatGPT plan" label with a
+     "Manage usage" link,
+   - handling for OpenAI's plan-usage error codes.
+3. Mark it Ready only after OpenAI confirms this use in writing and its data terms are known.
+
+### Rules for per-user AI plans
+
+- A user's plan runs only that user's own interactive requests. It never runs another staff
+  member's request or a background job.
+- Background AI, such as overnight prep memos, needs a firm-wide connection: an API key,
+  OpenRouter or a local model.
+- Each AI feature declares whether it is interactive or background, and the outbound policy
+  enforces the routing.
+- Every AI request records which connection paid for it.
+
+### Confidentiality
+
+- Consumer plans (ChatGPT Plus and Pro, Claude Pro and Max) carry different data-use terms from
+  business plans and API access (ChatGPT Business and Enterprise, Claude Team and Enterprise,
+  both APIs).
+- The AI connect flow and the MCP setup guide recommend business plans or API access for client
+  data, and link to each vendor's terms.
+- A local model keeps everything on the firm's own hardware.
+
+### MCP server
+
+This moves up from Phase 5 to Phase 3.
+- **Sign-in.** Uses the MCP authorization flow, so Claude's "register automatically" option and
+  ChatGPT's authentication setup both work.
+- **Permissions.** Each staff member signs in as themselves and sees only what their CRM role
+  allows.
+- **Tools.** Read tools come first: search contacts, matter summary, deadlines. Write tools
+  (create a task, log a note, save a draft) require confirmation, stay off until a superuser
+  turns them on, and are audited on every call.
+- **Reachability.**
+  - Claude connects from Anthropic's cloud, so the MCP endpoint must be public or allow
+    Anthropic's IP ranges.
+  - ChatGPT offers a Secure MCP Tunnel for private servers.
+  - Otherwise, use the same expose-only-this-path guidance as webhooks.
+- **Sampling.** Do not use MCP sampling. The 2026-07-28 spec deprecates it.
+
+Sources, read 2026-10-29:
+- [Claude Code legal and compliance](https://code.claude.com/docs/en/legal-and-compliance)
+- [Claude custom connectors](https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp)
+- Sign in with ChatGPT developer docs:
+  - [open source](https://developers.openai.com/siwc/token-sharing-open-source)
+  - [sign-in](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)
+  - [self-hosted VMs](https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms)
+  - [preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
+- [ChatGPT custom MCP servers](https://developers.openai.com/plugins/deploy/connect-chatgpt)
+- [OpenRouter OAuth PKCE](https://openrouter.ai/docs/use-cases/oauth-pkce)
+- [MCP sampling (deprecated)](https://modelcontextprotocol.io/specification/2026-07-28/client/sampling)
+
+## User experience
+
+**Connections page** (`/connections/`)
+- Grouped by capability, with search and Ready, Beta and Wanted filters.
+- Tiles show the logo, a one-line description, the auth type ("API key" or "Sign in") and a
+  status badge once connected.
+- Wanted tiles link to that connector's public GitHub discussion. The CRM sends no telemetry and
+  never phones home.
+
+**Connect flow**
+1. Tile
+2. Detail page: what it does, data sent and received, permissions requested, and whether it needs
+   public webhooks
+3. Acknowledge the data flows
+4. Enter credentials or sign in
+5. The test call passes
+6. Choose capabilities and defaults, for example which mailbox, or which deposit account takes
+   trust money and which takes operating money
+7. Connected in preview mode, and the first sync is queued
+
+**Empty states.** Each automated area shows the connect prompt next to the manual path:
+
+| Screen | Empty state |
+|---|---|
+| Calls | "Connect your phone system to log calls automatically" · Log a call |
+| Billing | "Connect a payment processor to accept cards and ACH" · Record a payment |
+| Documents | "Connect e-signature to send retainers for signature" · Upload signed copy |
+| Matter status | "Connect USCIS case status to check receipts automatically" |
+| Calendar | "Connect your calendar to sync appointments" |
+
+**Health**
+- Each connection shows its status, last sync and recent errors, with a Reconnect button when
+  it needs reauthorization.
+- A dashboard banner appears for broken connections and for a stalled worker.
+- Disconnecting revokes the token at the provider where possible, deletes the credentials, and
+  asks whether to keep or remove the synced records.
+
+**First-run checklist.** A skippable list on the dashboard: firm profile, 2FA, email, calendar,
+phone, payments.
+
+## Security and professional responsibility
+
+- Port `EncryptedJSONField` (MultiFernet with key rotation). `check --deploy` fails when a
+  connection exists without `FIELD_ENCRYPTION_KEYS`.
+- Built-in TOTP 2FA with recovery codes. Keep a local superuser break-glass login when SSO is on.
+- Portable JSON export includes connection metadata but never credentials or secrets.
+- Webhook payloads are minimized before storage (port the firm CRM's data-minimization helpers).
+- Use the provider's hosted checkout and signing pages by redirect, so the staff CSP stays
+  strict and no vendor scripts load.
+- Data-flow acknowledgments support the firm's own confidentiality analysis (Model Rule 1.6(c);
+  ABA Formal Opinion 512 for generative AI). The software does not make that judgment for the
+  firm.
+- Payments connectors must state whether they can keep trust and operating funds separate. A
+  connector that cannot must say so on its tile. Version 1 records which account a payment went to
+  and does not attempt a full trust ledger.
+- Texting must handle STOP and opt-out in core. US business texting may need carrier (10DLC)
+  registration. The connect flow says so.
+
+## Features that work without connectors
+
+These are ported from the firm CRM as core features before their connectors, so every empty state
+has a working manual path:
+
+1. Communications log for calls, texts, emails and meetings, shown in the activity timeline
+2. Billing: invoices, line items flagged as earned fee or advance, manual payments, rates on the
+   existing time entries, and payment plans with reminders as work items
+3. USCIS notices and receipt tracking on matters
+4. Workflow templates, firm-authored, with none shipped
+5. Custom fields on contacts and matters
+6. Engagements: one consult or retainer covering several people
+7. An operating dashboard built from CRM data only
+8. REST API with scoped tokens and an API audit log
+9. Signed outbound webhooks
+
+## Phases
+
+| Phase | Scope | Done when |
+|---|---|---|
+| 0. Boundary | Docs and check scripts listed above | Release gate passes under the new rules |
+| 1. Foundation | Encryption, TOTP, worker and scheduler, core tables, registry and manifests, `catalog.toml`, Connections UI, API-key and BYO-OAuth flows, webhooks, outbound policy, data-flow acknowledgment, an `example` connector, and the contract test harness | The example connector can be connected, receive a signed webhook, sync, attempt a preview-mode send and disconnect, all audited. No vendor code yet. |
+| 2. Manual-first features | The nine features above, each with its empty state | Every screen is fully usable with zero connections |
+| 3. Port the firm's adapters, plus AI access | Google, Microsoft 365, Dialpad, Twilio (texting), Calendly, LawPay, OpenAI, Anthropic, USCIS Case Status and BIA Edge, rewritten against the interfaces with firm-specific behavior removed. AI access: the MCP server, OpenRouter, the OpenAI-compatible endpoint, and the ChatGPT plan connector behind a Beta flag | Each connector passes its contract tests on recorded fixtures and has its data flows filled in. A staff member can work with the CRM from Claude through the MCP server. |
+| 4. Second adapters | IMAP/SMTP, Twilio voice, Dialpad texting, Stripe, Cal.com, Documenso, Zoom, CourtListener, the website-form webhook, OIDC sign-in and SMTP system email | No interface needed a vendor-specific escape hatch; any interface fixes were made in core and the first adapter was updated |
+| 5. Ecosystem | Connector SDK guide and template, entry-point packages, filled-out Wanted catalog, n8n/Zapier/Make recipes, migration importers, WhatsApp, shipping, translation | An outside contributor can ship a Beta connector without touching `crm/` |
+| 6. Broker | Hosted OAuth broker and webhook relay | Starts after Phase 4 (see "Decisions") |
+
+## Testing
+
+- Every capability has a contract test suite, and every connector runs it against recorded
+  fixtures through the HTTP mock transport. CI never touches the network.
+- Fixtures use fictional `.test` data and pass the privacy check.
+- Negative tests: bad and missing signatures, replayed events, expired tokens, revoked scopes,
+  and outbound attempts blocked by each policy step.
+- An optional live sandbox suite runs by hand with each vendor's test credentials.
+- Add `connectors` to the coverage source. The 80% floor applies.
+
+## Porting notes from the firm CRM
+
+That code is private to the firm and not in this repo. Port by rewriting against the interfaces,
+not by copying whole modules. Review the firm's test fixtures for real client data before
+anything is copied.
+
+| Keep | Change |
+|---|---|
+| `EncryptedJSONField` with key rotation | The provider list is a hardcoded `TextChoices` → use a registry |
+| `safety.py` outbound decisions: preview by default, kill switch, admin-only send | Webhook secrets are global settings → store one per connection |
+| Normalized message and event dataclasses | Some webhooks are accepted unsigned in DEBUG → always fail closed |
+| Graph `clientState` plus subscription-ID verification | Microsoft exists twice (a separate app and a provider adapter) → one framework only |
+| Webhook payload data minimization | 2FA codes depend on an outbound email account → use TOTP |
+| Dedupe and repair commands | Capability booleans on the account → a list of enabled capabilities |
+
+## Decisions
+
+Decided 2026-10-29:
+
+1. **Hosted broker.** Design for it in Phase 1: the OAuth and webhook code must not assume the
+   installation is always the OAuth client. Build it after Phase 4, and decide then whether it is
+   a paid service. The tradeoffs stay the same. It would give one-click Google and Microsoft
+   sign-in, but it would see tokens in transit, need Google's annual security assessment for
+   restricted Gmail scopes, and be a service to operate.
+2. **Repo layout.** First-party connectors live in this repo. Third-party connectors are
+   installable packages.
+3. **Django version.** Stay on 5.2 LTS with the `django-tasks` backport (see "Background jobs").
+4. **Trust accounting.** Version 1 records which account a payment went to. No trust ledger.
+5. **AI features.** Port consult prep memos, task suggestions and the assistant. Each is opt-in
+   and off by default. See "AI access".
+6. **Name.** "Connections".
+7. **Third-party connector licensing.** The catalog lists only connectors under OSI-approved
+   licenses compatible with AGPL-3.0.
+
+## Open questions
+
+1. **ChatGPT plan usage for this kind of app.** Ask OpenAI, through its Sign in with ChatGPT
+   interest form:
+   - Does a firm-hosted, multi-user, open-source web app qualify?
+   - Can the callback be on the firm's own domain instead of `127.0.0.1`?
+   - Are ChatGPT Business and Enterprise workspaces eligible?
+   - What retention and confidentiality terms apply to plan-usage requests?
+
+## Risks
+
+- **Maintenance.** Every connector breaks when its vendor changes. Mitigation: Ready only with a
+  maintainer and passing contract tests, and automatic demotion to Beta when either lapses.
+- **Attack surface.** More credentials and more inbound endpoints. Mitigations: encryption,
+  scope minimization, fail-closed webhooks and audit records.
+- **Self-hosting friction.** BYO OAuth setup and public webhooks are real hurdles. Mitigations:
+  wizards, polling fallbacks, and possibly the broker.
+- **Trademarks.** Use names and logos only to identify compatibility, follow each vendor's brand
+  guidelines and show the non-affiliation notice.
+- **AI vendor policy.** Rules on using subscriptions in other apps changed several times during
+  2026. Keep each AI path in its own connector, so one vendor's change cannot break the others,
+  and recheck the rules before each release.

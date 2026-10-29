@@ -18,7 +18,7 @@ Django + Gunicorn
         └── private media volume (uploaded document bytes)
 ```
 
-There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment processor, email provider, cloud-drive API, or background worker.
+There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment processor, email provider, cloud-drive API, or background worker today. The connector work described below adds a database-backed worker and optional provider adapters. It does not add Redis, Celery, or a message broker.
 
 ## Domain model
 
@@ -39,6 +39,17 @@ All ordinary CRM pages require an active staff account. Destructive document/par
 
 Uploaded files are never routed through Django's public media URL. Downloads pass through an authenticated view and return `private, no-store`.
 
+## Connectors (planned)
+
+The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without changing the shape of core:
+
+- `crm/connect/`: a provider-neutral framework. It holds the connector registry, connections with encrypted credentials, the outbound policy, the webhook endpoint, OAuth, and the Connections page.
+- `connectors/<provider>/`: one optional adapter package per provider, implementing capability interfaces such as phone, mailbox, or payments. Third-party connectors install as Python packages through an entry point.
+- A `worker` process with a database-backed task queue for syncs and webhook processing. Installations with nothing connected do not need it.
+- A `/hooks/` path for provider webhooks and an MCP endpoint. Operators can expose just these paths through the reverse proxy without exposing the rest of the application.
+
+Core never imports from `connectors/`; `scripts/check_scope.sh` enforces this.
+
 ## Extension policy
 
-Prefer a separate project or narrow adapter over adding providers to core. New core dependencies require a clear security and maintenance benefit. Schema changes use ordinary checked-in Django migrations. Operators should run migrations as a separate release step before replacing application processes.
+Provider code belongs in `connectors/`, never in core. New core dependencies require a clear security and maintenance benefit. A provider SDK may be added only as an optional extra for its connector. Schema changes use ordinary checked-in Django migrations. Operators should run migrations as a separate release step before replacing application processes.
