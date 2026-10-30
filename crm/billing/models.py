@@ -290,6 +290,8 @@ class PaymentPlan(models.Model):
     )
     frequency = models.CharField(max_length=20, choices=Frequency.choices)
     reminder_days_before = models.PositiveSmallIntegerField(default=3)
+    # Email the client too, through the firm's system email connection.
+    email_reminders = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
@@ -348,6 +350,9 @@ class PaymentPlanInstallment(models.Model):
         on_delete=models.SET_NULL,
         related_name="payment_plan_installment",
     )
+    # When the client's email reminder was sent or tried, and why it was not sent, if not.
+    reminder_emailed_at = models.DateTimeField(null=True, blank=True)
+    reminder_email_error = models.CharField(max_length=255, blank=True)
 
     class Meta:
         ordering = ["sequence"]

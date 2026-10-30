@@ -4,8 +4,14 @@
 <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'connections' %}">Connections</a> · {{ maturity_label }}</p><h1 class="with-monogram"><span class="monogram" aria-hidden="true">{{ monogram }}</span>{{ entry.name }}</h1><p>{% if entry.description %}{{ entry.description }}{% elif not connector %}A service people have asked to connect.{% endif %}</p></div></div>
 {% if not connector %}
   <section class="panel narrow-content">
+    {% if works_through %}
+    <h2>Works through {{ works_through.name }}</h2>
+    <p class="muted">No connector made for {{ entry.name }} exists yet, but {{ entry.name }} works with the {{ works_through.name }} connector.</p>
+    <p><a class="primary-link" href="{% url 'connector_detail' works_through.key %}">Connect {{ works_through.name }}</a></p>
+    {% else %}
     <h2>Not built yet</h2>
     <p class="muted">No connector for {{ entry.name }} exists yet. Until one does, use the CRM's manual tools for this work.</p>
+    {% endif %}
     <p><a class="primary-link" href="https://github.com/chammond510/open-immigration-crm/blob/main/connectors/README.md">How to build a connector</a></p>
   </section>
 {% else %}

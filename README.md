@@ -12,7 +12,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - USCIS notices on each matter (receipts, appointments, RFEs, NOIDs, decisions), with response due dates and appointments added to the work queue, and a receipt-number status history
 - A communications log of calls, texts, emails, and meetings, with a per-contact texting opt-out. Records from connected services are matched to contacts by exact phone number or email, and anything unmatched waits in a Needs matching list
 - One-click time tracking against a matter or contact, with per-record totals
-- Billing for staff granted access: hourly rates, invoices whose lines are marked earned fee or trust advance, manually recorded payments with the account they were deposited to, payment plans with staff reminders, and a printable invoice
+- Billing for staff granted access: hourly rates, invoices whose lines are marked earned fee or trust advance, manually recorded payments with the account they were deposited to, payment plans with staff reminders (and client email reminders once the firm connects an email service), and a printable invoice
 - Firm-created per-matter checklists—zero legal templates ship with the project
 - Firm-written workflow templates: phases with checklist items and optional phase deadlines, applied to a matter by hand or automatically for new matters of a case type
 - Custom fields on contacts and matters (text, number, date, choice, yes or no), shown on forms and record pages and carried in exports, the API, and webhooks
@@ -62,6 +62,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **CourtListener** (Beta) searches case law from the Free Law Project, including the federal courts of appeals, the Supreme Court, and the Board of Immigration Appeals. Each staff member connects their own CourtListener account, as its terms require.
 - **Google Workspace** and **Microsoft 365** (Beta) connect each staff member's Gmail and Google Calendar, or Outlook mail and calendar. Their email with clients is filed on the right contact, they can send email from contact pages, and their appointments are kept in step with their calendar.
 - **IMAP and SMTP email** (Beta) does the same for a mailbox at almost any other provider, with an app password (see [the setup guide](connectors/imap_smtp/README.md)).
+- **SMTP server** (Beta) lets the CRM email clients itself, through the firm's mail server or an email delivery service such as Postmark, Amazon SES, SendGrid, or Mailgun: secure intake links when staff create them, and payment plan reminders when a plan asks for them (see [the setup guide](connectors/smtp/README.md)).
 
 The catalog lists the other providers people have asked for as Wanted.
 

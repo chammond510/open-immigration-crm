@@ -111,6 +111,38 @@ def snippet_of(raw):
     return re.sub(r"\s+", " ", text).strip()[:500]
 
 
+def open_smtp(host, port, security, username, password, *, refused):
+    """A signed-in SMTP connection over TLS with the certificate checked: SSL or STARTTLS."""
+    context = ssl.create_default_context()
+    try:
+        if security == "starttls":
+            server = smtplib.SMTP(host, int(port), timeout=TIMEOUT)
+            server.starttls(context=context)
+        else:
+            server = smtplib.SMTP_SSL(host, int(port), context=context, timeout=TIMEOUT)
+    except (OSError, ssl.SSLError, smtplib.SMTPException):
+        raise ConnectorError(
+            "The outgoing mail server could not be reached securely. Check the SMTP server, "
+            "port, and security."
+        ) from None
+    try:
+        server.login(username, password)
+    except smtplib.SMTPAuthenticationError:
+        server.close()
+        raise ConnectorError(refused, status=401) from None
+    except (OSError, smtplib.SMTPException):
+        server.close()
+        raise ConnectorError("The outgoing mail server would not sign in.") from None
+    return server
+
+
+def quit_quietly(server):
+    try:
+        server.quit()
+    except (OSError, smtplib.SMTPException):
+        pass
+
+
 def quoted(folder):
     return '"' + folder.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -323,31 +355,14 @@ class ImapSmtpConnector(Connector):
         )
 
     def smtp(self):
-        host, port = self.setting("smtp_host"), int(self.setting("smtp_port") or 465)
-        context = ssl.create_default_context()
-        try:
-            if self.setting("smtp_security") == "starttls":
-                server = smtplib.SMTP(host, port, timeout=TIMEOUT)
-                server.starttls(context=context)
-            else:
-                server = smtplib.SMTP_SSL(host, port, context=context, timeout=TIMEOUT)
-        except (OSError, ssl.SSLError, smtplib.SMTPException):
-            raise ConnectorError(
-                "The outgoing mail server could not be reached securely. Check the SMTP server, "
-                "port, and security."
-            ) from None
-        try:
-            server.login(self.username, self.credentials.get("password", ""))
-        except smtplib.SMTPAuthenticationError:
-            server.close()
-            raise ConnectorError(
-                "The outgoing mail server did not accept the address and app password.",
-                status=401,
-            ) from None
-        except (OSError, smtplib.SMTPException):
-            server.close()
-            raise ConnectorError("The outgoing mail server would not sign in.") from None
-        return server
+        return open_smtp(
+            self.setting("smtp_host"),
+            self.setting("smtp_port") or 465,
+            self.setting("smtp_security"),
+            self.username,
+            self.credentials.get("password", ""),
+            refused="The outgoing mail server did not accept the address and app password.",
+        )
 
     def test_connection(self):
         mailbox = self.mailbox()
@@ -355,11 +370,7 @@ class ImapSmtpConnector(Connector):
             mailbox.open("INBOX")
         finally:
             mailbox.close()
-        server = self.smtp()
-        try:
-            server.quit()
-        except (OSError, smtplib.SMTPException):
-            pass
+        quit_quietly(self.smtp())
 
     # Mail
 
@@ -443,10 +454,7 @@ class ImapSmtpConnector(Connector):
         except (OSError, smtplib.SMTPException):
             raise ConnectorError("The outgoing mail server did not take the email.") from None
         finally:
-            try:
-                server.quit()
-            except (OSError, smtplib.SMTPException):
-                pass
+            quit_quietly(server)
         if self.setting("copy_to_sent") != "no":
             self.keep_copy(message.as_bytes())
         return message_key({"message-id": message["Message-ID"]})

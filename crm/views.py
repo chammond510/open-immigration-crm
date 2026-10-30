@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from .comms import system_email
 from .forms import (
     ActivityForm,
     ChecklistItemForm,
@@ -890,17 +891,47 @@ def intake_form_update(request, pk):
     )
 
 
+def email_intake_link(invite, url, actor):
+    """Email a new intake link to its contact; return why it was not sent, or ""."""
+    firm = FirmProfile.load().name
+    name = invite.intake_form.name
+    expires = f"{invite.expires_at:%B} {invite.expires_at.day}, {invite.expires_at:%Y}"
+    try:
+        sent = system_email.send_system_email(
+            invite.contact,
+            subject=f"{name}: your secure link from {firm}",
+            body=(
+                f"Hello {invite.contact.first_name},\n\n"
+                f'{firm} asks you to fill in "{name}". Use this private link:\n\n{url}\n\n'
+                f"It works once and expires on {expires}. Please do not forward it; it is "
+                "meant only for you. If you did not expect this email, you can ignore it.\n"
+            ),
+            log_summary=f'Secure intake link for "{name}", expiring {expires}. '
+            "The link itself is not kept.",
+            purpose="Intake link",
+            actor=actor,
+            matter=invite.matter,
+        )
+    except ValidationError as exc:
+        return " ".join(exc.messages).rstrip(".")
+    return system_email.not_sent_reason(sent)
+
+
 @staff_required
 @require_http_methods(["GET", "POST"])
 def intake_invite_create(request):
-    form = IntakeInviteForm(request.POST or None)
+    form = IntakeInviteForm(request.POST or None, can_email=system_email.sender() is not None)
     if form.is_valid():
         invite, raw_token = form.issue(request.user)
         audit(request, "intake_invite.created", invite)
         url = request.build_absolute_uri(reverse("public_intake", kwargs={"token": raw_token}))
-        return render(
-            request, "crm/intake_invite_created.html", {"invite": invite, "intake_url": url}
-        )
+        context = {"invite": invite, "intake_url": url, "can_email": "send_email" in form.fields}
+        if form.cleaned_data.get("send_email"):
+            context["email_problem"] = email_intake_link(invite, url, request.user)
+            context["emailed"] = not context["email_problem"]
+            if context["emailed"]:
+                audit(request, "intake_invite.emailed", invite)
+        return render(request, "crm/intake_invite_created.html", context)
     return render(
         request,
         "crm/form_page.html",

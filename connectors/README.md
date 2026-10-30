@@ -44,6 +44,8 @@ connectors/
 
    Mailbox connectors declare a `send_email` outbound action. Its payload is `{"to": address, "subject": text, "body": plain text, "staff_email": the sender's email}`, and it returns the provider's message ID, which should be the ID the mailbox's own copy syncs under. Core's "Send an email" form uses it like "Send a text".
 
+   System email connectors declare `send_system_email`, for the email the CRM sends itself, such as secure intake links and payment plan reminders. Its payload is `{"to": address, "subject": text, "body": plain text, "sender_name": the firm's name}`, and it returns the message ID. Send it from the firm's address, as plain text, marked `Auto-Submitted: auto-generated`. The firm's oldest active system email connection sends, and core logs each sent email on the contact with its own summary, never the body.
+
    Payment connectors can declare `create_payment_link`. Its payload is `{"invoice_number", "amount" (a decimal string), "currency", "deposit_account" ("operating" or "trust"), "email", "name"}`, and it returns the link's HTTPS address. Core asks for one link per account still owed on an invoice, because advances go to trust and earned fees to operating, never mixed. The payment should come back as a `PaymentRecord` with the invoice number as `reference` and the account as `deposit_account`. A `PaymentRecord` with status `refunded` voids the payment, and `partially_refunded` leaves it for staff to adjust.
 
    Calendar connectors that take the CRM's appointments declare `save_event` and `delete_event`. The `save_event` payload is `{"event_id": the provider's ID or "", "title", "starts_at", "ends_at" (ISO 8601), "time_zone", "description", "crm_id"}`, and it returns the event's ID; create the event when `event_id` is empty or no longer exists. Add no attendees and send no invitations. Core puts each appointment on its staff member's connected calendars and keeps it in step, and it only changes events it created (`ExternalRef.created_by_crm`). List both actions in `owner_sync_actions`, which lets them run automatically on a personal connection, but only for records assigned to its owner.
@@ -97,6 +99,6 @@ connectors/
    - For a provider that proves an event with a shared value inside it rather than a signature, such as Microsoft Graph's `clientState`, also set `body_is_signed = False`. Such a connector must fetch what the event points to from the provider and never trust the body.
    - For a provider that sends no secret at all, such as LawPay, also set `webhook_uses_secret = False`. Treat each delivery only as a hint: read an ID, fetch the event from the provider, and record only what the provider returns.
    - Use phone numbers in the 555-0100 to 555-0199 range with a real area code, such as +1 202 555 0143.
-6. Remove the provider's entry from `catalog.toml` once its connector exists.
+6. Remove the provider's entry from `catalog.toml` once its connector exists. A wanted provider that already works through an installed connector, such as an email service that accepts SMTP, can say so with `works_through = "<that connector's key>"`; its tile then points there.
 
 Ready connectors need a named maintainer. `connectors/example_oauth/` shows an OAuth connector; its sign-in flow runs through the firm's own app registration, entered by a superuser on the connector's page.

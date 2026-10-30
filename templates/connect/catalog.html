@@ -19,7 +19,7 @@
   <section class="catalog-group" aria-labelledby="group-{{ group.key }}">
     <h2 id="group-{{ group.key }}">{{ group.label }}</h2>
     <div class="catalog-grid">
-      {% for tile in group.tiles %}<a class="catalog-tile" href="{% url 'connector_detail' tile.entry.key %}"><span class="monogram" aria-hidden="true">{{ tile.monogram }}</span><span class="tile-body"><strong>{{ tile.entry.name }}</strong><span>{% if tile.entry.connector %}{{ tile.auth }}{% else %}Not built yet{% endif %}</span></span><span class="tile-badges">{% if tile.connected %}<span class="badge active">Connected</span>{% endif %}{% if tile.test_only %}<span class="badge">Test only</span>{% endif %}<span class="badge maturity-{{ tile.entry.maturity }}">{{ tile.maturity_label }}</span></span></a>{% endfor %}
+      {% for tile in group.tiles %}<a class="catalog-tile" href="{% url 'connector_detail' tile.entry.key %}"><span class="monogram" aria-hidden="true">{{ tile.monogram }}</span><span class="tile-body"><strong>{{ tile.entry.name }}</strong><span>{% if tile.entry.connector %}{{ tile.auth }}{% elif tile.works_through %}Works through {{ tile.works_through.name }}{% else %}Not built yet{% endif %}</span></span><span class="tile-badges">{% if tile.connected %}<span class="badge active">Connected</span>{% endif %}{% if tile.test_only %}<span class="badge">Test only</span>{% endif %}<span class="badge maturity-{{ tile.entry.maturity }}">{{ tile.maturity_label }}</span></span></a>{% endfor %}
     </div>
   </section>
 {% empty %}

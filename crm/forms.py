@@ -6,6 +6,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.utils import timezone
 from django.utils.text import slugify
 
+from .comms.system_email import address_problem
 from .customfields.forms import CustomFieldsMixin
 from .models import (
     Activity,
@@ -249,11 +250,19 @@ class IntakeInviteForm(forms.Form):
     matter = forms.ModelChoiceField(queryset=Matter.objects.none(), required=False)
     expires_in_days = forms.IntegerField(min_value=1, max_value=30, initial=7)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, can_email=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["intake_form"].queryset = IntakeForm.objects.filter(is_active=True)
         self.fields["contact"].queryset = Contact.objects.all()
         self.fields["matter"].queryset = Matter.objects.exclude(status=Matter.Status.CLOSED)
+        if can_email:
+            self.fields["send_email"] = forms.BooleanField(
+                label="Email the link to the contact",
+                required=False,
+                initial=True,
+                help_text="Sent through the firm's email delivery service. The next page also "
+                "shows the link to copy.",
+            )
 
     def clean(self):
         cleaned = super().clean()
@@ -263,6 +272,10 @@ class IntakeInviteForm(forms.Form):
             is_party = matter.parties.filter(contact=contact).exists()
             if not is_party:
                 raise forms.ValidationError("The selected contact is not linked to that matter.")
+        if cleaned.get("send_email") and contact and address_problem(contact):
+            self.add_error(
+                "send_email", f"{address_problem(contact)} Or untick this to copy the link instead."
+            )
         return cleaned
 
     def issue(self, user):

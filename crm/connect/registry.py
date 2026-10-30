@@ -34,6 +34,8 @@ class CatalogEntry:
     maturity: str
     description: str = ""
     connector: type[Connector] | None = None
+    # For a wanted provider: the key of an installed connector it already works through.
+    works_through: str = ""
 
 
 def manifest_problems(cls):
@@ -208,6 +210,8 @@ def read_catalog_file(path):
         capabilities = tuple(item.get("capabilities", ()))
         if not KEY_PATTERN.match(key) or not item.get("name"):
             raise ImproperlyConfigured(f"Catalog entry {item!r} needs a valid key and a name.")
+        if item.get("works_through") and not KEY_PATTERN.match(item["works_through"]):
+            raise ImproperlyConfigured(f"Catalog entry {key!r} has an invalid works_through key.")
         unknown = set(capabilities) - set(Capability.values)
         if not capabilities or unknown:
             raise ImproperlyConfigured(
@@ -220,6 +224,7 @@ def read_catalog_file(path):
                 capabilities=tuple(sorted(capabilities)),
                 maturity=Maturity.WANTED,
                 description=item.get("description", ""),
+                works_through=item.get("works_through", ""),
             )
         )
     return entries

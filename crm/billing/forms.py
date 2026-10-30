@@ -88,3 +88,13 @@ class PaymentPlanForm(forms.Form):
         max_value=30,
         initial=3,
     )
+
+    def __init__(self, *args, can_email=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        if can_email:
+            self.fields["email_reminders"] = forms.BooleanField(
+                label="Also email the client a reminder then",
+                required=False,
+                help_text="Sent at 9 a.m. through the firm's email delivery service, to the "
+                "invoice contact's email address.",
+            )

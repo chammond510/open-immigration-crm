@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
 
+from crm.comms.system_email import address_problem
 from crm.models import AuditLog, TimeEntry, WorkItem
 
 from .models import (
@@ -225,13 +226,26 @@ def split_amount(total, count):
     return [each] * (count - 1) + [money(total - each * (count - 1))]
 
 
+def reminder_moment(due_date, days_before):
+    """9 a.m. on the reminder day."""
+    return timezone.make_aware(datetime.combine(due_date - timedelta(days=days_before), time(9)))
+
+
 def reminder_time(due_date, days_before):
-    moment = timezone.make_aware(datetime.combine(due_date - timedelta(days=days_before), time(9)))
-    return max(moment, timezone.now())
+    return max(reminder_moment(due_date, days_before), timezone.now())
 
 
 @transaction.atomic
-def create_plan(invoice, actor, *, count, first_due_date, frequency, reminder_days_before=3):
+def create_plan(
+    invoice,
+    actor,
+    *,
+    count,
+    first_due_date,
+    frequency,
+    reminder_days_before=3,
+    email_reminders=False,
+):
     """Split the invoice's balance into installments, each with a staff reminder work item."""
     invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
     if invoice.status not in OPEN_STATUSES or invoice.balance <= 0:
@@ -242,10 +256,13 @@ def create_plan(invoice, actor, *, count, first_due_date, frequency, reminder_da
         raise ValidationError(f"Choose between 2 and {MAX_INSTALLMENTS} installments.")
     if first_due_date < timezone.localdate():
         raise ValidationError("The first installment cannot be due in the past.")
+    if email_reminders and address_problem(invoice.contact):
+        raise ValidationError(address_problem(invoice.contact))
     plan = PaymentPlan.objects.create(
         invoice=invoice,
         frequency=frequency,
         reminder_days_before=reminder_days_before,
+        email_reminders=email_reminders,
         created_by=actor,
     )
     currency = BillingSettings.load().currency
@@ -301,6 +318,18 @@ def sync_plan(invoice):
         else PaymentPlan.Status.ACTIVE
     )
     plan.save(update_fields=["status"])
+    return plan
+
+
+def set_email_reminders(plan, actor, on):
+    """Turn the client's email reminders on or off for a plan in force."""
+    if plan.status != PaymentPlan.Status.ACTIVE:
+        raise ValidationError("Only an active payment plan's reminders can be changed.")
+    if on and address_problem(plan.invoice.contact):
+        raise ValidationError(address_problem(plan.invoice.contact))
+    plan.email_reminders = on
+    plan.save(update_fields=["email_reminders"])
+    record(actor, "payment_plan.email_reminders_" + ("on" if on else "off"), plan.invoice)
     return plan
 
 
