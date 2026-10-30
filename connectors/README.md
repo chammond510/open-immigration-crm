@@ -79,7 +79,7 @@ connectors/
 
    Core stores them:
    - calls, texts, and emails become communications, matched to a contact by E.164 phone number or email, or left for staff in Needs matching;
-   - calendar events with a known contact, and bookings, become appointments linked through `ExternalRef`. A `BookingRecord` with `replaces` (the earlier booking's `external_id`) moves that appointment rather than making another. For a contact a booking creates, core fills the contact field named by the connection's `lead_source_field` setting from the tracking value named by `lead_source_from` (utm_source by default), when it matches one of the field's choices;
+   - calendar events with a known contact, and bookings, become appointments linked through `ExternalRef`. A `LeadRecord` matches or creates a contact at the Inquiry stage and adds an intake note. A `BookingRecord` with `replaces` (the earlier booking's `external_id`) moves that appointment rather than making another. For a contact a booking creates, core fills the contact field named by the connection's `lead_source_field` setting from the tracking value named by `lead_source_from` (utm_source by default), when it matches one of the field's choices;
    - payments are recorded on the invoice they reference;
    - case status readings are recorded on the matter with that receipt number. A change creates a review task for staff. When the source cannot answer for a receipt number, the record carries a `problem` (`not_found`, `invalid_receipt`, or `unavailable`) instead of a status, and the matter shows it until a status arrives.
 

@@ -9,6 +9,8 @@ class CrmConfig(AppConfig):
         from . import (
             appointments,
             checks,  # noqa: F401
+            leads,
         )
 
         appointments.connect()
+        leads.connect()
