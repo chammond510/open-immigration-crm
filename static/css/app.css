@@ -82,6 +82,7 @@ small { color: var(--muted); }
 .message { padding: 10px 13px; border: 1px solid #c5d3f3; border-radius: 6px; background: var(--accent-soft); color: #1c448f; }
 .message.success { border-color: #badcc7; background: var(--success-soft); color: var(--success); }
 .message.error { border-color: #edc3c3; background: var(--danger-soft); color: var(--danger); }
+.message.warning { border-color: #ecd6a8; background: var(--warning-soft); color: var(--warning); }
 .panel { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .flush-panel { padding: 0; overflow: hidden; }
 .section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 17px; }

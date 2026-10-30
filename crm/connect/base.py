@@ -321,6 +321,15 @@ class Connector:
         """
         raise NotImplementedError
 
+    def deposit_accounts(self):
+        """For payments: the accounts this connection takes payments into.
+
+        "operating", "trust", or both. Core asks a connection for payment links only
+        into these, so a processor account that pays out to one bank account is
+        never asked to take money meant for the other.
+        """
+        return ("operating", "trust")
+
     def revoke(self):
         """Revoke the stored credentials at the provider, if it supports that."""
 

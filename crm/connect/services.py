@@ -146,16 +146,20 @@ def disconnect(connection, actor):
     return connection
 
 
-def enable_webhooks(connection, actor, provider_secret=""):
+def enable_webhooks(connection, actor, provider_secret="", *, registering=False):
     """Issue a new private /hooks/ URL token and signing secret; return both to show once.
 
     For connectors whose provider issues the signing secret, pass it as
-    ``provider_secret``. Calling this again rotates the token and secret.
+    ``provider_secret``. When the CRM is registering the address at such a provider
+    (``registering``), it may be left out: the connector's ``register_webhook()``
+    stores the secret the provider returns. Calling this again rotates the token and
+    secret.
     """
     cls = connection.connector_class
     if cls is None or cls.webhooks is None:
         raise ValidationError("This connection does not receive webhooks.")
-    if cls.webhooks.secret_source == "provider" and not provider_secret:
+    registers = registering and bool(cls.webhooks.register_label)
+    if cls.webhooks.secret_source == "provider" and not provider_secret and not registers:
         raise ValidationError(f"Paste the signing secret {cls.name} shows for this webhook.")
     if cls.webhooks.secret_source == "credential":
         # The provider signs with a credential staff already entered, such as an auth token.

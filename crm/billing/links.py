@@ -78,13 +78,35 @@ def current_links(invoice):
     return links
 
 
+def served_accounts(connection):
+    connector = connection.connector()
+    return tuple(connector.deposit_accounts()) if connector else ()
+
+
+def unserved(connection, invoice):
+    """Accounts still owed that this connection cannot take payments into."""
+    return [
+        account for account in links_needed(invoice) if account not in served_accounts(connection)
+    ]
+
+
 def create_links(connection, invoice, actor):
-    """Ask the processor for a link per account still owed; return the policy's requests."""
+    """Ask the processor for a link per account still owed; return the policy's requests.
+
+    Only accounts the connection takes payments into get a link; see ``unserved``.
+    """
     if not amounts_due(invoice):
         raise ValidationError("Nothing is left to pay on this invoice.")
     due = links_needed(invoice)
     if not due:
         raise ValidationError("Links for what is owed already exist; copy them below.")
+    served = served_accounts(connection)
+    due = {account: amount for account, amount in due.items() if account in served}
+    if not due:
+        names = " or ".join(Payment.Account(account).label.lower() for account in served)
+        raise ValidationError(
+            f"{connection.label} takes payments into the {names} only, and nothing is owed into it."
+        )
     contact = invoice.contact
     requests = []
     for account, amount in due.items():
