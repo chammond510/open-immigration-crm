@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Create an API token · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'api_access' %}">API access</a></p><h1>Create an API token</h1><p>The token acts as you. Give it only the access the tool needs; write access includes read access.</p></div></div>
+  <form method="post" class="panel stacked-form">
+    {% csrf_token %}
+    {% for error in form.non_field_errors %}<div class="message error">{{ error }}</div>{% endfor %}
+    <div class="form-grid">
+      {% for field in form %}{% if field.name != "scopes" %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endif %}{% endfor %}
+    </div>
+    <fieldset class="scope-picker">
+      <legend>Access</legend>
+      {% for error in form.scopes.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+      <div class="table-wrap"><table><thead><tr><th>Records</th><th>Read</th><th>Read and write</th></tr></thead><tbody>
+        {% for row in form.scope_rows %}<tr>
+          <td>{{ row.label }}</td>
+          <td><input type="checkbox" name="scopes" value="{{ row.read }}" aria-label="{{ row.label }}: read" {% if row.read_checked %}checked{% endif %}></td>
+          <td>{% if row.write %}<input type="checkbox" name="scopes" value="{{ row.write }}" aria-label="{{ row.label }}: read and write" {% if row.write_checked %}checked{% endif %}>{% else %}<span class="muted">Read only</span>{% endif %}</td>
+        </tr>{% endfor %}
+      </tbody></table></div>
+    </fieldset>
+    <div class="form-actions"><button class="button primary" type="submit">Create token</button><a class="button" href="{% url 'api_access' %}">Cancel</a></div>
+  </form>
+</div>
+{% endblock %}

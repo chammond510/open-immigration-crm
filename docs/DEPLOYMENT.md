@@ -125,6 +125,14 @@ Providers deliver events to `https://<your-host>/hooks/<token>/`, where each con
 
 Keep the trailing slash when entering a webhook URL at a provider; a redirect would drop the request body.
 
+## API
+
+The JSON API at `/api/v1/` is off until a superuser turns it on under **API access**. While it is off, every request is refused. See [API](API.md).
+- **Tokens.** Each token acts as one staff member. Only superusers can create tokens unless a superuser turns on **Let staff create their own tokens**.
+- **Exposure.** Tools that run in the cloud, such as Zapier, must reach `/api/` over HTTPS. Expose that path at the reverse proxy only if the firm uses such a tool. Self-hosted tools like n8n can call the CRM on the private network instead.
+- **Limits.** Each token is limited to `API_HOURLY_LIMIT` requests an hour (default 1000). Bodies over 256 KB are refused.
+- **Request log.** Every request is logged. Old rows can be removed with `python manage.py prune_api_log --days 365`.
+
 ## Reverse proxy
 
 Terminate TLS at the proxy and forward only to the private Gunicorn port. Preserve the original host, set `X-Forwarded-Proto` to `https`, cap request bodies consistently with `DOCUMENT_UPLOAD_MAX_BYTES`, disable caching for authenticated responses, and do not add third-party analytics to intake pages.

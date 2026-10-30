@@ -1,0 +1,11 @@
+{% if tokens %}<div class="table-wrap"><table><thead><tr><th>Token</th>{% if show_owner %}<th>Staff member</th>{% endif %}<th>Access</th><th>Expires</th><th>Last used</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
+  {% for token in tokens %}<tr>
+    <td><strong>{{ token.name }}</strong><small class="mono">{{ token.prefix }}…</small></td>
+    {% if show_owner %}<td>{{ token.user.get_full_name|default:token.user.username }}</td>{% endif %}
+    <td class="wrap">{{ token.scope_summary|default:"No access" }}</td>
+    <td>{{ token.expires_at|date:"M j, Y" }}</td>
+    <td>{{ token.last_used_at|date:"M j, g:i a"|default:"Never" }}</td>
+    <td><span class="badge {% if token.status == 'active' %}active{% elif token.status == 'revoked' %}failed{% else %}needs_attention{% endif %}">{{ token.status|capfirst }}</span>{% if token.revoked_by %}<small>by {{ token.revoked_by.get_full_name|default:token.revoked_by.username }}</small>{% endif %}</td>
+    <td>{% if token.status == 'active' %}<form method="post" action="{% url 'api_token_revoke' token.pk %}" data-confirm="Revoke {{ token.name }}? Anything using it stops working.">{% csrf_token %}<button class="button danger" type="submit">Revoke</button></form>{% endif %}</td>
+  </tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="empty-state"><h3>No tokens</h3><p>{% if show_owner %}No other staff member has created a token.{% else %}Create a token to connect an automation tool or script.{% endif %}</p></div>{% endif %}

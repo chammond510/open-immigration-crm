@@ -36,11 +36,20 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
 - `Connection`, `OutboundRequest`, `SyncRun`, `WebhookEvent`, `WorkerHeartbeat`, and `ConnectorApp` (in `crm/connect/`) hold connected provider accounts, the outbound log, sync history, received provider events, and worker check-ins; see Connectors below.
+- `ApiSettings`, `ApiToken`, and `ApiRequestLog` (in `crm/api/`) hold the firm's API switches, scoped bearer tokens that act as one staff member (only a SHA-256 hash is stored), and a log row for every API request. See [API](API.md).
 - `TwoFactorDevice` holds a user's authenticator secret, encrypted with `FIELD_ENCRYPTION_KEYS`; `RecoveryCode` stores only SHA-256 hashes of single-use recovery codes.
 
 ## Trust boundaries
 
 All ordinary CRM pages require an active staff account. Destructive document/party actions, firm settings, and exports require a superuser. A public intake URL is a bearer credential: possession allows one submission until the link expires or is revoked. Intake answers are displayed as unverified client-provided information.
+
+The JSON API (`/api/v1/`) accepts only bearer tokens, never session cookies, so it needs no CSRF protection. A token acts as its staff member and is limited to its scopes. It is refused when:
+- the API is off;
+- the token is revoked or expired;
+- its user is inactive or lacks the two-factor sign-in the firm requires;
+- it belongs to a staff member while staff tokens are turned off.
+
+Billing scopes also need the billing permission. Writes run in a transaction through the same forms and services as the web pages, and nothing can be deleted through the API.
 
 Uploaded files are never routed through Django's public media URL. Downloads pass through an authenticated view and return `private, no-store`.
 
@@ -92,7 +101,7 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
   - Token exchange uses the standard library over HTTPS only, with a size limit.
 
 Still planned:
-- an MCP endpoint
+- an MCP endpoint, built on the API's views and scopes
 
 Operators can expose just `/hooks/` (and later the MCP path) through the reverse proxy without exposing the rest of the application.
 

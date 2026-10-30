@@ -336,3 +336,9 @@ td.wrap { white-space: normal; min-width: 220px; }
 @media (max-width: 640px) {
   .timer-target { display: none; }
 }
+.scope-picker { margin: 0; padding: 0; border: 0; }
+.scope-picker legend { margin-bottom: 8px; font-weight: 700; }
+.scope-picker td { white-space: normal; }
+.check-label.wrap small { display: block; margin-top: 2px; }
+.api-page { display: grid; gap: 18px; min-width: 0; }
+.request-path { overflow-wrap: anywhere; }

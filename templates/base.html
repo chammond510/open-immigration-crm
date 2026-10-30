@@ -36,6 +36,7 @@
           {% endif %}
           <a href="{% url 'password_change' %}">Change password</a>
           <a href="{% url 'two_factor_settings' %}">Two-factor sign-in</a>
+          <a href="{% url 'api_access' %}">API access</a>
           <form action="{% url 'logout' %}" method="post">
             {% csrf_token %}
             <button class="quiet-button" type="submit">Sign out</button>

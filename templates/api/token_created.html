@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}API token created · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'api_access' %}">API access</a></p><h1>{{ token.name }}</h1><p>Copy the token now. It is shown only once; if it is lost, revoke it and create another.</p></div></div>
+  <section class="panel stacked-form">
+    <div class="field"><label for="api-token">Token</label><div class="copy-field"><input id="api-token" type="text" readonly value="{{ raw_token }}"><button class="button" type="button" data-copy-for="api-token">Copy</button></div><small>Treat this like a password. It expires on {{ token.expires_at|date:"F j, Y" }}.</small></div>
+    <div class="field"><label for="api-url">API address</label><div class="copy-field"><input id="api-url" type="text" readonly value="{{ api_url }}"><button class="button" type="button" data-copy-for="api-url">Copy</button></div><small>Send the token in the header <code>Authorization: Bearer &lt;token&gt;</code>. Paths end with a slash.</small></div>
+    <dl class="facts"><dt>Access</dt><dd>{{ token.scope_summary|default:"No access" }}</dd></dl>
+    <div class="form-actions"><a class="button primary" href="{% url 'api_access' %}">Done</a></div>
+  </section>
+</div>
+{% endblock %}
