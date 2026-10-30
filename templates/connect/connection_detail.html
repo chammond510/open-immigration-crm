@@ -19,6 +19,22 @@
       {% if user.is_superuser and not connection.data_flows_acknowledged and not disconnected %}<form method="post" action="{% url 'connection_acknowledge' connection.pk %}" class="panel">{% csrf_token %}<button class="button primary" type="submit">I reviewed this, and the firm accepts it</button></form>{% endif %}
     {% endif %}
     {% events_panel connection %}
+    {% if config_form %}
+      <form method="post" action="{% url 'connection_config' connection.pk %}" class="panel stacked-form">
+        {% csrf_token %}
+        <div class="section-heading"><div><h2>Settings</h2><p>How this connection works for the firm.</p></div></div>
+        {% for label, reason in config_form.unavailable.items %}<div class="message error">{{ label }} could not be loaded: {{ reason }}</div>{% endfor %}
+        {% for field in config_form %}
+          <div class="field">
+            {% if field.field.widget.input_type == "checkbox" %}<span class="field-label">{{ field.label }}</span><div class="choice-list">{{ field }}</div>
+            {% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+            {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+          </div>
+        {% endfor %}
+        {% if config_form.fields %}<div class="form-actions"><button class="button" type="submit">Save settings</button></div>{% endif %}
+      </form>
+    {% endif %}
     {% if not connector or connector.sync_capabilities %}<section class="panel"><div class="section-heading"><div><h2>Recent syncs</h2><p>Scheduled pulls of new records.</p></div></div>
       {% for run in sync_runs %}<div class="mini-record"><div><strong>{{ run.capability|capability_label }}</strong><span>{{ run.created_at|date:"M j, g:i a" }}{% if run.records_received %} · {{ run.records_received }} record{{ run.records_received|pluralize }}{% endif %}{% if run.error %} · {{ run.error }}{% endif %}</span></div><span class="badge {{ run.status }}">{{ run.get_status_display }}</span></div>{% empty %}<p class="muted">No syncs yet.</p>{% endfor %}
     </section>{% endif %}

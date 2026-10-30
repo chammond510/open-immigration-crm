@@ -27,6 +27,11 @@ def clean_settings(cls, config):
     """The connector's settings from ``config``, with defaults filled in and values checked."""
     cleaned = dict(config)
     for setting in cls.settings_fields:
+        if setting.options or setting.multiple:
+            # Chosen from live options on the connection's page, which checks them.
+            default = [] if setting.multiple else setting.default
+            cleaned[setting.name] = config.get(setting.name, default)
+            continue
         value = str(config.get(setting.name, setting.default)).strip()
         if setting.choices and value not in dict(setting.choices):
             raise ValidationError(f"Choose a valid {setting.label.lower()}.")

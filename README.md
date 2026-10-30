@@ -52,6 +52,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **Dialpad** (Beta) files calls, with recording links and Dialpad's AI recap, and texts on the right contact.
 - **Twilio** (Beta) files incoming texts and STOP replies.
 - With Dialpad or Twilio connected, staff can send texts from contact and matter pages. Each text passes the outbound policy, and its delivery status is shown.
+- **Calendly** (Beta) files consultations booked through Calendly: the contact is matched or created, the consult appointment is made, reschedules and cancellations follow, and the booking link's tracking can fill the lead source.
 - **Google Workspace** and **Microsoft 365** (Beta) connect each staff member's Gmail and Google Calendar, or Outlook mail and calendar. Their email with clients is filed on the right contact, they can send email from contact pages, and their appointments are kept in step with their calendar.
 
 The catalog lists the other providers people have asked for as Wanted.

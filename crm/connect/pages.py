@@ -13,7 +13,13 @@ from crm.models import AuditLog
 
 from . import oauth
 from .base import ApiKeyAuth, Capability, ConnectionScope, ConnectorError, Maturity, OAuthAuth
-from .forms import ConnectForm, ConnectionSettingsForm, ConnectorAppForm, ProviderSecretForm
+from .forms import (
+    ConnectForm,
+    ConnectionConfigForm,
+    ConnectionSettingsForm,
+    ConnectorAppForm,
+    ProviderSecretForm,
+)
 from .models import Connection, ConnectorApp
 from .registry import registry
 from .scheduler import worker_is_running
@@ -53,15 +59,26 @@ def auth_label(cls):
     return "No sign-in"
 
 
-def setting_values(connection):
-    """(label, value) for each of the connector's settings, with choices shown by name."""
+def setting_values(connection, form=None):
+    """(label, value) for each of the connector's settings, with choices shown by name.
+
+    Live options are named from the settings form, which has loaded them.
+    """
     cls = connection.connector_class
     config = connection.config or {}
-    return [
-        (setting.label, dict(setting.choices).get(value, value))
-        for setting in (cls.settings_fields if cls else ())
-        if (value := config.get(setting.name, setting.default))
-    ]
+    values = []
+    for setting in cls.settings_fields if cls else ():
+        value = config.get(setting.name, setting.default)
+        field = form.fields.get(f"setting_{setting.name}") if form else None
+        names = dict(getattr(field, "choices", None) or setting.choices)
+        if isinstance(value, list):
+            shown = (
+                ", ".join(str(names.get(v, v)) for v in value) if field else f"{len(value)} chosen"
+            )
+            values.append((setting.label, shown or "None chosen"))
+        elif value:
+            values.append((setting.label, names.get(value, value)))
+    return values
 
 
 def catalog_entry(entry, connected_keys):
@@ -263,7 +280,8 @@ def connection_detail(request, pk):
             }
         ),
         "capability_labels": [Capability(c).label for c in connection.enabled_capabilities],
-        "settings": setting_values(connection),
+        "config_form": (form := config_form(request, connection)),
+        "settings": setting_values(connection, form),
         "sync_runs": connection.sync_runs.all()[:5],
         "webhook_events": connection.webhook_events.all()[:5],
         "outbound_requests": connection.outbound_requests.select_related("actor")[:5],
@@ -314,6 +332,37 @@ def connection_settings(request, pk):
             f"admin-only {'on' if connection.outbound_admin_only else 'off'}",
         )
         messages.success(request, "Connection settings saved.")
+    return redirect("connection_detail", pk=pk)
+
+
+def config_form(request, connection, data=None):
+    """The connection's settings form, for those who manage it, while it is connected."""
+    cls = connection.connector_class
+    if (
+        cls is None
+        or not cls.settings_fields
+        or not can_manage(request.user, connection)
+        or connection.status == Connection.Status.DISCONNECTED
+    ):
+        return None
+    return ConnectionConfigForm(data, connector=connection.connector())
+
+
+@staff_required
+@require_POST
+def connection_config(request, pk):
+    connection = managed_connection_or_404(request, pk)
+    form = config_form(request, connection, request.POST)
+    if form is None:
+        raise Http404
+    if form.is_valid():
+        connection.config = {**(connection.config or {}), **form.settings()}
+        connection.save(update_fields=["config", "updated_at"])
+        record_audit(request.user, "connection.config_changed", connection)
+        messages.success(request, "Settings saved.")
+    else:
+        problems = [e for errors in form.errors.values() for e in errors]
+        messages.error(request, "Settings not saved: " + " ".join(problems))
     return redirect("connection_detail", pk=pk)
 
 

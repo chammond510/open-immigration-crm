@@ -17,6 +17,7 @@ never changed without notice. Changes that came from a calendar are not sent bac
 
 import contextvars
 import logging
+import re
 from datetime import timedelta
 
 from django.conf import settings
@@ -31,6 +32,7 @@ from crm.connect.records import BookingRecord, CalendarEventRecord
 from crm.connect.signals import records_received
 from crm.matching import match_contact, match_staff, normalize_email, normalize_phone
 
+from .customfields.models import CustomField
 from .models import Activity, Contact, WorkItem
 
 logger = logging.getLogger(__name__)
@@ -65,8 +67,10 @@ def same_appointment(title, starts_at, contact):
     )
 
 
-def save_appointment(connection, record, *, contact, description, etag=""):
+def save_appointment(connection, record, *, contact, description, etag="", moved=None):
+    """Create or update the appointment for a provider item; ``moved`` is one it replaces."""
     item, ref = refs.find(connection, WorkItem, record.external_id)
+    item = item or moved
     if record.cancelled:
         cancel(item)
         return item
@@ -103,6 +107,32 @@ def store_event(connection, record):
     )
 
 
+def squash(text):
+    return re.sub(r"[^a-z0-9]", "", str(text).lower())
+
+
+def lead_source(connection, record):
+    """The lead-source value for a new contact, from the booking's tracking, if it fits.
+
+    The connection names a contact choice field (``lead_source_field``) and the
+    tracking value to read (``lead_source_from``, utm_source by default). The value
+    must match one of the field's choices, ignoring case, spaces, and punctuation.
+    """
+    config = connection.config or {}
+    key = config.get("lead_source_field")
+    value = record.tracking.get(config.get("lead_source_from") or "utm_source") or ""
+    field = CustomField.objects.filter(
+        key=key,
+        applies_to=CustomField.AppliesTo.CONTACT,
+        field_type=CustomField.FieldType.CHOICE,
+        is_active=True,
+    ).first()
+    if not key or not value or field is None:
+        return {}
+    choice = next((c for c in field.choice_list if squash(c) == squash(value)), None)
+    return {key: choice} if choice else {}
+
+
 def booking_contact(connection, record):
     contact = match_contact(record.invitee_email) or match_contact(record.invitee_phone)
     if contact:
@@ -115,23 +145,33 @@ def booking_contact(connection, record):
         phone=normalize_phone(record.invitee_phone) or record.invitee_phone[:40],
         stage=Contact.Stage.CONSULTATION,
         assigned_to=connection.owner,
+        custom_fields=lead_source(connection, record),
     )
+    tracking = "; ".join(f"{k}: {v}" for k, v in sorted(record.tracking.items()) if v)
     Activity.objects.create(
         contact=contact,
         kind=Activity.Kind.SYSTEM,
         subject=f"Contact created from a booking through {connection.label}",
+        body=f"Booking link tracking: {tracking}" if tracking else "",
     )
     return contact
 
 
 def store_booking(connection, record):
     item, _ = refs.find(connection, WorkItem, record.external_id)
+    moved = None
+    if item is None and record.replaces:
+        # A reschedule: the earlier booking's appointment moves to the new time.
+        moved, _ = refs.find(connection, WorkItem, record.replaces)
+        item = moved
     if item is None and record.cancelled:
         return None
     contact = item.contact if item and item.contact else booking_contact(connection, record)
     details = [record.location] if record.location else []
     details += [f"{question}: {answer}" for question, answer in record.answers.items()]
-    return save_appointment(connection, record, contact=contact, description="\n".join(details))
+    return save_appointment(
+        connection, record, contact=contact, description="\n".join(details), moved=moved
+    )
 
 
 def store_records(sender, connection, capability, records, **kwargs):
