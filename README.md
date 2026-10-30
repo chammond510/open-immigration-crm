@@ -50,7 +50,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **Webhooks**, built in and vendor-neutral, sends signed CRM events to n8n, Zapier, Make, or any address the firm chooses.
 - **USCIS Case Status API** (Beta) checks the receipt numbers of open matters once a day through the firm's own developer.uscis.gov app, and creates a review task when a status changes.
 - **Dialpad** (Beta) files calls, with recording links and Dialpad's AI recap, and texts on the right contact.
-- **Twilio** (Beta) files incoming texts and STOP replies.
+- **Twilio** (Beta) files incoming texts and STOP replies, and can log the firm's Twilio calls on the right contact.
 - With Dialpad or Twilio connected, staff can send texts from contact and matter pages. Each text passes the outbound policy, and its delivery status is shown.
 - **AI models** (Beta): Anthropic, OpenAI, OpenRouter, or any OpenAI-compatible endpoint, including a model the firm runs itself. Behind a flag, staff can also use their own ChatGPT plan through Sign in with ChatGPT, until OpenAI confirms this use. They power consult prep memos, task suggestions that staff accept or dismiss, and a matter assistant whose changes wait for confirmation and whose drafts are never sent. AI features stay off until a superuser turns them on, and every request is logged with the connection that paid for it (see [AI features](docs/AI.md)).
 - **LawPay** (Beta) makes payment links for invoices, with advances paid into trust and earned fees into operating, and records LawPay payments and refunds on the invoice.

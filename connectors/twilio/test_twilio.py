@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest import mock
 from urllib.parse import parse_qs, urlencode
 
@@ -5,14 +6,15 @@ import httpx
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from crm.comms.models import Communication
 from crm.comms.texting import send_text
 from crm.connect import http
 from crm.connect.base import ConnectorError
-from crm.connect.models import Connection, OutboundRequest, WebhookEvent
+from crm.connect.models import Connection, OutboundRequest, SyncRun, WebhookEvent
 from crm.connect.services import acknowledge_data_flows, create_connection
-from crm.connect.tasks import process_webhook_event
+from crm.connect.tasks import process_webhook_event, run_sync
 from crm.connect.testing import ConnectorContract
 from crm.tests.factories import make_contact, make_user
 
@@ -23,6 +25,8 @@ TOKEN = "fictional-auth-token"
 SERVICE = "MG" + "0" * 31 + "2"
 FIRM_NUMBER = "+12025550143"
 CLIENT_NUMBER = "+12025550144"
+OTHER_LINE = "+12025550160"
+STAFF_CELL = "+12025550150"
 CREDENTIALS = {"account_sid": ACCOUNT, "auth_token": TOKEN}
 
 
@@ -32,8 +36,10 @@ class FakeTwilio:
     def __init__(self):
         self.requests = []
         self.unsubscribed = set()
-        self.numbers = {FIRM_NUMBER: "PN" + "0" * 31 + "3"}
+        self.numbers = {FIRM_NUMBER: "PN" + "0" * 31 + "3", OTHER_LINE: "PN" + "0" * 31 + "4"}
         self.sent = 0
+        self.calls = []
+        self.recordings = []
 
     def __call__(self, request):
         self.requests.append(request)
@@ -44,8 +50,23 @@ class FakeTwilio:
         form = {k: v[0] for k, v in parse_qs(request.content.decode()).items()}
         if path.endswith("/IncomingPhoneNumbers.json"):
             number = request.url.params.get("PhoneNumber")
-            found = [{"sid": self.numbers[number]}] if number in self.numbers else []
+            listed = [{"sid": sid, "phone_number": n} for n, sid in self.numbers.items()]
+            found = [n for n in listed if not number or n["phone_number"] == number]
             return httpx.Response(200, json={"incoming_phone_numbers": found})
+        if path.endswith("/Calls.json"):
+            # Two pages, to follow next_page_uri.
+            if request.url.params.get("PageToken"):
+                return httpx.Response(200, json={"calls": self.calls[1:], "next_page_uri": None})
+            following = f"/2010-04-01/Accounts/{ACCOUNT}/Calls.json?PageSize=1&PageToken=PA1"
+            return httpx.Response(
+                200,
+                json={
+                    "calls": self.calls[:1],
+                    "next_page_uri": following if len(self.calls) > 1 else None,
+                },
+            )
+        if path.endswith("/Recordings.json"):
+            return httpx.Response(200, json={"recordings": self.recordings})
         if path.endswith("/Messages.json"):
             if form["To"] in self.unsubscribed:
                 message = f"Attempt to send to unsubscribed recipient {form['To']}"
@@ -89,6 +110,20 @@ def inbound(body="Thank you", sid="SM" + "9" * 32, **extra):
     }
 
 
+def leg(sid, direction, sender, to, *, status="completed", duration="125", parent=None):
+    return {
+        "sid": sid.ljust(34, "0"),
+        "parent_call_sid": parent.ljust(34, "0") if parent else None,
+        "direction": direction,
+        "from": sender,
+        "to": to,
+        "status": status,
+        "duration": duration if status == "completed" else None,
+        "start_time": "Fri, 30 Oct 2026 15:00:00 +0000",
+        "date_created": "Fri, 30 Oct 2026 14:59:58 +0000",
+    }
+
+
 def connect(admin, sender=FIRM_NUMBER):
     connection = create_connection(
         "twilio",
@@ -110,7 +145,12 @@ class TwilioContractTests(FakeTwilioMixin, ConnectorContract, TestCase):
     invalid_credentials = {**CREDENTIALS, "auth_token": "wrong"}
     connection_config = {"sender": FIRM_NUMBER}
     outbound_examples = {"send_text": {"to": CLIENT_NUMBER, "body": "Fictional reminder"}}
+    sync_examples = {"phone": {}}
     webhook_secret = TOKEN
+
+    def setUp(self):
+        super().setUp()
+        self.twilio.calls = [leg("CA1", "inbound", CLIENT_NUMBER, FIRM_NUMBER)]
 
     def make_webhook(self, secret):
         return signed(self.webhook_url, inbound(), secret)
@@ -293,3 +333,96 @@ class TwilioWebhookTests(FakeTwilioMixin, TestCase):
         failed = self.turn_on()
         self.assertContains(failed, "could not be set up automatically")
         self.assertContains(failed, "not in this Twilio account")
+
+
+class TwilioCallTests(FakeTwilioMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.admin = make_user()
+        self.contact = make_contact(self.admin, phone="202-555-0144")
+        self.connection = create_connection(
+            "twilio",
+            label="Firm phone",
+            created_by=self.admin,
+            capabilities=["phone"],
+            credentials=dict(CREDENTIALS),
+        )
+        acknowledge_data_flows(self.connection, self.admin)
+        self.twilio.calls = [
+            # Answered on a staff phone: the inbound parent and the forwarding child.
+            leg("CA1", "inbound", CLIENT_NUMBER, FIRM_NUMBER),
+            leg("CA1B", "outbound-dial", FIRM_NUMBER, STAFF_CELL, parent="CA1"),
+            # Rang through to the staff phone, which did not answer.
+            leg("CA2", "inbound", CLIENT_NUMBER, FIRM_NUMBER, duration="20"),
+            leg("CA2B", "outbound-dial", FIRM_NUMBER, STAFF_CELL, status="no-answer", parent="CA2"),
+            # Placed from a browser: the outside party is only on the child leg.
+            leg("CA3", "inbound", "client:associate", ""),
+            leg("CA3B", "outbound-dial", FIRM_NUMBER, CLIENT_NUMBER, parent="CA3"),
+            # Placed through the API, unanswered, on another of the firm's numbers.
+            leg("CA4", "outbound-api", OTHER_LINE, "+12025550170", status="no-answer"),
+            # Still going: filed by a later sync.
+            leg("CA5", "inbound", CLIENT_NUMBER, FIRM_NUMBER, status="in-progress"),
+        ]
+        self.twilio.recordings = [
+            {"sid": "RE" + "1" * 32, "call_sid": "CA1".ljust(34, "0"), "duration": "151"}
+        ]
+
+    def sync(self):
+        run = SyncRun.objects.create(connection=self.connection, capability="phone")
+        run_sync.call(run.pk)
+        run.refresh_from_db()
+        return run
+
+    def test_each_call_is_filed_once_from_its_legs(self):
+        run = self.sync()
+        self.assertEqual(run.status, SyncRun.Status.SUCCEEDED, run.error)
+        calls = {c.external_id[:4].rstrip("0"): c for c in Communication.objects.all()}
+        self.assertEqual(set(calls), {"CA1", "CA2", "CA3", "CA4"})
+        answered, missed, browser, api = calls["CA1"], calls["CA2"], calls["CA3"], calls["CA4"]
+        self.assertEqual(
+            (answered.contact, answered.direction, answered.duration.total_seconds()),
+            (self.contact, "inbound", 125),
+        )
+        self.assertIn("Twilio recording RE1", answered.summary)
+        self.assertIn("(2:31)", answered.summary)
+        self.assertEqual((missed.contact, missed.direction), (self.contact, "inbound"))
+        self.assertEqual((missed.subject, answered.subject), ("Call missed", ""))
+        self.assertEqual((browser.contact, browser.direction), (self.contact, "outbound"))
+        self.assertEqual(
+            (api.counterpart, api.direction, api.subject),
+            ("+12025550170", "outbound", "Call no answer"),
+        )
+        self.assertEqual(run.cursor_after, {"since": "Fri, 30 Oct 2026 15:00:00 +0000"})
+        params = [r.url.params for r in self.twilio.requests if r.url.path.endswith("/Calls.json")]
+        first_day = (timezone.now() - timedelta(days=7, hours=2)).strftime("%Y-%m-%d")
+        self.assertEqual(params[0]["StartTime>"], first_day)
+        self.assertTrue(params[1].get("PageToken"))
+        # Later syncs go back over the last two hours from where the last one stopped.
+        self.twilio.requests = []
+        self.sync()
+        later = next(r for r in self.twilio.requests if r.url.path.endswith("/Calls.json"))
+        self.assertEqual(later.url.params["StartTime>"], "2026-10-30")
+
+        # The call that was still going is filed once it has ended.
+        self.twilio.calls[-1] = leg("CA5", "inbound", CLIENT_NUMBER, FIRM_NUMBER)
+        self.sync()
+        self.assertEqual(Communication.objects.count(), 5)
+
+    def test_only_the_chosen_numbers(self):
+        self.connection.config = {"call_numbers": [OTHER_LINE]}
+        self.connection.save()
+        self.sync()
+        self.assertEqual([c.external_id[:3] for c in Communication.objects.all()], ["CA4"])
+        self.client.force_login(self.admin)
+        detail = self.client.get(reverse("connection_detail", args=[self.connection.pk]))
+        self.assertContains(detail, "Log calls on these numbers")
+        self.assertContains(detail, OTHER_LINE)
+
+    def test_calls_alone_need_no_sender(self):
+        TwilioConnector(self.connection).test_connection()
+        texting = connect(self.admin, sender=FIRM_NUMBER)
+        texting.config = {}
+        with self.assertRaisesMessage(ConnectorError, "number or Messaging Service to send texts"):
+            TwilioConnector(texting).test_connection()
+        with self.assertRaisesMessage(ConnectorError, "number or Messaging Service to send texts"):
+            TwilioConnector(texting).perform("send_text", {"to": CLIENT_NUMBER, "body": "x"})
