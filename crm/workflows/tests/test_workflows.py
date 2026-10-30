@@ -1,3 +1,4 @@
+import time
 from datetime import timedelta
 from unittest import mock
 
@@ -53,6 +54,16 @@ class OutlineTests(TestCase):
         template = make_template(make_user())
         self.assertEqual(parse_outline(outline_text(template)), phases)
         self.assertIn("Finish (due in 1 day)", outline_text(template))
+
+    def test_long_lines_parse_quickly(self):
+        start = time.monotonic()
+        with self.assertRaisesMessage(ValidationError, "1 to 200 characters"):
+            parse_outline("Phase" + " " * 50_000 + "x")
+        self.assertEqual(
+            parse_outline("Phase" + " " * 50_000 + "(due in 3 days)")[0][:2], ("Phase", 3)
+        )
+        self.assertLess(time.monotonic() - start, 1)
+        self.assertEqual(parse_outline("Phase   (DUE IN 3 DAY)")[0][:2], ("Phase", 3))
 
     def test_outline_errors(self):
         for text, message in (

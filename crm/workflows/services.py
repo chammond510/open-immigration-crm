@@ -15,7 +15,9 @@ from .models import ItemTemplate, MatterPhase, MatterWorkflow, PhaseTemplate, Wo
 
 MAX_PHASES = 30
 MAX_ITEMS = 300
-DUE_PATTERN = re.compile(r"\s*\(due in (\d{1,3}) days?\)\s*$", re.IGNORECASE)
+# Lines are stripped first, so the pattern needs no surrounding whitespace, which
+# also keeps matching linear on long lines of spaces.
+DUE_PATTERN = re.compile(r"\(due in (\d{1,3}) days?\)$", re.IGNORECASE)
 
 
 def parse_outline(text):
@@ -42,7 +44,7 @@ def parse_outline(text):
             phases[-1][2].append((title, description))
             continue
         due = DUE_PATTERN.search(line)
-        name = DUE_PATTERN.sub("", line).strip() if due else line
+        name = line[: due.start()].strip() if due else line
         if not name or len(name) > 200:
             raise ValidationError(f"Line {number}: a phase name needs 1 to 200 characters.")
         phases.append((name, int(due.group(1)) if due else None, []))
