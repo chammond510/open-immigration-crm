@@ -12,8 +12,8 @@
 
 The [connector plan](CONNECTOR_PLAN.md) has the full design. Each phase must pass the release gate before the next begins.
 
-0. **Boundary.** Documentation and check scripts describe a provider-neutral core plus optional connectors.
-1. **Foundation.** Encrypted credential storage, built-in two-factor sign-in, a database-backed worker, the connector registry, the Connections page, webhooks, and the outbound policy, proven with a fictional example connector.
+0. **Boundary** (done). Documentation and check scripts describe a provider-neutral core plus optional connectors.
+1. **Foundation** (done). Encrypted credential storage, built-in two-factor sign-in, a database-backed worker, the connector registry, the Connections page, webhooks, and the outbound policy, proven with a fictional example connector.
 2. **Manual-first features.** A communications log, billing, receipt tracking, firm-authored workflow templates, custom fields, a REST API, and signed outbound webhooks, all usable with nothing connected.
 3. **First connectors and AI access.** Phone, mailbox, calendar, scheduling, payments, AI models, legal research, and case status, plus an MCP server so staff can use the CRM from their own AI assistant.
 4. **Second providers.** A second provider for each capability, so the interfaces stay provider-neutral.

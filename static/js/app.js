@@ -44,3 +44,16 @@ if (copyButton && copySource) {
     }
   });
 }
+
+document.querySelectorAll("[data-copy-for]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const source = document.getElementById(button.dataset.copyFor);
+    try {
+      await navigator.clipboard.writeText(source.value);
+      button.textContent = "Copied";
+    } catch {
+      source.select();
+      button.textContent = "Selected — copy it";
+    }
+  });
+});

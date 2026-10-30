@@ -3,6 +3,7 @@ import secrets
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from crm.models import AuditLog
@@ -141,3 +142,41 @@ def enable_webhooks(connection, actor, provider_secret=""):
     connection.save(update_fields=["webhook_token_hash", "webhook_secret", "updated_at"])
     record_audit(actor, "connection.webhooks_enabled", connection)
     return token, secret
+
+
+def can_manage(user, connection):
+    """Superusers manage every connection; staff manage only their own personal ones."""
+    return user.is_superuser or (connection.owner_id is not None and connection.owner_id == user.pk)
+
+
+def visible_connections(user):
+    """Firm-wide connections plus the user's own; superusers see every connection."""
+    connections = Connection.objects.select_related("owner")
+    if user.is_superuser:
+        return connections
+    return connections.filter(Q(owner__isnull=True) | Q(owner=user))
+
+
+def needs_worker(connection):
+    cls = connection.connector_class
+    return cls is not None and bool(cls.sync_capabilities or cls.webhooks)
+
+
+def connection_alerts(user):
+    """Problems a staff member should see: connections that need attention, a stopped worker."""
+    from .scheduler import worker_is_running
+
+    active = visible_connections(user).exclude(status=Connection.Status.DISCONNECTED)
+    troubled = [
+        connection
+        for connection in active
+        if connection.status in (Connection.Status.NEEDS_ATTENTION, Connection.Status.NEEDS_REAUTH)
+    ]
+    worker_needed = any(
+        connection.status == Connection.Status.ACTIVE and needs_worker(connection)
+        for connection in active
+    )
+    return {
+        "troubled": troubled,
+        "worker_stopped": worker_needed and not worker_is_running(),
+    }

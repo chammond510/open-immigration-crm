@@ -29,6 +29,31 @@ class Capability(models.TextChoices):
     MIGRATION = "migration", "Migration"
 
 
+# How "Connect your ..." prompts name each capability.
+CAPABILITY_NOUNS = {
+    Capability.PHONE: "phone system",
+    Capability.TEXTING: "texting service",
+    Capability.MAILBOX: "mailbox",
+    Capability.SYSTEM_EMAIL: "email delivery service",
+    Capability.CALENDAR: "calendar",
+    Capability.SCHEDULING: "scheduling tool",
+    Capability.VIDEO: "video meeting service",
+    Capability.PAYMENTS: "payment processor",
+    Capability.ACCOUNTING: "accounting software",
+    Capability.STORAGE: "document storage",
+    Capability.ESIGNATURE: "e-signature service",
+    Capability.AI_MODELS: "AI model",
+    Capability.TRANSLATION: "translation service",
+    Capability.LEGAL_RESEARCH: "legal research service",
+    Capability.CASE_STATUS: "case status source",
+    Capability.SHIPPING: "shipping carrier",
+    Capability.LEAD_CAPTURE: "lead sources",
+    Capability.MARKETING: "marketing accounts",
+    Capability.SIGN_IN: "sign-in provider",
+    Capability.MIGRATION: "previous practice system",
+}
+
+
 class Maturity(models.TextChoices):
     READY = "ready", "Ready"
     BETA = "beta", "Beta"
@@ -64,6 +89,8 @@ class OAuthAuth:
     token_url: str
     scopes: dict[str, tuple[str, ...]]
     docs_url: str = ""
+    # Provider-specific authorize parameters, such as a request for offline access.
+    extra_authorize_params: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -134,6 +161,9 @@ class ConnectorError(Exception):
 
 class Connector:
     """Base class for connectors. Subclasses declare their manifest as class attributes."""
+
+    # Templates receive connector classes; without this Django would try to call them.
+    do_not_call_in_templates = True
 
     key = ""
     name = ""

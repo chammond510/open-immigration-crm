@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Webhook address · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'connection_detail' connection.pk %}">{{ connection.label }}</a></p><h1>Webhook address{% if secret %} and secret{% endif %}</h1><p>Enter {% if secret %}these{% else %}this address{% endif %} in {{ connector.name }}'s webhook settings. {% if secret %}They are{% else %}It is{% endif %} shown only now; if lost, issue a new one from the connection page.</p></div></div>
+  <section class="panel stacked-form">
+    <div class="field"><label for="webhook-url">Webhook address</label><div class="copy-field"><input id="webhook-url" type="text" readonly value="{{ webhook_url }}"><button class="button" type="button" data-copy-for="webhook-url">Copy</button></div><small>Keep the trailing slash.</small></div>
+    {% if secret %}<div class="field"><label for="webhook-secret">Signing secret</label><div class="copy-field"><input id="webhook-secret" type="text" readonly value="{{ secret }}"><button class="button" type="button" data-copy-for="webhook-secret">Copy</button></div><small>Treat this like a password.</small></div>{% endif %}
+    {% if connector.webhooks.instructions %}<p class="muted">{{ connector.webhooks.instructions }}</p>{% endif %}
+    <div class="form-actions"><a class="button primary" href="{% url 'connection_detail' connection.pk %}">Done</a></div>
+  </section>
+</div>
+{% endblock %}

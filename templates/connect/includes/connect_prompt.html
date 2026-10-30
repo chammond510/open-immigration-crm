@@ -1,0 +1,1 @@
+<div class="connect-prompt">{% if connected %}<span>Connected through <a href="{% url 'connection_detail' connected.pk %}">{{ connected.label }}</a>.</span>{% else %}<span>Connect your {{ noun }}{% if purpose %} {{ purpose }}{% endif %}.</span><a class="button" href="{% url 'connections' %}?capability={{ capability }}">See {{ noun }} options</a>{% endif %}</div>

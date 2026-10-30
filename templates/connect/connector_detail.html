@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.name }} · Connections · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow"><a href="{% url 'connections' %}">Connections</a> · {{ maturity_label }}</p><h1 class="with-monogram"><span class="monogram" aria-hidden="true">{{ monogram }}</span>{{ entry.name }}</h1><p>{% if entry.description %}{{ entry.description }}{% elif not connector %}A service people have asked to connect.{% endif %}</p></div></div>
+{% if not connector %}
+  <section class="panel narrow-content">
+    <h2>Not built yet</h2>
+    <p class="muted">No connector for {{ entry.name }} exists yet. Until one does, use the CRM's manual tools for this work.</p>
+    <p><a class="primary-link" href="https://github.com/chammond510/open-immigration-crm/blob/main/connectors/README.md">How to build a connector</a></p>
+  </section>
+{% else %}
+<div class="detail-grid">
+  <div class="detail-main">
+    {% include "connect/includes/data_flows.html" with flows=connector.data_flows %}
+    {% if is_oauth %}
+      {% if user.is_superuser %}
+        <section class="panel">
+          <div class="section-heading"><div><h2>{% if app %}The firm's {{ entry.name }} app{% else %}First, register the firm's {{ entry.name }} app{% endif %}</h2><p>{{ entry.name }} signs in through an OAuth app the firm registers in its developer console. Use this exact redirect URI there.</p></div></div>
+          <div class="copy-field"><input id="callback-url" type="text" readonly value="{{ callback_url }}" aria-label="Redirect URI"><button class="button" type="button" data-copy-for="callback-url">Copy</button></div>
+          {% if connector.auth.docs_url %}<p><a class="primary-link" href="{{ connector.auth.docs_url }}" rel="noopener noreferrer">{{ entry.name }}'s instructions</a></p>{% endif %}
+          <form method="post" action="{% url 'connector_app' entry.key %}" class="stacked-form">
+            {% csrf_token %}
+            {% for field in app_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+            {% if app %}<small class="muted">Saved {{ app.updated_at|date:"M j, Y" }}. Enter the secret again to change these details.</small>{% endif %}
+            <div class="form-actions"><button class="button" type="submit">Save app details</button></div>
+          </form>
+        </section>
+      {% elif not app %}
+        <section class="panel"><p class="muted">A superuser must register the firm's {{ entry.name }} app before anyone can connect it.</p></section>
+      {% endif %}
+    {% endif %}
+    {% if form %}
+      <section class="panel">
+        <div class="section-heading"><div><h2>Connect {{ entry.name }}</h2><p>{% if form.personal %}This connects your own account. Only you can use it, and never for automations.{% else %}This connection is shared by the whole firm.{% endif %}</p></div></div>
+        <form method="post" class="stacked-form">
+          {% csrf_token %}
+          {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+          {% for field in form %}
+            <div class="field">
+              {% if field.name == "acknowledge" %}<label class="check-label wrap" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>
+              {% elif field.name == "capabilities" %}<span class="field-label">What to connect</span><div class="choice-list">{{ field }}</div>
+              {% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+              {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+              {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+          {% endfor %}
+          <div class="form-actions"><button class="button primary" type="submit">{% if is_oauth %}Continue to sign-in{% else %}Connect{% endif %}</button><a class="button" href="{% url 'connections' %}">Cancel</a></div>
+        </form>
+      </section>
+    {% elif not may_connect %}
+      <section class="panel"><p class="muted">Only a superuser can connect {{ entry.name }} for the firm.</p></section>
+    {% endif %}
+  </div>
+  <aside class="detail-aside">
+    <section class="panel facts"><h2>About this connector</h2><dl>
+      <dt>Capabilities</dt><dd>{{ capability_labels|join:", " }}</dd>
+      <dt>Sign-in</dt><dd>{{ auth_label }}</dd>
+      <dt>Connects</dt><dd>{% if connector.connection_scope == "user" %}Each staff member separately{% else %}The whole firm{% endif %}</dd>
+      <dt>Webhooks</dt><dd>{% if connector.webhooks %}Needs a public /hooks/ address{% else %}Not used{% endif %}</dd>
+      <dt>Maintainers</dt><dd>{{ connector.maintainers|join:", "|default:"None named yet" }}</dd>
+    </dl></section>
+    {% if connector.hidden %}<p class="privacy-note">This is a fictional connector for testing. It is listed only because hidden connectors are shown on this installation.</p>{% endif %}
+  </aside>
+</div>
+{% endif %}
+{% endblock %}
