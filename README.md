@@ -21,6 +21,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff
 - A JSON API for scripts and automation tools, off until a superuser turns it on, with scoped, expiring, revocable tokens and a log of every request (see [API](docs/API.md))
 - Signed outbound webhooks for automation tools: the firm chooses which CRM events are sent, and each one is retried and recorded (see [Outbound webhooks](docs/WEBHOOKS.md))
+- An MCP server so staff can work with the CRM from Claude or ChatGPT on their own plans. It is off until a superuser turns it on. Each person signs in as themselves, read tools come first, and write tools need a superuser's approval and the person's confirmation (see [AI assistants](docs/MCP.md)).
 - An operating dashboard built only from CRM data:
   - intake by stage, with lead sources from a custom field;
   - matters by status, case type, and workflow phase;

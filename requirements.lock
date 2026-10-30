@@ -4,10 +4,16 @@ asgiref==3.12.1
     # via
     #   django
     #   django-axes
+certifi==2026.10.23
+    # via requests
 cffi==2.1.1 ; platform_python_implementation != 'PyPy'
     # via cryptography
+charset-normalizer==3.5.2
+    # via requests
 cryptography==50.0.2
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   jwcrypto
 dj-database-url==3.1.2
     # via -r requirements.in
 django==5.2.17
@@ -15,10 +21,13 @@ django==5.2.17
     #   -r requirements.in
     #   dj-database-url
     #   django-axes
+    #   django-oauth-toolkit
     #   django-stubs-ext
     #   django-tasks
     #   django-tasks-db
 django-axes==8.3.1
+    # via -r requirements.in
+django-oauth-toolkit==3.4.1
     # via -r requirements.in
 django-stubs-ext==6.1.2
     # via
@@ -32,6 +41,12 @@ django-tasks-db==0.13.0
     # via -r requirements.in
 gunicorn==23.0.0
     # via -r requirements.in
+idna==3.20
+    # via requests
+jwcrypto==1.6.1
+    # via django-oauth-toolkit
+oauthlib==4.0.0
+    # via django-oauth-toolkit
 packaging==26.3
     # via gunicorn
 psycopg==3.2.13
@@ -40,6 +55,8 @@ psycopg-binary==3.2.13 ; implementation_name != 'pypy'
     # via psycopg
 pycparser==3.12 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
     # via cffi
+requests==2.34.2
+    # via django-oauth-toolkit
 segno==1.6.6
     # via -r requirements.in
 sqlparse==0.6.0
@@ -49,10 +66,15 @@ typing-extensions==4.16.0
     #   django-stubs-ext
     #   django-tasks
     #   django-tasks-db
+    #   jwcrypto
     #   psycopg
 tzdata==2026.3 ; sys_platform == 'win32'
     # via
     #   django
     #   psycopg
+urllib3==2.8.0
+    # via
+    #   django-oauth-toolkit
+    #   requests
 whitenoise==6.12.0
     # via -r requirements.in

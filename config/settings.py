@@ -100,6 +100,8 @@ INSTALLED_APPS = [
     "crm.workflows.apps.WorkflowsConfig",
     "crm.customfields.apps.CustomFieldsConfig",
     "crm.reports.apps.ReportsConfig",
+    "oauth2_provider",
+    "crm.mcp.apps.McpConfig",
 ]
 
 MIDDLEWARE = [
@@ -210,6 +212,58 @@ CONNECTOR_WEBHOOK_MAX_BYTES = int(os.environ.get("CONNECTOR_WEBHOOK_MAX_BYTES", 
 
 # REST API (/api/v1/). It stays off until a superuser turns it on under API access.
 API_HOURLY_LIMIT = int(os.environ.get("API_HOURLY_LIMIT", "1000"))
+
+# MCP server (/mcp) for Claude and ChatGPT, with django-oauth-toolkit as its
+# authorization server. It stays off until a superuser turns it on under AI
+# assistants. See docs/MCP.md.
+MCP_HOURLY_LIMIT = int(os.environ.get("MCP_HOURLY_LIMIT", "1000"))
+OAUTH2_PROVIDER_APPLICATION_MODEL = "oauth2_provider.Application"
+OAUTH2_PROVIDER = {
+    "SCOPES": {
+        "crm:read": "Read contacts, matters, work, notices, communications, and time",
+        "crm:write": "Add tasks, notes, communications, and status checks, if the firm allows it",
+    },
+    "DEFAULT_SCOPES": ["crm:read", "crm:write"],
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
+    "REFRESH_TOKEN_EXPIRE_SECONDS": 30 * 24 * 3600,
+    "AUTHORIZATION_CODE_EXPIRE_SECONDS": 60,
+    "ROTATE_REFRESH_TOKEN": True,
+    # A reused refresh token revokes its whole family. No grace period, because
+    # tokens are stored only as hashes and an old one could not be returned again.
+    "REFRESH_TOKEN_REUSE_PROTECTION": True,
+    "PKCE_REQUIRED": True,
+    # Ask every time; a client registered by anyone cannot reuse an earlier approval.
+    "REQUEST_APPROVAL_PROMPT": "force",
+    # Claude and ChatGPT use HTTPS callbacks. Plain-http loopback (Claude Code) stays off.
+    "ALLOWED_REDIRECT_URI_SCHEMES": ["https"],
+    "OAUTH2_RESPONSE_TYPES_SUPPORTED": ["code"],
+    "OAUTH2_GRANT_TYPES_SUPPORTED": ["authorization_code", "refresh_token"],
+    "OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED": [
+        "none",
+        "client_secret_post",
+        "client_secret_basic",
+    ],
+    "DCR_ENABLED": True,
+    "DCR_REGISTRATION_PERMISSION_CLASSES": ("crm.mcp.oauth.RegistrationPermission",),
+    "CIMD_ENABLED": True,
+    "CIMD_REGISTRATION_PERMISSION_CLASSES": ("crm.mcp.oauth.MetadataDocumentPermission",),
+    "OAUTH2_PROTECTED_RESOURCE_NAME": "Open Immigration CRM",
+    "OAUTH2_PROTECTED_RESOURCE_DOCUMENTATION": (
+        "https://github.com/chammond510/open-immigration-crm/blob/main/docs/MCP.md"
+    ),
+    # RFC 9700 (OAuth security best practice): hashed tokens, S256-only PKCE, the
+    # RFC 9207 iss parameter, no implicit or password grants, header-only tokens.
+    "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PASSWORD_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PKCE_METHOD": True,
+    "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
+    "COMPLIANT_BCP_RFC9700_AUTHZ_RESPONSE_ISS": True,
+    "COMPLIANT_BCP_RFC9700_TOKEN_STORAGE": True,
+    "COMPLIANT_BCP_RFC9700_REFRESH_TOKEN": True,
+    "COMPLIANT_BCP_RFC9700_REDIRECT_URI_SCHEME": True,
+    "COMPLIANT_BCP_RFC9700_REDIRECT_URI_MATCHING": True,
+    "COMPLIANT_BCP_RFC9700_PKCE_REQUIRED": True,
+}
 
 # Background work runs in `python manage.py run_worker`, which keeps its queue in
 # the application database. No Redis or message broker is involved.

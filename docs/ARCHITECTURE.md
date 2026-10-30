@@ -109,10 +109,18 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
   - Sign-in starts from a link rather than a form, because `form-action 'self'` blocks a form submission that redirects to the provider.
   - Token exchange uses the standard library over HTTPS only, with a size limit.
 
-Still planned:
-- an MCP endpoint, built on the API's views and scopes
+- **MCP server** (`crm/mcp/`, see [AI assistants](MCP.md)).
+  - `/mcp` is a stateless, JSON-only Streamable HTTP endpoint written as plain Django views. It serves MCP 2026-07-28 and the earlier `initialize` handshake.
+  - Sign-in uses django-oauth-toolkit as the OAuth authorization server, mounted at the root for the two `.well-known` documents and under `/o/`:
+    - PKCE with S256 only;
+    - tokens bound to the `/mcp` resource, and stored only as hashes;
+    - rotating refresh tokens;
+    - client registration by Client ID Metadata Documents, or by capped dynamic registration.
+  - The consent step is the toolkit's view, limited to active staff, with the content security policy widened to the one client's callback.
+  - Tools (`crm/mcp/tools.py`) run as the token's user, through the same forms and services as the web pages.
+  - `McpSettings` keeps the server and write tools off until a superuser turns them on. `McpToolCall` logs each call without its arguments or results.
 
-Operators can expose just `/hooks/` (and later the MCP path) through the reverse proxy without exposing the rest of the application.
+Operators can expose just `/hooks/` and the MCP paths through the reverse proxy without exposing the rest of the application.
 
 Core never imports from `connectors/`; `scripts/check_scope.sh` enforces this.
 

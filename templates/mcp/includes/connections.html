@@ -1,0 +1,9 @@
+{% if connections %}<div class="table-wrap"><table><thead><tr><th>Assistant</th>{% if show_owner %}<th>Staff member</th>{% endif %}<th>Connected</th><th>Returns to</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
+  {% for row in connections %}<tr>
+    <td><strong>{{ row.application.name|default:"Unnamed assistant" }}</strong><small>{{ row.registered_by }}</small></td>
+    {% if show_owner %}<td>{{ row.user.get_full_name|default:row.user.username }}</td>{% endif %}
+    <td>{{ row.since|date:"M j, Y" }}</td>
+    <td><span class="mono">{{ row.callback_host|default:"—" }}</span></td>
+    <td><form method="post" action="{% url 'mcp_disconnect' row.application.pk row.user.pk %}" data-confirm="Disconnect {{ row.application.name|default:'this assistant' }}?">{% csrf_token %}<button class="button danger" type="submit">Disconnect</button></form></td>
+  </tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="empty-state"><h3>None connected</h3><p>{% if show_owner %}No other staff member has connected an assistant.{% else %}Connect Claude or ChatGPT with the server URL above.{% endif %}</p></div>{% endif %}

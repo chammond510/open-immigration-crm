@@ -133,6 +133,20 @@ The JSON API at `/api/v1/` is off until a superuser turns it on under **API acce
 - **Limits.** Each token is limited to `API_HOURLY_LIMIT` requests an hour (default 1000). Bodies over 256 KB are refused.
 - **Request log.** Every request is logged. Old rows can be removed with `python manage.py prune_api_log --days 365`.
 
+## AI assistants (MCP)
+
+The MCP server lets staff use the CRM from Claude or ChatGPT; see [AI assistants](MCP.md). It is off until a superuser turns it on under **AI assistants**.
+- **Reachability.** Claude and ChatGPT call it from their own servers. Make these paths reachable over HTTPS:
+  - `/mcp`
+  - `/.well-known/oauth-authorization-server`
+  - `/.well-known/oauth-protected-resource/mcp`
+  - `/o/`
+
+  The rest of the CRM can stay private: staff browsers need the consent page, `/o/authorize/`, but the assistants do not.
+- **Correct addresses.** The proxy must pass the original host and `X-Forwarded-Proto` (set `TRUST_X_FORWARDED_PROTO=true`). Otherwise the addresses in the discovery documents will be wrong and assistants cannot sign in.
+- **Limits.** Each person is limited to `MCP_HOURLY_LIMIT` tool calls an hour (default 1000).
+- **Expired tokens.** Run `python manage.py cleartokens` from cron to delete expired tokens.
+
 ## Outbound webhooks
 
 The **Webhooks** connector sends the CRM events a superuser chooses to an automation tool's address; see [Outbound webhooks](WEBHOOKS.md).

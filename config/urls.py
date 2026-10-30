@@ -5,6 +5,7 @@ from django.urls import include, path
 from django.views.generic import RedirectView
 
 from crm.connect.views import receive_webhook
+from crm.mcp import views as mcp_views
 from crm.views import (
     AuditedPasswordChangeView,
     FirstRunAwareLoginView,
@@ -21,6 +22,10 @@ def health(request):
 
 urlpatterns = [
     path("health/", health, name="health"),
+    # MCP server and its sign-in; see docs/MCP.md.
+    path("mcp", mcp_views.endpoint, name="mcp"),
+    path("", include("crm.mcp.oauth_urls")),
+    path("settings/mcp/", include("crm.mcp.urls")),
     # Provider webhooks; the token is a per-connection secret. See docs/DEPLOYMENT.md.
     path("hooks/<str:token>/", receive_webhook, name="connector_webhook"),
     path(

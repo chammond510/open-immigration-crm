@@ -235,7 +235,7 @@ Firms can power AI in four ways. This reflects each vendor's published rules as 
 
 | Path | Who pays | Scope | Usable by a self-hosted web app today |
 |---|---|---|---|
-| Bring the CRM into Claude or ChatGPT through the MCP server | The user's own Claude or ChatGPT plan | Per user | Yes. Claude custom connectors work on Free (one connector), Pro, Max, Team and Enterprise. ChatGPT allows custom MCP servers, subject to workspace policy. |
+| Bring the CRM into Claude or ChatGPT through the MCP server | The user's own Claude or ChatGPT plan | Per user | Yes. Claude custom connectors work on Free (one connector), Pro, Max, Team and Enterprise. ChatGPT custom MCP connectors are confirmed for Business, Enterprise and Edu on the web; Free, Plus and Pro are unconfirmed (checked 2026-10-30). |
 | Sign in with ChatGPT, using plan usage | The user's ChatGPT plan | Per user | Not confirmed; see below |
 | OpenRouter sign-in | OpenRouter pay-per-use credits | Per user or firm-wide | Yes |
 | API key or local model | The firm | Firm-wide | Yes |
@@ -326,6 +326,11 @@ This moves up from Phase 5 to Phase 3.
   - ChatGPT offers a Secure MCP Tunnel for private servers.
   - Otherwise, use the same expose-only-this-path guidance as webhooks.
 - **Sampling.** Do not use MCP sampling. The 2026-07-28 spec deprecates it.
+- **Detail.** See "Phase 3 plan", PR 3.1. Checked 2026-10-30 against:
+  - the [MCP authorization spec](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization);
+  - Claude's [connector authentication](https://claude.com/docs/connectors/building/authentication) and [review criteria](https://claude.com/docs/connectors/building/review-criteria) docs;
+  - OpenAI's [Apps SDK authentication](https://developers.openai.com/apps-sdk/build/auth) and [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) docs;
+  - the [django-oauth-toolkit](https://django-oauth-toolkit.readthedocs.io/en/latest/) docs.
 
 Sources, read 2026-10-29:
 - [Claude Code legal and compliance](https://code.claude.com/docs/en/legal-and-compliance)
@@ -421,7 +426,7 @@ has a working manual path:
 | 1. Foundation | Encryption, TOTP, worker and scheduler, core tables, registry and manifests, `catalog.toml`, Connections UI, API-key and BYO-OAuth flows, webhooks, outbound policy, data-flow acknowledgment, an `example` connector, and the contract test harness | The example connector can be connected, receive a signed webhook, sync, attempt a preview-mode send and disconnect, all audited. No vendor code yet. |
 | 2. Manual-first features (done) | The features above except engagements, each with its empty state; see "Phase 2 plan" | Every capability's "Connect your ..." prompt sits beside a working manual path |
 | 3. Port the firm's adapters, plus AI access | Google, Microsoft 365, Dialpad, Twilio (texting), Calendly, LawPay, OpenAI, Anthropic, USCIS Case Status and BIA Edge, rewritten against the interfaces with firm-specific behavior removed. AI access: the MCP server, OpenRouter, the OpenAI-compatible endpoint, and the ChatGPT plan connector behind a Beta flag | Each connector passes its contract tests on recorded fixtures and has its data flows filled in. A staff member can work with the CRM from Claude through the MCP server. |
-| 4. Second adapters | IMAP/SMTP, Twilio voice, Dialpad texting, Stripe, Cal.com, Documenso, Zoom, CourtListener, the website-form webhook, OIDC sign-in and SMTP system email | No interface needed a vendor-specific escape hatch; any interface fixes were made in core and the first adapter was updated |
+| 4. Second adapters | IMAP/SMTP, Twilio voice, Dialpad texting, Stripe, Cal.com, Documenso, Zoom, CourtListener, Google Drive and OneDrive/SharePoint, the website-form webhook, OIDC sign-in and SMTP system email | No interface needed a vendor-specific escape hatch; any interface fixes were made in core and the first adapter was updated |
 | 5. Ecosystem | Connector SDK guide and template, entry-point packages, filled-out Wanted catalog, n8n/Zapier/Make recipes, migration importers, WhatsApp, shipping, translation | An outside contributor can ship a Beta connector without touching `crm/` |
 | 6. Broker | Hosted OAuth broker and webhook relay | Starts after Phase 4 (see "Decisions") |
 
@@ -449,6 +454,75 @@ Decided 2026-10-29:
 - The API uses plain Django views, not an API framework.
 - Invoices print from an HTML page; no PDF library.
 - Trust accounting stays at recording which account a payment went to.
+
+## Phase 3 plan
+
+Phase 3 connects real providers. It is done when every connector passes its contract tests on
+recorded, fictional fixtures and has its data flows filled in, and when a staff member can work
+with the CRM from Claude through the MCP server.
+
+The firm CRM's adapters were surveyed on 2026-10-30. They are rewritten against the framework,
+not copied: firm names, accounts, and business rules come out, and the bugs listed below are not
+carried over.
+
+| PR | Scope |
+|---|---|
+| 3.1 MCP server (`crm/mcp`, done) | Off until a superuser turns it on. **Endpoint**: `/mcp/`, written as plain Django views (the official SDK needs ASGI). It is stateless, answers with JSON only, checks `Origin`, and supports both protocol versions in use: 2026-07-28 (`server/discover`, version headers, no sessions) and the earlier version that Claude's docs still describe (`initialize`, `notifications/initialized`, `ping`). **Sign-in**: `django-oauth-toolkit` as the authorization server, which is tested for this role. It publishes authorization server metadata (RFC 8414) and protected resource metadata (RFC 9728), and returns a 401 with `WWW-Authenticate` to start sign-in. It accepts S256 PKCE only and binds tokens to the `resource` (RFC 8707), and refresh tokens rotate. Clients register through Client ID Metadata Documents (Claude's published identity and ChatGPT) or dynamic registration (Claude's "register automatically"), which is rate-limited. Each staff member approves access on a consent page after normal sign-in, including two-factor. **Tools** follow the API's scopes and the person's own permissions. Read tools: search contacts and matters, matter summary, deadlines, notices, communications, time, and invoices (with billing access). Write tools are off until a superuser turns them on: create a task, add a note, log a communication, record a status check. Every tool carries `title` and `readOnlyHint` or `destructiveHint`, so Claude and ChatGPT ask before writes. Every call is audited. Clients and tokens are listed on the API access page, where they can be revoked. **Setup guide** (`docs/MCP.md`): adding the connector in Claude and in ChatGPT. Reachability: `/mcp/`, `/o/`, and `/.well-known/` must be reachable from Claude (160.79.104.0/21) or ChatGPT (OpenAI's published list), and the consent page from staff browsers. ChatGPT's Secure MCP Tunnel does not carry the authorization server. |
+| 3.2 Provider framework | A shared HTTPS client (`httpx`): timeouts, retries that honour `Retry-After` on 429 and 5xx, response size limits, and a pagination helper. Tests use its mock transport with the network blocked. OAuth token refresh under a row lock before expiry; rotating refresh tokens are saved once; a refused refresh marks the connection "needs sign-in again". Typed records per capability (call, text, email, calendar event, booking, payment, case status) with a contract test suite each, replacing the free-form `Record.data`. Core handlers that store them: communications, appointments, payments, status checks. An `ExternalRef` table for records with no provider-ID field of their own, such as appointments. Matching: phone numbers stored in E.164 with a firm default country (`phonenumbers`) and emails lowercased, both indexed. Unmatched calls, texts, and emails go to a "Needs matching" list where staff link or create the contact. There is no partial-number matching. |
+| 3.3 USCIS Case Status | The firm's own developer.uscis.gov app (client credentials), with a sandbox or production switch. The worker checks the receipt numbers of open matters daily, spacing requests and backing off on 429, and records each reading with `record_status`. A change creates a review task for staff: no legal interpretation and no message to the client. |
+| 3.4 Phone and texting: Dialpad, Twilio | Dialpad: calls with recording links and Dialpad's AI recap arrive by signed webhook, with the data read from the verified token rather than the unsigned body. Texts arrive both ways, history can be backfilled through the API, and a setup check registers the webhook. Twilio: texts are sent through the outbound policy; inbound messages and delivery status arrive on webhooks verified with `X-Twilio-Signature`; STOP, START, and HELP keywords update the contact's opt-out in core. A "Send a text" form on contact pages works with either connector. |
+| 3.5 Google Workspace | Gmail as each staff member's mailbox (or one shared mailbox): incremental history sync with paging, matched messages stored as communications, others sent to Needs matching, and sending through the outbound policy. Google Calendar both ways: CRM appointments are pushed, events are pulled with paging, and near-duplicates are merged. The setup guide covers marking the firm's app as internal, which avoids Google's verification for the restricted Gmail scopes. |
+| 3.6 Microsoft 365 | Outlook mail and calendar through Microsoft Graph, in one code path with one stored token. Graph subscriptions are verified by `clientState` plus the subscription ID and renewed by the worker, with polling as a fallback. Sending and calendar writes go through the policy. |
+| 3.7 Calendly | An organization webhook, HMAC-signed with a timestamp window, for bookings, cancellations, and reschedules. A booking matches or creates the contact and creates the consult appointment. Which event types count as consults is set on the connection, not guessed from their names. UTM fields can fill a chosen lead-source custom field, which the operating dashboard groups by. |
+| 3.8 LawPay | Payment links for an invoice's balance (outbound, through the policy). Charge webhooks, verified with the signing secret, record payments on the invoice they reference; refunds void them. Each LawPay account maps to operating or trust. The endpoints and signature header are checked against current AffiniPay documentation before writing code. |
+| 3.9 AI models and AI settings | A provider-neutral AI interface: messages, function tools, and structured output. Connectors: OpenAI and Anthropic (API keys, plain HTTPS, OpenAI calls with `store: false`); OpenRouter (PKCE sign-in); and any OpenAI-compatible endpoint, which covers local models. An AI settings page where each feature is off until a superuser turns it on, and where the firm chooses which connection powers background work. Every request is logged with the connection that paid for it. Per-user connections run only that user's own interactive requests. |
+| 3.10 AI features | Ported from the firm CRM with generic prompts. **Consult prep memos** for upcoming consults, built from CRM data. **Task suggestions** that staff accept or dismiss; they are read-only until accepted. **A matter assistant**: CRM read tools, and write tools that need confirmation for each action; drafts are never sent. All output is labelled as an AI draft for attorney review. Tool results are treated as untrusted data. Conversations are kept in the CRM, not at the provider. |
+| 3.11 BIA Edge legal research | Authority search from a matter: query, results with citations and links, and saving selected authorities to the matter. Retries and a cold-start notice. |
+| 3.12 ChatGPT plan (Beta, behind a flag) | As described under "AI access". It becomes Ready only after OpenAI confirms this use in writing. |
+
+Ported, but changed:
+- **Signatures.** Webhooks are verified in every environment. Dialpad's data comes from the
+  verified token, and Twilio's inbound webhooks are signed and checked. The firm CRM accepted
+  unsigned requests in debug mode, and its Twilio integration had no inbound webhook at all.
+- **Texting.** Texts go through the outbound policy. Without credentials they fail rather than
+  being marked sent.
+- **Paging.** Calendar and mailbox syncs follow every page. Rate limits back off with `Retry-After`.
+- **Tokens.** One token per connection, refreshed under a lock. The firm CRM stored Microsoft
+  tokens twice.
+- **Storage at providers.** OpenAI requests use `store: false`, and AI conversations are kept in
+  the CRM.
+- **Matching.** No last-7-digit phone matching. Unmatched records wait for staff.
+
+Not in Phase 3:
+- Google Drive storage moves to Phase 4, with OneDrive and SharePoint.
+- Cover letter drafting is not ported. It depends on firm exemplars, and the firm CRM's exemplar
+  fixtures contain real-looking client data.
+- Google Ads, GA4, and website call tracking stay "Later" (marketing analytics and lead capture).
+- The firm CRM's Obsidian vault sync is not ported, because it copies personal data out of the
+  CRM.
+
+Decided 2026-10-30:
+- Order: the MCP server first (3.1), because it needs no provider and lets firms use their own
+  Claude or ChatGPT plans at once. Then the framework (3.2), then the providers.
+- New dependencies:
+  - `django-oauth-toolkit` (3.4 or later) for the MCP authorization server, rather than writing
+    OAuth endpoints by hand.
+  - `httpx` for the shared client and its mock transport.
+  - `phonenumbers` for international phone numbers.
+
+  Provider SDKs stay out; connectors use plain HTTPS.
+- MCP sign-in, checked while building 3.1. django-oauth-toolkit 3.4:
+  - stores tokens only as hashes (`COMPLIANT_BCP_RFC9700_TOKEN_STORAGE`);
+  - sends the RFC 9207 `iss`, which ChatGPT's preferred callback needs;
+  - accepts S256-only PKCE.
+
+  Hashed storage rules out a refresh-token grace period, so a reused refresh token revokes its
+  chain. Dynamic registration stays available beside Client ID Metadata Documents. Claude Code's
+  plain-http loopback callback is not accepted.
+- Maturity: every ported connector ships as Beta. It becomes Ready once it has passed a live check
+  against a real account and has a named maintainer.
+- Live checks run by hand, on a non-production installation with the firm's own accounts. They
+  never run in CI, and nothing recorded from a real account is committed.
 
 ## Testing
 
