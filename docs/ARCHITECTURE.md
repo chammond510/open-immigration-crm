@@ -18,7 +18,7 @@ Django + Gunicorn
         └── private media volume (uploaded document bytes)
 ```
 
-There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment processor, email provider, cloud-drive API, or background worker today. The connector work described below adds a database-backed worker and optional provider adapters. It does not add Redis, Celery, or a message broker.
+There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment processor, email provider, or cloud-drive API. An optional `worker` process (`python manage.py run_worker`) runs connector syncs and webhook processing from a queue kept in the application database; installations with nothing connected do not need it.
 
 ## Domain model
 
@@ -32,7 +32,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
-- `Connection` and `OutboundRequest` (in `crm/connect/`) hold connected provider accounts and the log of outbound actions; see Connectors below.
+- `Connection`, `OutboundRequest`, `SyncRun`, `WebhookEvent`, and `WorkerHeartbeat` (in `crm/connect/`) hold connected provider accounts, the outbound log, sync history, received provider events, and worker check-ins; see Connectors below.
 - `TwoFactorDevice` holds a user's authenticator secret, encrypted with `FIELD_ENCRYPTION_KEYS`; `RecoveryCode` stores only SHA-256 hashes of single-use recovery codes.
 
 ## Trust boundaries
@@ -63,14 +63,22 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
   - `testing.ConnectorContract` holds the shared contract tests. They block network access.
 - `connectors/<provider>/` holds one optional adapter package per provider. `connectors/example/` is a fictional connector, hidden from the catalog, that exercises the framework.
 
+- **Worker.** `python manage.py run_worker` runs two things:
+  - a scheduler thread that records a `WorkerHeartbeat` and queues a `SyncRun` for each due capability of each active connection;
+  - the `django-tasks-db` worker, which runs syncs and webhook processing from a queue table in the application database.
+
+  Each sync resumes from the previous successful run's cursor. Synced and webhook records are delivered through the `records_received` signal; features subscribe to it, and the framework keeps only the run or event record.
+- **Webhooks.** `/hooks/<token>/` accepts provider events.
+  - The token is unique to each connection and stored only as a SHA-256 hash. The signing secret is stored encrypted.
+  - An event is stored only after its signature verifies, and it is stored minimized and encrypted. It is answered quickly, deduplicated by provider event ID, and processed by the worker, which then deletes the payload.
+  - Unknown tokens, inactive connections, bad signatures, oversized bodies, and malformed events are rejected without detail.
+
 Still planned:
-- a `worker` process with a database-backed task queue for syncs and webhook processing (installations with nothing connected will not need it)
-- a `/hooks/` path for provider webhooks
 - OAuth sign-in
 - the Connections page
 - an MCP endpoint
 
-Operators will be able to expose just the webhook and MCP paths through the reverse proxy without exposing the rest of the application.
+Operators can expose just `/hooks/` (and later the MCP path) through the reverse proxy without exposing the rest of the application.
 
 Core never imports from `connectors/`; `scripts/check_scope.sh` enforces this.
 

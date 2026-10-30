@@ -1,3 +1,20 @@
+x-app-environment: &app-environment
+  DEBUG: "False"
+  SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+  FIELD_ENCRYPTION_KEYS: ${FIELD_ENCRYPTION_KEYS:?Set FIELD_ENCRYPTION_KEYS in .env}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
+  SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-False}
+  SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-False}
+  CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-False}
+  TRUST_X_FORWARDED_PROTO: ${TRUST_X_FORWARDED_PROTO:-False}
+  TIME_ZONE: ${TIME_ZONE:-America/Chicago}
+  POSTGRES_DB: opencrm
+  POSTGRES_USER: opencrm
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-only-change-me}
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+
 services:
   db:
     image: postgres:17.6-bookworm
@@ -20,26 +37,24 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      DEBUG: "False"
-      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
-      FIELD_ENCRYPTION_KEYS: ${FIELD_ENCRYPTION_KEYS:?Set FIELD_ENCRYPTION_KEYS in .env}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
-      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-False}
-      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-False}
-      CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-False}
-      TRUST_X_FORWARDED_PROTO: ${TRUST_X_FORWARDED_PROTO:-False}
-      TIME_ZONE: ${TIME_ZONE:-America/Chicago}
-      POSTGRES_DB: opencrm
-      POSTGRES_USER: opencrm
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-only-change-me}
-      POSTGRES_HOST: db
-      POSTGRES_PORT: "5432"
+    environment: *app-environment
     ports:
       - "127.0.0.1:${APP_PORT:-8000}:8000"
     volumes:
       - media_data:/app/media
+
+  # Runs connector syncs and webhook processing. Installations with nothing
+  # connected can stop it: docker compose stop worker
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["python", "manage.py", "run_worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *app-environment
+    healthcheck:
+      disable: true
 
 volumes:
   postgres_data:

@@ -10,7 +10,14 @@ from importlib.metadata import entry_points
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-from .base import AUTH_TYPES, Capability, ConnectionScope, Connector, Maturity
+from .base import (
+    AUTH_TYPES,
+    WEBHOOK_SECRET_SOURCES,
+    Capability,
+    ConnectionScope,
+    Connector,
+    Maturity,
+)
 
 ENTRY_POINT_GROUP = "open_immigration_crm.connectors"
 KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
@@ -51,6 +58,14 @@ def manifest_problems(cls):
     flows = cls.data_flows
     if flows is None or flows.version < 1 or not (flows.sends or flows.receives):
         problems.append("data_flows must have a version of at least 1 and list what moves")
+    if not set(cls.sync_capabilities) <= set(cls.capabilities):
+        problems.append("sync_capabilities must be declared capabilities")
+    if cls.webhooks is not None and (
+        not cls.webhooks.capabilities
+        or not set(cls.webhooks.capabilities) <= set(cls.capabilities)
+        or cls.webhooks.secret_source not in WEBHOOK_SECRET_SOURCES
+    ):
+        problems.append("webhooks must use declared capabilities and a crm or provider secret")
     stray = set(cls.outbound_actions.values()) - set(cls.capabilities)
     if stray:
         problems.append(f"outbound actions use undeclared capabilities: {', '.join(sorted(stray))}")

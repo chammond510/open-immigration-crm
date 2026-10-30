@@ -1,7 +1,7 @@
 """What a connector declares and the behavior every connector provides."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db import models
 
@@ -102,6 +102,32 @@ class SyncBatch:
     cursor: dict
 
 
+WEBHOOK_SECRET_SOURCES = ("crm", "provider")
+
+
+@dataclass(frozen=True)
+class WebhookSpec:
+    """How a provider delivers events to the connection's private /hooks/ URL.
+
+    ``secret_source`` is "crm" when the CRM generates the signing secret for staff
+    to paste at the provider, or "provider" when staff paste the provider's secret
+    into the CRM.
+    """
+
+    capabilities: tuple[str, ...]
+    secret_source: str = "crm"
+    instructions: str = ""
+
+
+@dataclass(frozen=True)
+class WebhookEnvelope:
+    """The minimum of a verified webhook that processing needs; stored encrypted."""
+
+    event_id: str
+    capability: str
+    payload: dict
+
+
 class ConnectorError(Exception):
     """A provider failure. The message is stored and shown, so it must not contain client data."""
 
@@ -120,6 +146,10 @@ class Connector:
     maintainers: tuple[str, ...] = ()
     # Outbound action name -> the capability it belongs to.
     outbound_actions: dict[str, str] = {}
+    # Capabilities the worker pulls on a schedule, and how often.
+    sync_capabilities: frozenset[str] = frozenset()
+    sync_interval = timedelta(minutes=15)
+    webhooks: WebhookSpec | None = None
     # Hidden connectors (such as the fictional example) stay out of the catalog.
     hidden = False
 
@@ -148,3 +178,21 @@ class Connector:
 
     def revoke(self):
         """Revoke the stored credentials at the provider, if it supports that."""
+
+    def verify_webhook(self, body, headers, secret):
+        """Return True only if ``body`` carries a valid provider signature made with ``secret``.
+
+        Use a constant-time comparison. Never accept an unsigned request.
+        """
+        raise NotImplementedError
+
+    def parse_webhook(self, body, headers):
+        """Return a WebhookEnvelope holding only what processing needs.
+
+        Called after verification. Raise ConnectorError for a malformed event.
+        """
+        raise NotImplementedError
+
+    def handle_webhook(self, capability, payload):
+        """Turn a stored webhook payload into Records. Runs in the worker."""
+        raise NotImplementedError

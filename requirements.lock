@@ -15,7 +15,20 @@ django==5.2.17
     #   -r requirements.in
     #   dj-database-url
     #   django-axes
+    #   django-stubs-ext
+    #   django-tasks
+    #   django-tasks-db
 django-axes==8.3.1
+    # via -r requirements.in
+django-stubs-ext==6.1.2
+    # via
+    #   django-tasks
+    #   django-tasks-db
+django-tasks==0.12.0
+    # via
+    #   -r requirements.in
+    #   django-tasks-db
+django-tasks-db==0.13.0
     # via -r requirements.in
 gunicorn==23.0.0
     # via -r requirements.in
@@ -31,8 +44,12 @@ segno==1.6.6
     # via -r requirements.in
 sqlparse==0.6.0
     # via django
-typing-extensions==4.16.0 ; python_full_version < '3.13'
-    # via psycopg
+typing-extensions==4.16.0
+    # via
+    #   django-stubs-ext
+    #   django-tasks
+    #   django-tasks-db
+    #   psycopg
 tzdata==2026.3 ; sys_platform == 'win32'
     # via
     #   django

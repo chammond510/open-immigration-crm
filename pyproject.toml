@@ -16,7 +16,12 @@ ignore = ["DJ001", "DJ012"]
 
 [tool.coverage.run]
 source = ["crm", "connectors"]
-omit = ["crm/migrations/*", "crm/connect/migrations/*", "crm/management/*"]
+omit = [
+    "crm/migrations/*",
+    "crm/connect/migrations/*",
+    "crm/management/*",
+    "crm/connect/management/*",
+]
 
 [tool.coverage.report]
 show_missing = true

@@ -29,7 +29,20 @@ django==5.2.17
     #   -r requirements.in
     #   dj-database-url
     #   django-axes
+    #   django-stubs-ext
+    #   django-tasks
+    #   django-tasks-db
 django-axes==8.3.1
+    # via -r requirements.in
+django-stubs-ext==6.1.2
+    # via
+    #   django-tasks
+    #   django-tasks-db
+django-tasks==0.12.0
+    # via
+    #   -r requirements.in
+    #   django-tasks-db
+django-tasks-db==0.13.0
     # via -r requirements.in
 filelock==3.32.2
     # via cachecontrol
@@ -92,9 +105,12 @@ tomli==2.4.1
     # via pip-audit
 tomli-w==1.2.0
     # via pip-audit
-typing-extensions==4.16.0 ; python_full_version < '3.13'
+typing-extensions==4.16.0
     # via
     #   cyclonedx-python-lib
+    #   django-stubs-ext
+    #   django-tasks
+    #   django-tasks-db
     #   psycopg
 tzdata==2026.3 ; sys_platform == 'win32'
     # via

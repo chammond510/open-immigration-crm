@@ -3,6 +3,9 @@
 It is hidden from the catalog. Real connectors follow the same shape.
 """
 
+import hashlib
+import hmac
+import json
 from datetime import UTC, datetime, timedelta
 
 from crm.connect.base import (
@@ -15,10 +18,18 @@ from crm.connect.base import (
     Maturity,
     Record,
     SyncBatch,
+    WebhookEnvelope,
+    WebhookSpec,
 )
 from crm.connect.registry import register
 
 EPOCH = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
+SIGNATURE_HEADER = "X-Example-Signature"
+
+
+def sign(body, secret):
+    """The example service signs each delivery with HMAC-SHA256 of the raw body."""
+    return hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
 
 @register
@@ -37,6 +48,11 @@ class ExampleConnector(Connector):
         receives=("Fictional message events",),
     )
     outbound_actions = {"send_message": Capability.TEXTING}
+    sync_capabilities = frozenset({Capability.TEXTING})
+    webhooks = WebhookSpec(
+        capabilities=(Capability.TEXTING,),
+        instructions="Paste the URL and signing secret into the example service.",
+    )
     hidden = True
 
     def test_connection(self):
@@ -60,3 +76,36 @@ class ExampleConnector(Connector):
         if action != "send_message" or not payload.get("body"):
             raise ConnectorError("The example service needs a message body.")
         return f"example-sent-{len(payload['body'])}"
+
+    def verify_webhook(self, body, headers, secret):
+        signature = headers.get(SIGNATURE_HEADER, "")
+        return bool(signature) and hmac.compare_digest(signature, sign(body, secret))
+
+    def parse_webhook(self, body, headers):
+        try:
+            event = json.loads(body)
+        except ValueError as exc:
+            raise ConnectorError("The example event was not valid JSON.") from exc
+        if not isinstance(event, dict) or not event.get("id"):
+            raise ConnectorError("The example event had no id.")
+        # Keep only what processing needs.
+        payload = {
+            "id": str(event["id"]),
+            "body": str(event.get("body", ""))[:1000],
+            "sent_at": str(event.get("sent_at", "")),
+        }
+        return WebhookEnvelope(
+            event_id=payload["id"], capability=Capability.TEXTING, payload=payload
+        )
+
+    def handle_webhook(self, capability, payload):
+        sent_at = payload.get("sent_at")
+        occurred_at = datetime.fromisoformat(sent_at) if sent_at else EPOCH
+        return [
+            Record(
+                external_id=payload["id"],
+                kind="message",
+                occurred_at=occurred_at,
+                data={"body": payload.get("body", "")},
+            )
+        ]

@@ -5,13 +5,14 @@ package and set the class attributes. The tests block network access, so
 connectors must answer from recorded fixtures or a fake transport.
 """
 
+import json
 import socket
 from datetime import datetime
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 
-from .base import Connector, ConnectorError, Record, SyncBatch
+from .base import Connector, ConnectorError, Record, SyncBatch, WebhookEnvelope
 from .models import Connection
 from .registry import manifest_problems
 
@@ -24,10 +25,11 @@ class ConnectorContract:
     connector_class: type[Connector] | None = None
     valid_credentials: dict = {}
     invalid_credentials: dict = {}
-    # Capability -> cursor to start from; listed capabilities must support sync.
-    sync_capabilities: dict = {}
+    # Capability -> cursor to start from, for every capability the connector syncs.
+    sync_examples: dict = {}
     # Outbound action -> payload that should succeed.
     outbound_examples: dict = {}
+    webhook_secret = "fictional-webhook-secret"
 
     def setUp(self):
         super().setUp()
@@ -50,6 +52,20 @@ class ConnectorContract:
             credentials=self.valid_credentials if credentials is None else credentials,
         )
 
+    def make_webhook(self, secret):
+        """Return (body bytes, headers dict) for one validly signed fictional event.
+
+        Required when the connector declares webhooks.
+        """
+        raise NotImplementedError
+
+    def assert_records(self, records):
+        for record in records:
+            self.assertIsInstance(record, Record)
+            self.assertTrue(record.external_id)
+            self.assertIsInstance(record.occurred_at, datetime)
+            self.assertIsNotNone(record.occurred_at.tzinfo, "Record times must be aware.")
+
     def test_contract_manifest_is_complete(self):
         self.assertEqual(manifest_problems(self.connector_class), [])
 
@@ -63,18 +79,33 @@ class ConnectorContract:
 
     def test_contract_sync_returns_records(self):
         connector = self.connector_class(self.make_connection())
-        for capability, cursor in self.sync_capabilities.items():
+        self.assertEqual(set(self.sync_examples), set(self.connector_class.sync_capabilities))
+        for capability, cursor in self.sync_examples.items():
             batch = connector.sync(capability, cursor)
             self.assertIsInstance(batch, SyncBatch)
             self.assertIsInstance(batch.cursor, dict)
-            for record in batch.records:
-                self.assertIsInstance(record, Record)
-                self.assertTrue(record.external_id)
-                self.assertIsInstance(record.occurred_at, datetime)
-                self.assertIsNotNone(record.occurred_at.tzinfo, "Record times must be aware.")
+            json.dumps(batch.cursor)
+            self.assert_records(batch.records)
 
     def test_contract_outbound_actions_return_references(self):
         connector = self.connector_class(self.make_connection())
         self.assertEqual(set(self.outbound_examples), set(self.connector_class.outbound_actions))
         for action, payload in self.outbound_examples.items():
             self.assertTrue(str(connector.perform(action, payload)))
+
+    def test_contract_webhooks_verify_parse_and_handle(self):
+        cls = self.connector_class
+        if cls.webhooks is None:
+            self.skipTest("This connector does not receive webhooks.")
+        connector = cls(self.make_connection())
+        body, headers = self.make_webhook(self.webhook_secret)
+        self.assertTrue(connector.verify_webhook(body, headers, self.webhook_secret))
+        self.assertFalse(connector.verify_webhook(body, headers, "a-different-secret"))
+        self.assertFalse(connector.verify_webhook(body + b" ", headers, self.webhook_secret))
+        self.assertFalse(connector.verify_webhook(body, {}, self.webhook_secret))
+        envelope = connector.parse_webhook(body, headers)
+        self.assertIsInstance(envelope, WebhookEnvelope)
+        self.assertTrue(envelope.event_id)
+        self.assertIn(envelope.capability, cls.webhooks.capabilities)
+        json.dumps(envelope.payload)
+        self.assert_records(connector.handle_webhook(envelope.capability, envelope.payload))

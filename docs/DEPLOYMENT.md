@@ -101,6 +101,22 @@ python manage.py reset_two_factor <username>
 
 They can then sign in with their password and set it up again. Both paths are recorded in the audit log.
 
+## Connector worker
+
+Connectors sync and process provider events in a separate worker process:
+
+```bash
+python manage.py run_worker
+```
+
+The Compose file runs it as the `worker` service, using the same image and environment as `web`. The worker keeps its queue in the application database, so it needs no Redis or message broker. Installations with nothing connected can stop it (`docker compose stop worker`). Run one worker per installation unless you have measured a need for more; each one records a heartbeat (default every `WORKER_TICK_SECONDS=60`) so the CRM can tell when syncs have stopped.
+
+## Provider webhooks
+
+Providers deliver events to `https://<your-host>/hooks/<token>/`, where each connection has its own token. If the rest of the CRM is reachable only through a VPN or identity-aware proxy, expose just the `/hooks/` path publicly at the reverse proxy and keep everything else private. Requests without a valid provider signature are rejected and nothing is stored. Bodies over `CONNECTOR_WEBHOOK_MAX_BYTES` (default 1 MB) are refused; keep the proxy's request-body limit for `/hooks/` at or below that value.
+
+Keep the trailing slash when entering a webhook URL at a provider; a redirect would drop the request body.
+
 ## Reverse proxy
 
 Terminate TLS at the proxy and forward only to the private Gunicorn port. Preserve the original host, set `X-Forwarded-Proto` to `https`, cap request bodies consistently with `DOCUMENT_UPLOAD_MAX_BYTES`, disable caching for authenticated responses, and do not add third-party analytics to intake pages.
