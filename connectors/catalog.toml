@@ -1,0 +1,421 @@
+# Providers people have asked for that have no connector yet. Each appears in
+# the Connections catalog as "Wanted" until a connector with the same key is
+# installed. Keys and capabilities follow crm/connect/base.py. Listing a name
+# here identifies compatibility only and implies no affiliation or endorsement.
+
+# Phone and texting
+[[connector]]
+key = "dialpad"
+name = "Dialpad"
+capabilities = ["phone", "texting"]
+
+[[connector]]
+key = "twilio"
+name = "Twilio"
+capabilities = ["phone", "texting"]
+
+[[connector]]
+key = "ringcentral"
+name = "RingCentral"
+capabilities = ["phone", "texting"]
+
+[[connector]]
+key = "aircall"
+name = "Aircall"
+capabilities = ["phone"]
+
+[[connector]]
+key = "zoom_phone"
+name = "Zoom Phone"
+capabilities = ["phone"]
+
+[[connector]]
+key = "vonage"
+name = "Vonage"
+capabilities = ["phone", "texting"]
+
+[[connector]]
+key = "eight_by_eight"
+name = "8x8"
+capabilities = ["phone"]
+
+[[connector]]
+key = "nextiva"
+name = "Nextiva"
+capabilities = ["phone"]
+
+[[connector]]
+key = "telnyx"
+name = "Telnyx"
+capabilities = ["phone", "texting"]
+
+[[connector]]
+key = "teams_phone"
+name = "Microsoft Teams Phone"
+capabilities = ["phone"]
+
+[[connector]]
+key = "whatsapp_business"
+name = "WhatsApp Business"
+capabilities = ["texting"]
+
+# Mailbox, calendar, and storage suites
+[[connector]]
+key = "google_workspace"
+name = "Google Workspace"
+capabilities = ["mailbox", "calendar", "storage"]
+
+[[connector]]
+key = "microsoft_365"
+name = "Microsoft 365"
+capabilities = ["mailbox", "calendar", "storage"]
+
+[[connector]]
+key = "imap_smtp"
+name = "IMAP and SMTP mail"
+capabilities = ["mailbox"]
+
+[[connector]]
+key = "zoho_mail"
+name = "Zoho Mail"
+capabilities = ["mailbox"]
+
+[[connector]]
+key = "caldav"
+name = "CalDAV calendar"
+capabilities = ["calendar"]
+
+# System email
+[[connector]]
+key = "smtp"
+name = "SMTP server"
+capabilities = ["system_email"]
+
+[[connector]]
+key = "postmark"
+name = "Postmark"
+capabilities = ["system_email"]
+
+[[connector]]
+key = "amazon_ses"
+name = "Amazon SES"
+capabilities = ["system_email"]
+
+[[connector]]
+key = "sendgrid"
+name = "SendGrid"
+capabilities = ["system_email"]
+
+[[connector]]
+key = "mailgun"
+name = "Mailgun"
+capabilities = ["system_email"]
+
+# Scheduling and video
+[[connector]]
+key = "calendly"
+name = "Calendly"
+capabilities = ["scheduling"]
+
+[[connector]]
+key = "cal_com"
+name = "Cal.com"
+capabilities = ["scheduling"]
+
+[[connector]]
+key = "acuity"
+name = "Acuity Scheduling"
+capabilities = ["scheduling"]
+
+[[connector]]
+key = "microsoft_bookings"
+name = "Microsoft Bookings"
+capabilities = ["scheduling"]
+
+[[connector]]
+key = "zoom"
+name = "Zoom"
+capabilities = ["video", "scheduling"]
+
+[[connector]]
+key = "microsoft_teams"
+name = "Microsoft Teams"
+capabilities = ["video"]
+
+[[connector]]
+key = "google_meet"
+name = "Google Meet"
+capabilities = ["video"]
+
+[[connector]]
+key = "jitsi"
+name = "Jitsi Meet"
+capabilities = ["video"]
+
+# Payments and accounting
+[[connector]]
+key = "lawpay"
+name = "LawPay"
+capabilities = ["payments"]
+
+[[connector]]
+key = "stripe"
+name = "Stripe"
+capabilities = ["payments"]
+
+[[connector]]
+key = "square"
+name = "Square"
+capabilities = ["payments"]
+
+[[connector]]
+key = "paypal"
+name = "PayPal"
+capabilities = ["payments"]
+
+[[connector]]
+key = "headnote"
+name = "Headnote"
+capabilities = ["payments"]
+
+[[connector]]
+key = "confido_legal"
+name = "Confido Legal"
+capabilities = ["payments"]
+
+[[connector]]
+key = "quickbooks_online"
+name = "QuickBooks Online"
+capabilities = ["accounting"]
+
+[[connector]]
+key = "xero"
+name = "Xero"
+capabilities = ["accounting"]
+
+[[connector]]
+key = "freshbooks"
+name = "FreshBooks"
+capabilities = ["accounting"]
+
+# Document storage and e-signature
+[[connector]]
+key = "dropbox"
+name = "Dropbox"
+capabilities = ["storage"]
+
+[[connector]]
+key = "box"
+name = "Box"
+capabilities = ["storage"]
+
+[[connector]]
+key = "egnyte"
+name = "Egnyte"
+capabilities = ["storage"]
+
+[[connector]]
+key = "documenso"
+name = "Documenso"
+capabilities = ["esignature"]
+
+[[connector]]
+key = "docusign"
+name = "DocuSign"
+capabilities = ["esignature"]
+
+[[connector]]
+key = "dropbox_sign"
+name = "Dropbox Sign"
+capabilities = ["esignature"]
+
+[[connector]]
+key = "adobe_acrobat_sign"
+name = "Adobe Acrobat Sign"
+capabilities = ["esignature"]
+
+[[connector]]
+key = "boldsign"
+name = "BoldSign"
+capabilities = ["esignature"]
+
+# AI models and translation
+[[connector]]
+key = "openai"
+name = "OpenAI API"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "anthropic"
+name = "Anthropic API"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "openrouter"
+name = "OpenRouter"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "openai_compatible"
+name = "OpenAI-compatible endpoint (including local models)"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "chatgpt_plan"
+name = "ChatGPT plan (Sign in with ChatGPT)"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "azure_openai"
+name = "Azure OpenAI"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "gemini"
+name = "Google Gemini API"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "aws_bedrock"
+name = "AWS Bedrock"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "vertex_ai"
+name = "Google Vertex AI"
+capabilities = ["ai_models"]
+
+[[connector]]
+key = "deepl"
+name = "DeepL"
+capabilities = ["translation"]
+
+[[connector]]
+key = "google_translation"
+name = "Google Cloud Translation"
+capabilities = ["translation"]
+
+# Legal research and case status
+[[connector]]
+key = "bia_edge"
+name = "BIA Edge"
+capabilities = ["legal_research"]
+
+[[connector]]
+key = "courtlistener"
+name = "CourtListener"
+capabilities = ["legal_research"]
+
+[[connector]]
+key = "uscis_case_status"
+name = "USCIS Case Status API"
+capabilities = ["case_status"]
+
+[[connector]]
+key = "visa_bulletin"
+name = "Visa Bulletin"
+capabilities = ["case_status"]
+
+[[connector]]
+key = "uscis_processing_times"
+name = "USCIS processing times"
+capabilities = ["case_status"]
+
+# Shipping
+[[connector]]
+key = "usps"
+name = "USPS"
+capabilities = ["shipping"]
+
+[[connector]]
+key = "fedex"
+name = "FedEx"
+capabilities = ["shipping"]
+
+[[connector]]
+key = "ups"
+name = "UPS"
+capabilities = ["shipping"]
+
+# Leads and marketing
+[[connector]]
+key = "website_form"
+name = "Website form (signed webhook)"
+capabilities = ["lead_capture"]
+
+[[connector]]
+key = "wordpress_forms"
+name = "WordPress form plugins"
+capabilities = ["lead_capture"]
+
+[[connector]]
+key = "google_lead_forms"
+name = "Google Ads lead forms"
+capabilities = ["lead_capture"]
+
+[[connector]]
+key = "meta_lead_ads"
+name = "Meta lead ads"
+capabilities = ["lead_capture"]
+
+[[connector]]
+key = "google_local_services"
+name = "Google Local Services Ads"
+capabilities = ["lead_capture"]
+
+[[connector]]
+key = "google_ads"
+name = "Google Ads"
+capabilities = ["marketing"]
+
+[[connector]]
+key = "google_analytics"
+name = "Google Analytics 4"
+capabilities = ["marketing"]
+
+[[connector]]
+key = "meta_ads"
+name = "Meta Ads"
+capabilities = ["marketing"]
+
+# Sign-in
+[[connector]]
+key = "oidc"
+name = "OpenID Connect (Google, Microsoft Entra ID, and others)"
+capabilities = ["sign_in"]
+
+[[connector]]
+key = "okta"
+name = "Okta"
+capabilities = ["sign_in"]
+
+[[connector]]
+key = "jumpcloud"
+name = "JumpCloud"
+capabilities = ["sign_in"]
+
+# Migration from other practice-management systems
+[[connector]]
+key = "docketwise"
+name = "Docketwise"
+capabilities = ["migration"]
+
+[[connector]]
+key = "inszoom"
+name = "INSZoom"
+capabilities = ["migration"]
+
+[[connector]]
+key = "clio"
+name = "Clio"
+capabilities = ["migration"]
+
+[[connector]]
+key = "mycase"
+name = "MyCase"
+capabilities = ["migration"]
+
+[[connector]]
+key = "lawlogix"
+name = "LawLogix"
+capabilities = ["migration"]

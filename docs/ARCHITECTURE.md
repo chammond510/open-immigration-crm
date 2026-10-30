@@ -32,6 +32,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
+- `Connection` and `OutboundRequest` (in `crm/connect/`) hold connected provider accounts and the log of outbound actions; see Connectors below.
 - `TwoFactorDevice` holds a user's authenticator secret, encrypted with `FIELD_ENCRYPTION_KEYS`; `RecoveryCode` stores only SHA-256 hashes of single-use recovery codes.
 
 ## Trust boundaries
@@ -40,14 +41,36 @@ All ordinary CRM pages require an active staff account. Destructive document/par
 
 Uploaded files are never routed through Django's public media URL. Downloads pass through an authenticated view and return `private, no-store`.
 
-## Connectors (planned)
+## Connectors
 
-The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without changing the shape of core:
+The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without changing the shape of core. No provider connector has shipped yet. The framework is in place:
 
-- `crm/connect/`: a provider-neutral framework. It holds the connector registry, connections with encrypted credentials, the outbound policy, the webhook endpoint, OAuth, and the Connections page.
-- `connectors/<provider>/`: one optional adapter package per provider, implementing capability interfaces such as phone, mailbox, or payments. Third-party connectors install as Python packages through an entry point.
-- A `worker` process with a database-backed task queue for syncs and webhook processing. Installations with nothing connected do not need it.
-- A `/hooks/` path for provider webhooks and an MCP endpoint. Operators can expose just these paths through the reverse proxy without exposing the rest of the application.
+- `crm/connect/` is a provider-neutral Django app (label `connect`).
+  - `registry.py` imports every module under the packages in `CONNECTOR_PACKAGES` (default `connectors`), plus installed packages that use the `open_immigration_crm.connectors` entry point. It rejects connectors whose manifest is incomplete, and it merges installed connectors with the wanted providers listed in `connectors/catalog.toml`.
+  - `Connection` is one connected account, either firm-wide or a single staff member's. Its credentials are encrypted with `FIELD_ENCRYPTION_KEYS`. New connections start in preview mode, and each records which version of the connector's data-flow description a superuser acknowledged.
+  - `policy.send()` is the only path for outbound actions. It checks, in order:
+    1. the site-wide kill switch
+    2. that the connector is installed
+    3. that the connection is active
+    4. that the capability is enabled
+    5. data-flow acknowledgment
+    6. that a personal connection is used only by its owner, never by automations
+    7. the admin-only setting
+    8. the hourly limit
+    9. preview mode
+
+    It records every attempt as an `OutboundRequest`, storing only safe error text.
+  - `testing.ConnectorContract` holds the shared contract tests. They block network access.
+- `connectors/<provider>/` holds one optional adapter package per provider. `connectors/example/` is a fictional connector, hidden from the catalog, that exercises the framework.
+
+Still planned:
+- a `worker` process with a database-backed task queue for syncs and webhook processing (installations with nothing connected will not need it)
+- a `/hooks/` path for provider webhooks
+- OAuth sign-in
+- the Connections page
+- an MCP endpoint
+
+Operators will be able to expose just the webhook and MCP paths through the reverse proxy without exposing the rest of the application.
 
 Core never imports from `connectors/`; `scripts/check_scope.sh` enforces this.
 
