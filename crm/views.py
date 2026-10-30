@@ -67,6 +67,7 @@ from .two_factor import (
     replace_recovery_codes,
     reset_two_factor,
 )
+from .workflows.models import MatterPhase
 
 staff_required = user_passes_test(
     lambda user: user.is_active and user.is_staff,
@@ -522,7 +523,6 @@ def matter_detail(request, pk):
         "parties": matter.parties.select_related("contact"),
         "activities": matter.activities.select_related("created_by")[:30],
         "work_items": matter.work_items.select_related("contact", "assigned_to")[:20],
-        "checklist": matter.checklist.select_related("completed_by"),
         "documents": matter.documents.select_related("contact", "uploaded_by"),
         "time_entries": matter.time_entries.select_related("user")[:50],
         "time_total": time_total_display(matter.time_entries.all()),
@@ -531,7 +531,6 @@ def matter_detail(request, pk):
             instance=Activity(contact=matter.primary_contact, matter=matter),
             initial={"occurred_at": timezone.localtime().strftime("%Y-%m-%dT%H:%M")},
         ),
-        "checklist_form": ChecklistItemForm(),
         "document_form": DocumentUploadForm(initial={"contact": matter.primary_contact}),
     }
     return render(request, "crm/matter_detail.html", context)
@@ -745,12 +744,16 @@ def checklist_add(request, matter_pk):
     if form.is_valid():
         item = form.save(commit=False)
         item.matter = matter
+        # With a workflow applied, new items join the phase in progress.
+        item.phase = MatterPhase.objects.filter(
+            workflow__matter=matter, status=MatterPhase.Status.IN_PROGRESS
+        ).first()
         item.save()
         audit(request, "checklist_item.created", item)
         messages.success(request, "Checklist item added.")
     else:
         messages.error(request, "Review the checklist item and try again.")
-    return redirect("matter_detail", pk=matter.pk)
+    return redirect(reverse("matter_detail", args=[matter.pk]) + "#checklist")
 
 
 @staff_required
@@ -762,7 +765,7 @@ def checklist_toggle(request, pk):
     item.completed_by = request.user if item.is_completed else None
     item.save(update_fields=["is_completed", "completed_at", "completed_by"])
     audit(request, "checklist_item.toggled", item, detail=f"completed={item.is_completed}")
-    return redirect("matter_detail", pk=item.matter_id)
+    return redirect(reverse("matter_detail", args=[item.matter_id]) + "#checklist")
 
 
 @staff_required

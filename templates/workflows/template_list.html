@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Workflows · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Firm settings</p><h1>Workflows</h1><p>Phases and checklist items your firm applies to matters. None ship with the project; write the steps your firm has approved.</p></div><div class="actions"><a class="button primary" href="{% url 'workflow_template_create' %}">New workflow</a></div></div>
+<section class="panel flush-panel">{% if templates %}<div class="table-wrap"><table><thead><tr><th>Workflow</th><th>Case type</th><th class="numeric">Phases</th><th class="numeric">Items</th><th class="numeric">Matters</th><th>Status</th></tr></thead><tbody>
+  {% for template in templates %}<tr><td><a class="primary-link" href="{% url 'workflow_template_update' template.pk %}">{{ template.name }}</a>{% if template.description %}<small>{{ template.description }}</small>{% endif %}</td><td>{{ template.get_case_type_display|default:"Any" }}{% if template.apply_to_new_matters %}<small>Applied to new matters</small>{% endif %}</td><td class="numeric">{{ template.phase_count }}</td><td class="numeric">{{ template.item_count }}</td><td class="numeric">{{ template.matter_count }}</td><td><span class="badge {% if template.is_active %}active{% else %}closed{% endif %}">{% if template.is_active %}Active{% else %}Inactive{% endif %}</span></td></tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="empty-state"><h3>No workflows yet</h3><p>A workflow is a list of phases, each with checklist items. Apply one to a matter, or have it start automatically for new matters of a case type.</p></div>{% endif %}</section>
+{% endblock %}

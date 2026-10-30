@@ -33,6 +33,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("connections/", include("crm.connect.urls")),
     path("events/", include("crm.events.urls")),
+    path("workflows/", include("crm.workflows.urls")),
+    path("settings/custom-fields/", include("crm.customfields.urls")),
     path("communications/", include("crm.comms.urls")),
     path("billing/", include("crm.billing.urls")),
     path("notices/", include("crm.notices.urls")),

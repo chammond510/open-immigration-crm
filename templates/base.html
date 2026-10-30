@@ -22,7 +22,7 @@
           <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>Overview</a>
           <a href="{% url 'contact_list' %}" {% if 'contact' in request.resolver_match.url_name or request.resolver_match.url_name == 'pipeline' %}aria-current="page"{% endif %}>Contacts</a>
           <a href="{% url 'matter_list' %}" {% if 'matter' in request.resolver_match.url_name or 'checklist' in request.resolver_match.url_name or 'document' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Matters</a>
-          <a href="{% url 'work_list' %}" {% if 'work' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Work</a>
+          <a href="{% url 'work_list' %}" {% if 'work' in request.resolver_match.url_name and 'workflow' not in request.resolver_match.url_name %}aria-current="page"{% endif %}>Work</a>
           <a href="{% url 'notice_list' %}" {% if 'notice' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Notices</a>
           <a href="{% url 'communication_list' %}" {% if 'communication' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Communications</a>
           {% if perms.billing.access_billing %}<a href="{% url 'invoice_list' %}" {% if 'invoice' in request.resolver_match.url_name or 'billing' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Billing</a>{% endif %}
@@ -32,6 +32,8 @@
         <div class="sidebar-bottom">
           {% if user.is_superuser %}
             <a href="{% url 'firm_settings' %}">Firm settings</a>
+            <a href="{% url 'workflow_template_list' %}" {% if 'workflow_template' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Workflows</a>
+            <a href="{% url 'custom_field_list' %}" {% if 'custom_field' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Custom fields</a>
             <a href="{% url 'admin:index' %}">Administration</a>
           {% endif %}
           <a href="{% url 'password_change' %}">Change password</a>

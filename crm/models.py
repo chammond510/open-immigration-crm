@@ -109,6 +109,8 @@ class Contact(models.Model):
     # Set when the contact asks not to be texted (for example by replying STOP).
     # Texting connectors refuse to send to this contact while it is set.
     texting_opted_out_at = models.DateTimeField(null=True, blank=True)
+    # Values for the firm's custom contact fields, keyed by each field's key.
+    custom_fields = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -176,6 +178,8 @@ class Matter(models.Model):
     filing_date = models.DateField(null=True, blank=True)
     description = models.TextField(blank=True)
     notes = models.TextField(blank=True)
+    # Values for the firm's custom matter fields, keyed by each field's key.
+    custom_fields = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     closed_at = models.DateTimeField(null=True, blank=True)
@@ -425,6 +429,14 @@ class TimeEntry(models.Model):
 
 class ChecklistItem(models.Model):
     matter = models.ForeignKey(Matter, on_delete=models.CASCADE, related_name="checklist")
+    # Set when the item came from a workflow phase; the item outlives the phase.
+    phase = models.ForeignKey(
+        "workflows.MatterPhase",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="items",
+    )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     position = models.PositiveIntegerField(default=0)
