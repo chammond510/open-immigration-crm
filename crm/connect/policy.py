@@ -6,7 +6,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
-from .base import ConnectorError
+from .base import Capability, ConnectorError
 from .models import Connection, OutboundRequest
 
 
@@ -27,10 +27,17 @@ class Codes:
     NOT_ACKNOWLEDGED = "data_flows_not_acknowledged"
     PERSONAL_CONNECTION = "personal_connection"
     ADMIN_ONLY = "admin_only"
+    RECIPIENT_OPTED_OUT = "recipient_opted_out"
     RATE_LIMITED = "rate_limited"
 
 
-def evaluate(connection, *, capability, actor=None, is_automation=False):
+def texting_opted_out(target):
+    """True when the target, or a matter's primary contact, opted out of texts."""
+    contact = getattr(target, "primary_contact", target)
+    return bool(getattr(contact, "texting_opted_out_at", None))
+
+
+def evaluate(connection, *, capability, actor=None, is_automation=False, target=None):
     """Decide whether an outbound action may run. Checks run in a fixed, documented order."""
     if not settings.CONNECTORS_OUTBOUND_ENABLED:
         return Decision(False, Codes.KILL_SWITCH, "Outbound actions are turned off for this site.")
@@ -57,6 +64,8 @@ def evaluate(connection, *, capability, actor=None, is_automation=False):
         return Decision(
             False, Codes.ADMIN_ONLY, "Only superusers can send through this connection."
         )
+    if capability == Capability.TEXTING and texting_opted_out(target):
+        return Decision(False, Codes.RECIPIENT_OPTED_OUT, "The recipient opted out of texts.")
     sent_last_hour = OutboundRequest.objects.filter(
         connection=connection,
         status=OutboundRequest.Status.SENT,
@@ -78,7 +87,13 @@ def send(connection, action, payload, *, actor=None, is_automation=False, summar
     capability = cls.outbound_actions.get(action, "") if cls else ""
     if cls is not None and not capability:
         raise ValueError(f"{cls.name} has no outbound action named {action!r}.")
-    decision = evaluate(connection, capability=capability, actor=actor, is_automation=is_automation)
+    decision = evaluate(
+        connection,
+        capability=capability,
+        actor=actor,
+        is_automation=is_automation,
+        target=target,
+    )
     request = OutboundRequest(
         connection=connection,
         connector_key=connection.connector_key,

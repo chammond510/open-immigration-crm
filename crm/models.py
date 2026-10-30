@@ -106,6 +106,9 @@ class Contact(models.Model):
         related_name="assigned_contacts",
     )
     notes = models.TextField(blank=True)
+    # Set when the contact asks not to be texted (for example by replying STOP).
+    # Texting connectors refuse to send to this contact while it is set.
+    texting_opted_out_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -240,10 +243,9 @@ class MatterParty(models.Model):
 
 class Activity(models.Model):
     class Kind(models.TextChoices):
+        # Calls and meetings are logged as communications (crm.comms).
         NOTE = "note", "Note"
         STATUS = "status", "Status change"
-        MEETING = "meeting", "Meeting"
-        CALL = "call", "Call"
         DOCUMENT = "document", "Document"
         INTAKE = "intake", "Intake"
         SYSTEM = "system", "System"

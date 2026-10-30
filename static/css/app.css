@@ -225,6 +225,16 @@ code { padding: 1px 5px; border-radius: 4px; background: rgb(23 32 51 / 6%); fon
 .flows h3 { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
 .flows ul { margin: 6px 0 0; padding-left: 18px; }
 .flows li + li { margin-top: 4px; }
+.prompt-stack { display: grid; gap: 8px; margin-top: 12px; }
+.page-prompts { margin: 0 0 14px; }
+.texting-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; font-size: 12px; }
+.comm-item p.prose { margin: 6px 0 0; }
+.comm-item .badge { margin-right: 4px; vertical-align: 1px; }
+.table-note { padding: 10px 13px; }
+.badge.channel-call { background: var(--accent-soft); color: var(--accent-dark); }
+.badge.channel-text { background: #efe9f8; color: #5b3f8f; }
+.badge.channel-email { background: #e6f2f2; color: #23656a; }
+.badge.channel-meeting { background: var(--warning-soft); color: var(--warning); }
 .connect-prompt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px dashed #b7c6e6; border-radius: var(--radius); background: var(--accent-soft); color: #1c448f; }
 .badge.maturity-ready, .badge.succeeded, .badge.sent, .badge.processed { background: var(--success-soft); color: var(--success); }
 .badge.maturity-beta, .badge.queued, .badge.running, .badge.previewed { background: var(--accent-soft); color: var(--accent-dark); }

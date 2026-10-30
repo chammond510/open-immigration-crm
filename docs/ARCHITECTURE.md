@@ -29,6 +29,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `WorkItem` unifies a task, deadline, or appointment.
 - `TimeEntry` records tracked working time against a matter or contact; one timer runs per user, and no rates or amounts are stored.
 - `ChecklistItem` is firm-authored and scoped to a single matter.
+- `Communication` (in `crm/comms/`) is a call, text, email, or meeting linked to a contact and optionally a matter, logged by staff or recorded by a connector (stored once per connection and provider ID). `Contact.texting_opted_out_at` records a texting opt-out, which the outbound policy enforces.
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
@@ -56,8 +57,9 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
     5. data-flow acknowledgment
     6. that a personal connection is used only by its owner, never by automations
     7. the admin-only setting
-    8. the hourly limit
-    9. preview mode
+    8. recipient rules (no texts to a contact who opted out)
+    9. the hourly limit
+    10. preview mode
 
     It records every attempt as an `OutboundRequest`, storing only safe error text.
   - `testing.ConnectorContract` holds the shared contract tests. They block network access.

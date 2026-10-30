@@ -92,6 +92,7 @@ INSTALLED_APPS = [
     "django_tasks_db",
     "crm.apps.CrmConfig",
     "crm.connect.apps.ConnectConfig",
+    "crm.comms.apps.CommsConfig",
 ]
 
 MIDDLEWARE = [

@@ -173,7 +173,7 @@ class WorkspaceViewTests(TestCase):
 
     def test_activity_work_and_checklist_flows(self):
         activity_data = {
-            "kind": Activity.Kind.CALL,
+            "kind": Activity.Kind.NOTE,
             "subject": "Discussed next steps",
             "body": "Fictional note",
             "occurred_at": timezone.localtime().strftime("%Y-%m-%dT%H:%M"),

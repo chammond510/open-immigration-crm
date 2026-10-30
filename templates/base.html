@@ -23,6 +23,7 @@
           <a href="{% url 'contact_list' %}" {% if 'contact' in request.resolver_match.url_name or request.resolver_match.url_name == 'pipeline' %}aria-current="page"{% endif %}>Contacts</a>
           <a href="{% url 'matter_list' %}" {% if 'matter' in request.resolver_match.url_name or 'checklist' in request.resolver_match.url_name or 'document' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Matters</a>
           <a href="{% url 'work_list' %}" {% if 'work' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Work</a>
+          <a href="{% url 'communication_list' %}" {% if 'communication' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Communications</a>
           <a href="{% url 'intake_workspace' %}" {% if 'intake' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Intake</a>
           <a href="{% url 'connections' %}" {% if 'connect' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Connections</a>
         </nav>
