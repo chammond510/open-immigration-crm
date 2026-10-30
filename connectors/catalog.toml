@@ -221,26 +221,6 @@ capabilities = ["esignature"]
 
 # AI models and translation
 [[connector]]
-key = "openai"
-name = "OpenAI API"
-capabilities = ["ai_models"]
-
-[[connector]]
-key = "anthropic"
-name = "Anthropic API"
-capabilities = ["ai_models"]
-
-[[connector]]
-key = "openrouter"
-name = "OpenRouter"
-capabilities = ["ai_models"]
-
-[[connector]]
-key = "openai_compatible"
-name = "OpenAI-compatible endpoint (including local models)"
-capabilities = ["ai_models"]
-
-[[connector]]
 key = "chatgpt_plan"
 name = "ChatGPT plan (Sign in with ChatGPT)"
 capabilities = ["ai_models"]

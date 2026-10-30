@@ -16,7 +16,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from .base import ConnectorError, OAuthAuth
+from .base import SIGN_IN_TYPES, ConnectorError, KeyExchangeAuth, OAuthAuth
 from .http import ProviderClient
 from .models import Connection, ConnectorApp
 
@@ -52,6 +52,27 @@ def requested_scopes(cls, capabilities):
     return sorted(scopes)
 
 
+def remember(request, connection):
+    """A one-time state and PKCE verifier for this sign-in; returns (state, challenge)."""
+    state = secrets.token_urlsafe(32)
+    verifier, challenge = pkce_pair()
+    request.session[PENDING_KEY] = {
+        "state": state,
+        "connection": str(connection.pk),
+        "verifier": verifier,
+        "created": time.time(),
+    }
+    return state, challenge
+
+
+def key_exchange_url(request, connection):
+    state, challenge = remember(request, connection)
+    query = connection.connector().authorize_query(callback_url(request), challenge, state)
+    authorize_url = connection.connector_class.auth.authorize_url
+    separator = "&" if "?" in authorize_url else "?"
+    return f"{authorize_url}{separator}{urlencode(query)}"
+
+
 def pkce_pair():
     verifier = secrets.token_urlsafe(64)
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
@@ -61,19 +82,14 @@ def pkce_pair():
 def authorization_url(request, connection):
     """Remember a one-time state and PKCE verifier, and return the provider URL to visit."""
     cls = connection.connector_class
+    if cls is not None and isinstance(cls.auth, KeyExchangeAuth):
+        return key_exchange_url(request, connection)
     if cls is None or not isinstance(cls.auth, OAuthAuth):
         raise ValidationError("This connection does not sign in with OAuth.")
     app = ConnectorApp.objects.filter(connector_key=cls.key).first()
     if app is None:
         raise ValidationError(f"A superuser must first enter the firm's {cls.name} app details.")
-    state = secrets.token_urlsafe(32)
-    verifier, challenge = pkce_pair()
-    request.session[PENDING_KEY] = {
-        "state": state,
-        "connection": str(connection.pk),
-        "verifier": verifier,
-        "created": time.time(),
-    }
+    state, challenge = remember(request, connection)
     query = {
         "response_type": "code",
         "client_id": app.client_id,
@@ -193,10 +209,19 @@ def finish(request):
         raise ValidationError("This sign-in link expired or did not come from this CRM.")
     connection = Connection.objects.filter(pk=pending["connection"]).first()
     cls = connection.connector_class if connection else None
-    if cls is None or not isinstance(cls.auth, OAuthAuth):
+    if cls is None or not isinstance(cls.auth, SIGN_IN_TYPES):
         raise ValidationError("The connection for this sign-in no longer exists.")
     if request.GET.get("error") or not request.GET.get("code"):
         raise ConnectorError("Sign-in was cancelled or refused at the provider.")
+    if isinstance(cls.auth, KeyExchangeAuth):
+        connection.credentials = connection.connector().exchange_code(
+            request.GET["code"], pending["verifier"], callback_url(request)
+        )
+        connection.status = Connection.Status.ACTIVE
+        connection.last_error = ""
+        connection.last_success_at = timezone.now()
+        connection.save()
+        return connection
     app = ConnectorApp.objects.get(connector_key=cls.key)
     tokens = post_form(
         app_url(cls.auth.token_url, app),

@@ -38,6 +38,7 @@ class ConnectForm(forms.Form):
                     help_text=credential.help_text,
                     widget=widget,
                     max_length=4000,
+                    required=credential.required,
                     initial=credential.generate() if credential.generate else None,
                 )
         for setting in connector.settings_fields:

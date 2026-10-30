@@ -26,6 +26,7 @@ urlpatterns = [
     path("mcp", mcp_views.endpoint, name="mcp"),
     path("", include("crm.mcp.oauth_urls")),
     path("settings/mcp/", include("crm.mcp.urls")),
+    path("settings/ai/", include("crm.ai.urls")),
     # Provider webhooks; the token is a per-connection secret. See docs/DEPLOYMENT.md.
     path("hooks/<str:token>/", receive_webhook, name="connector_webhook"),
     path(

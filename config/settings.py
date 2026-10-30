@@ -102,6 +102,7 @@ INSTALLED_APPS = [
     "crm.reports.apps.ReportsConfig",
     "oauth2_provider",
     "crm.mcp.apps.McpConfig",
+    "crm.ai.apps.AiConfig",
 ]
 
 MIDDLEWARE = [

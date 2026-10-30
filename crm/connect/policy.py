@@ -129,9 +129,15 @@ def send(connection, action, payload, *, actor=None, is_automation=False, summar
         request.error = decision.reason
     else:
         try:
-            # The full answer, such as a payment link, for the caller; the stored copy is cut.
-            request.result = str(connection.connector().perform(action, payload))
-            request.provider_ref = request.result[:255]
+            # The full answer for the caller: text such as a payment link, or a structure
+            # such as a model's reply, whose "id" is kept as the reference.
+            request.response = connection.connector().perform(action, payload)
+            if isinstance(request.response, dict):
+                request.result = ""
+                request.provider_ref = str(request.response.get("id") or "")[:255]
+            else:
+                request.result = str(request.response)
+                request.provider_ref = request.result[:255]
             request.status = OutboundRequest.Status.SENT
         except ConnectorError as exc:
             request.status = OutboundRequest.Status.FAILED

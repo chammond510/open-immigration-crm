@@ -12,7 +12,7 @@
 <div class="detail-grid">
   <div class="detail-main">
     {% include "connect/includes/data_flows.html" with flows=connector.data_flows %}
-    {% if is_oauth %}
+    {% if needs_app %}
       {% if user.is_superuser %}
         <section class="panel">
           <div class="section-heading"><div><h2>{% if app %}The firm's {{ entry.name }} app{% else %}First, register the firm's {{ entry.name }} app{% endif %}</h2><p>{{ entry.name }} signs in through an OAuth app the firm registers in its developer console. Use this exact redirect URI there.</p></div></div>

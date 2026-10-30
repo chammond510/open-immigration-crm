@@ -70,6 +70,15 @@ Connectors change the risk picture in these ways:
 - **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models pass an outbound policy and start in preview mode. Calendar events the CRM writes have no attendees, so no invitations go out.
 - **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings. Each connection has its own unguessable URL token, stored only as a hash. Twilio's connector, which needs the address to ask for delivery updates, keeps it encrypted with its other credentials. Dialpad's events are signed tokens (JWT, HS256 only), read only after their signature checks out. Twilio's are checked against the exact address and every parameter. Calendly's signature covers a timestamp, and deliveries more than three minutes off are refused, so a captured one cannot be replayed later. Microsoft Graph's carry a shared value (`clientState`) instead of a signature. They are accepted only with that value and a known subscription ID, and the CRM fetches what changed from Graph itself, never trusting the notification's contents. LawPay does not sign its webhooks at all, so a LawPay delivery is only a hint: the CRM fetches the event it names from LawPay with the firm's key and records only that, and payments also arrive by polling. A verified event's payload is stored minimized and encrypted, and deleted once the worker has processed it.
 
+## AI features
+
+The CRM's own AI features send data to the AI model the firm connects, so they are guarded the same way as other outbound actions:
+- **Off by default.** AI, and each feature, stay off until a superuser turns them on.
+- **Through the outbound policy.** Every request starts in preview mode on a new connection, is limited per hour, and is logged with the feature, the person, and the connection that paid. Prompts and answers are not logged.
+- **Personal connections stay personal.** A staff member's own AI connection runs only their own requests. Background work runs only through the firm-wide connection a superuser chooses.
+- **No subscription credentials.** The Anthropic connector takes only Claude Console API keys and refuses anything else. Anthropic does not permit apps to use Claude.ai credentials.
+- **Less kept at providers.** OpenAI requests are sent with `store: false`. OpenRouter requests always deny data collection by the providers it routes to. A model the firm runs itself keeps everything local.
+
 ## AI assistants (MCP)
 
 The MCP server gives an assistant the access of the staff member who approved it, so its defaults are cautious:

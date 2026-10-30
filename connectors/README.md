@@ -7,12 +7,17 @@ Each subpackage here is one optional provider adapter. Core code never imports t
 ```text
 connectors/
   catalog.toml          wanted providers shown in the catalog before a connector exists
+  anthropic/            Claude models through a Claude Console API key
   calendly/             consultations booked through Calendly, by signed organization webhook
   dialpad/              Dialpad calls and texts, by signed webhook, with a call backfill
   google_workspace/     each staff member's Gmail and Google Calendar
   lawpay/               LawPay payment links per account, and payments by polling
   microsoft_365/        each staff member's Outlook mail and calendar, through Microsoft Graph
+  openai/               OpenAI models through the Responses API, with store: false
+  openai_compatible/    any OpenAI-compatible server, including local models such as Ollama
+  openrouter/           many models through OpenRouter, connected by signing in
   example/              a fictional connector that tests the framework (hidden from the catalog)
+  example_ai/           a fictional AI model for testing the AI interface (hidden)
     __init__.py         the connector class, registered with @register
     test_example.py     the shared contract tests plus connector-specific tests
   twilio/               Twilio texts, sent through the outbound policy and received by webhook
@@ -44,6 +49,10 @@ connectors/
    Calendar connectors that take the CRM's appointments declare `save_event` and `delete_event`. The `save_event` payload is `{"event_id": the provider's ID or "", "title", "starts_at", "ends_at" (ISO 8601), "time_zone", "description", "crm_id"}`, and it returns the event's ID; create the event when `event_id` is empty or no longer exists. Add no attendees and send no invitations. Core puts each appointment on its staff member's connected calendars and keeps it in step, and it only changes events it created (`ExternalRef.created_by_crm`). List both actions in `owner_sync_actions`, which lets them run automatically on a personal connection, but only for records assigned to its owner.
 
    A connector can declare a setting named `unmatched` with the choices `keep` and `skip`. With `skip`, core stores only records whose other party is a known contact, instead of sending the rest to Needs matching. Email between staff members is never stored.
+
+   AI model connectors declare `generate`. Core's `crm/ai/client.py` describes the payload (system prompt, messages, function tools, and an optional JSON schema) and the reply. Return `raw`, the provider's own copy of the assistant's turn, so core can send it back unchanged in a tool loop. Reasoning that must be passed back exactly needs this.
+
+   An `auth` of `KeyExchangeAuth` is a PKCE sign-in with no app to register that hands back an API key, as OpenRouter's does. The connector builds the query with `authorize_query()` and turns the code into credentials with `exchange_code()`. A `CredentialField` with `required=False` may be left blank, such as a key a local server ignores.
 
    Automation connectors (the `automation` capability) must declare a `deliver_event` outbound action. Its payload is `{"id": ..., "event": {...}}`; the ID stays the same across retries. Core builds events in `crm/events/` and sends them through the outbound policy from the worker.
 
