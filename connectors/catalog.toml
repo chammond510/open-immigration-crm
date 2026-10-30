@@ -103,11 +103,6 @@ capabilities = ["system_email"]
 
 # Scheduling and video
 [[connector]]
-key = "calendly"
-name = "Calendly"
-capabilities = ["scheduling"]
-
-[[connector]]
 key = "cal_com"
 name = "Cal.com"
 capabilities = ["scheduling"]

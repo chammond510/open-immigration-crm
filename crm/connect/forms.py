@@ -1,6 +1,6 @@
 from django import forms
 
-from .base import ApiKeyAuth, Capability, ConnectionScope
+from .base import ApiKeyAuth, Capability, ConnectionScope, ConnectorError
 
 CREDENTIAL_PREFIX = "credential_"
 SETTING_PREFIX = "setting_"
@@ -41,6 +41,8 @@ class ConnectForm(forms.Form):
                     initial=credential.generate() if credential.generate else None,
                 )
         for setting in connector.settings_fields:
+            if setting.options:
+                continue
             name = f"{SETTING_PREFIX}{setting.name}"
             if setting.choices:
                 self.fields[name] = forms.ChoiceField(choices=setting.choices)
@@ -71,6 +73,48 @@ class ConnectForm(forms.Form):
             name[len(SETTING_PREFIX) :]: value.strip()
             for name, value in self.cleaned_data.items()
             if name.startswith(SETTING_PREFIX)
+        }
+
+
+class ConnectionConfigForm(forms.Form):
+    """A connection's settings, changed after connecting, with live options from the provider.
+
+    A setting whose options cannot be loaded is left out and keeps its value;
+    ``unavailable`` says why.
+    """
+
+    def __init__(self, *args, connector, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.connector = connector
+        self.unavailable = {}
+        config = connector.connection.config or {}
+        for setting in type(connector).settings_fields:
+            choices = setting.choices
+            if setting.options:
+                try:
+                    choices = tuple(setting.options(connector))
+                except ConnectorError as exc:
+                    self.unavailable[setting.label] = str(exc)
+                    continue
+            name = f"{SETTING_PREFIX}{setting.name}"
+            if setting.multiple:
+                field = forms.MultipleChoiceField(
+                    choices=choices, required=False, widget=forms.CheckboxSelectMultiple
+                )
+            elif choices:
+                field = forms.ChoiceField(choices=choices)
+            else:
+                field = forms.CharField(max_length=500, required=setting.required)
+            field.label, field.help_text = setting.label, setting.help_text
+            field.initial = config.get(setting.name, [] if setting.multiple else setting.default)
+            if setting.validate:
+                field.validators.append(setting.validate)
+            self.fields[name] = field
+
+    def settings(self):
+        return {
+            name[len(SETTING_PREFIX) :]: value if isinstance(value, list) else value.strip()
+            for name, value in self.cleaned_data.items()
         }
 
 

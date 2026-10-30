@@ -90,6 +90,10 @@ class SettingField:
     With ``choices`` staff pick from a list; otherwise they type a value, which
     may be left blank unless ``required``. ``validate`` may raise ``ValidationError``
     for a value the connector cannot use; it is not called for a blank value.
+
+    ``options(connector)`` returns the choices live instead, such as the event types
+    at the provider; such a setting is chosen on the connection's page once it is
+    connected. With ``multiple``, staff pick any number and the value is a list.
     """
 
     name: str
@@ -99,6 +103,8 @@ class SettingField:
     required: bool = True
     help_text: str = ""
     validate: Callable[[str], None] | None = None
+    options: Callable[["Connector"], list[tuple[str, str]]] | None = None
+    multiple: bool = False
 
 
 @dataclass(frozen=True)
@@ -256,7 +262,8 @@ class Connector:
     def setting(self, name):
         """The connection's value for one of ``settings_fields``, or that field's default."""
         field = next(f for f in self.settings_fields if f.name == name)
-        return (self.connection.config or {}).get(name, field.default)
+        default = [] if field.multiple else field.default
+        return (self.connection.config or {}).get(name, default)
 
     def access_token(self):
         """For OAuth connectors: a current access token, refreshed when it is about to expire."""

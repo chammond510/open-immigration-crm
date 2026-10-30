@@ -134,6 +134,8 @@ class BookingRecord(TypedRecord):
     cancelled: bool = False
     answers: dict = field(default_factory=dict)  # Booking questions and their answers.
     tracking: dict = field(default_factory=dict)  # For example utm_source and utm_campaign.
+    # The external_id of the booking this one reschedules, whose appointment moves.
+    replaces: str = ""
 
     def problems(self):
         problems = super().problems()

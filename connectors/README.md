@@ -7,6 +7,7 @@ Each subpackage here is one optional provider adapter. Core code never imports t
 ```text
 connectors/
   catalog.toml          wanted providers shown in the catalog before a connector exists
+  calendly/             consultations booked through Calendly, by signed organization webhook
   dialpad/              Dialpad calls and texts, by signed webhook, with a call backfill
   google_workspace/     each staff member's Gmail and Google Calendar
   microsoft_365/        each staff member's Outlook mail and calendar, through Microsoft Graph
@@ -49,6 +50,8 @@ connectors/
 
    `settings_fields` are non-secret choices made when connecting, such as sandbox or production. They are kept in `Connection.config` and shown on the connection's page; read them with `self.setting(name)`. A `SettingField` with `choices` is a list, and its `validate` function can reject a value, such as an address outside the provider's own domain.
 
+   A setting with `options` gets its choices live, from `options(connector)`, such as the event types at the provider; it is chosen on the connection's page once connected, where staff who manage the connection can change any setting. With `multiple`, staff pick any number and the value is a list. For choices from the CRM's own data, call `crm.connect.lookups.options(name)`; core registers `lead_source_fields`, the contact choice fields a booking's tracking value can fill.
+
    Return typed records from `crm.connect.records` for your capability:
    - `CallRecord` (phone)
    - `TextRecord` (texting)
@@ -60,7 +63,7 @@ connectors/
 
    Core stores them:
    - calls, texts, and emails become communications, matched to a contact by E.164 phone number or email, or left for staff in Needs matching;
-   - calendar events with a known contact, and bookings, become appointments linked through `ExternalRef`;
+   - calendar events with a known contact, and bookings, become appointments linked through `ExternalRef`. A `BookingRecord` with `replaces` (the earlier booking's `external_id`) moves that appointment rather than making another. For a contact a booking creates, core fills the contact field named by the connection's `lead_source_field` setting from the tracking value named by `lead_source_from` (utm_source by default), when it matches one of the field's choices;
    - payments are recorded on the invoice they reference;
    - case status readings are recorded on the matter with that receipt number. A change creates a review task for staff. When the source cannot answer for a receipt number, the record carries a `problem` (`not_found`, `invalid_receipt`, or `unavailable`) instead of a status, and the matter shows it until a status arrives.
 

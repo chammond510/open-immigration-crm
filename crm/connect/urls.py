@@ -12,6 +12,7 @@ urlpatterns = [
     path("<uuid:pk>/acknowledge/", pages.connection_acknowledge, name="connection_acknowledge"),
     path("<uuid:pk>/test/", pages.connection_test, name="connection_test"),
     path("<uuid:pk>/settings/", pages.connection_settings, name="connection_settings"),
+    path("<uuid:pk>/config/", pages.connection_config, name="connection_config"),
     path("<uuid:pk>/webhooks/", pages.connection_webhooks, name="connection_webhooks"),
     path("<uuid:pk>/disconnect/", pages.connection_disconnect, name="connection_disconnect"),
 ]
