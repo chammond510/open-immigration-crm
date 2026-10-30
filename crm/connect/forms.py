@@ -82,6 +82,24 @@ class ConnectorAppForm(forms.Form):
         widget=forms.PasswordInput(attrs={"autocomplete": "off"}),
     )
 
+    def __init__(self, *args, connector=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        for setting in getattr(connector.auth, "app_fields", ()) if connector else ():
+            field = forms.CharField(
+                max_length=255, label=setting.label, help_text=setting.help_text
+            )
+            field.initial = (self.initial or {}).get(setting.name, setting.default)
+            if setting.validate:
+                field.validators.append(setting.validate)
+            self.fields[f"{SETTING_PREFIX}{setting.name}"] = field
+
+    def app_config(self):
+        return {
+            name[len(SETTING_PREFIX) :]: value.strip()
+            for name, value in self.cleaned_data.items()
+            if name.startswith(SETTING_PREFIX)
+        }
+
 
 class ConnectionSettingsForm(forms.Form):
     preview_mode = forms.BooleanField(

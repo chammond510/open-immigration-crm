@@ -9,7 +9,7 @@ import base64
 import hashlib
 import secrets
 import time
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -34,6 +34,15 @@ class TokenRefused(ConnectorError):
 def callback_url(request):
     """The exact redirect URI staff register in the provider's developer console."""
     return request.build_absolute_uri(reverse("connection_oauth_callback"))
+
+
+def app_url(url, app):
+    """A provider URL with the firm's app values, such as its tenant, filled in."""
+    values = {key: quote(str(value), safe="") for key, value in (app.config or {}).items()}
+    try:
+        return url.format(**values)
+    except (KeyError, IndexError):
+        raise ConnectorError("Enter the missing details of the firm's app first.") from None
 
 
 def requested_scopes(cls, capabilities):
@@ -75,8 +84,12 @@ def authorization_url(request, connection):
         "code_challenge_method": "S256",
         **cls.auth.extra_authorize_params,
     }
-    separator = "&" if "?" in cls.auth.authorize_url else "?"
-    return f"{cls.auth.authorize_url}{separator}{urlencode(query)}"
+    try:
+        authorize_url = app_url(cls.auth.authorize_url, app)
+    except ConnectorError as exc:
+        raise ValidationError(str(exc)) from None
+    separator = "&" if "?" in authorize_url else "?"
+    return f"{authorize_url}{separator}{urlencode(query)}"
 
 
 def post_form(url, data):
@@ -143,7 +156,7 @@ def access_token(connection):
             else:
                 try:
                     tokens = post_form(
-                        cls.auth.token_url,
+                        app_url(cls.auth.token_url, app),
                         {
                             "grant_type": "refresh_token",
                             "refresh_token": credentials["refresh_token"],
@@ -186,7 +199,7 @@ def finish(request):
         raise ConnectorError("Sign-in was cancelled or refused at the provider.")
     app = ConnectorApp.objects.get(connector_key=cls.key)
     tokens = post_form(
-        cls.auth.token_url,
+        app_url(cls.auth.token_url, app),
         {
             "grant_type": "authorization_code",
             "code": request.GET["code"],

@@ -38,6 +38,10 @@ class ConnectorContract:
     # False for providers that sign inside the body, such as with a JWT; their own
     # tests must then show that an unsigned body is refused.
     signature_in_headers = True
+    # False for providers that prove an event with a shared value inside it instead of
+    # signing the body, such as Microsoft Graph's clientState. Such a connector must
+    # fetch the data an event points to from the provider, never trust the body.
+    body_is_signed = True
 
     def setUp(self):
         super().setUp()
@@ -118,9 +122,10 @@ class ConnectorContract:
         url = self.webhook_url
         self.assertTrue(connector.verify_webhook(body, headers, self.webhook_secret, url=url))
         self.assertFalse(connector.verify_webhook(body, headers, "a-different-secret", url=url))
-        self.assertFalse(
-            connector.verify_webhook(body + b" ", headers, self.webhook_secret, url=url)
-        )
+        if self.body_is_signed:
+            self.assertFalse(
+                connector.verify_webhook(body + b" ", headers, self.webhook_secret, url=url)
+            )
         if self.signature_in_headers:
             self.assertFalse(connector.verify_webhook(body, {}, self.webhook_secret, url=url))
         envelope = connector.parse_webhook(body, headers)

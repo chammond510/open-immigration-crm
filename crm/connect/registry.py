@@ -18,6 +18,7 @@ from .base import (
     ConnectionScope,
     Connector,
     Maturity,
+    OAuthAuth,
 )
 
 ENTRY_POINT_GROUP = "open_immigration_crm.connectors"
@@ -75,6 +76,10 @@ def manifest_problems(cls):
         or cls.webhooks.secret_source not in WEBHOOK_SECRET_SOURCES
     ):
         problems.append("webhooks must use declared capabilities and a known secret source")
+    if isinstance(cls.auth, OAuthAuth):
+        named = set(re.findall(r"{(\w+)}", cls.auth.authorize_url + cls.auth.token_url))
+        if not named <= {f.name for f in cls.auth.app_fields}:
+            problems.append("OAuth URLs may name only the auth's app_fields")
     if cls.webhooks is not None and cls.webhooks.secret_source == "credential":
         names = {f.name for f in cls.auth.fields} if isinstance(cls.auth, ApiKeyAuth) else set()
         if cls.webhooks.secret_credential not in names:
