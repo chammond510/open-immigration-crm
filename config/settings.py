@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "crm.events.apps.EventsConfig",
     "crm.workflows.apps.WorkflowsConfig",
     "crm.customfields.apps.CustomFieldsConfig",
+    "crm.reports.apps.ReportsConfig",
 ]
 
 MIDDLEWARE = [

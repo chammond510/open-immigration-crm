@@ -37,6 +37,7 @@ Tokens start with `oic_`, so secret scanners can find one that leaks. `scripts/c
 | `time:read`, `time:write` | Time entries |
 | `notices:read`, `notices:write` | USCIS notices and status checks |
 | `billing:read` | Invoices and payments. The user also needs billing access. |
+| `reports:read` | The operating dashboard's figures. Billing figures are included only when the token also has `billing:read` and its user has billing access. |
 
 ## Endpoints
 
@@ -63,6 +64,7 @@ Paths end with a slash.
 | `/api/v1/status-checks/` | GET, POST | notices | Filters: `matter`, `receipt_number` |
 | `/api/v1/invoices/` | GET | billing | Filters: `status`, `matter`, `contact`, `updated_since` |
 | `/api/v1/invoices/<id>/` | GET | billing | Includes lines and payments |
+| `/api/v1/reports/summary/` | GET | reports | The operating dashboard as JSON. `period` is one of `week`, `month`, `last_month`, `quarter`, `year`, `30d`, `90d`, or `custom` with `start` and `end`; `by` picks the choice field for lead sources. Useful for a weekly scorecard sent by an automation tool. |
 
 `assigned_to` and `user` accept a user ID or `me`. Date filters take ISO 8601 values, such as `2026-03-02` or `2026-03-02T09:00:00Z`. A value without a time zone uses the installation's time zone.
 

@@ -21,6 +21,14 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff
 - A JSON API for scripts and automation tools, off until a superuser turns it on, with scoped, expiring, revocable tokens and a log of every request (see [API](docs/API.md))
 - Signed outbound webhooks for automation tools: the firm chooses which CRM events are sent, and each one is retried and recorded (see [Outbound webhooks](docs/WEBHOOKS.md))
+- An operating dashboard built only from CRM data:
+  - intake by stage, with lead sources from a custom field;
+  - matters by status, case type, and workflow phase;
+  - deadlines and open RFE or NOID responses;
+  - USCIS notices, communications, and time;
+  - for staff with billing access, invoiced, collected, and outstanding amounts by age.
+
+  Each figure is compared with the previous period.
 - Audit records for important actions
 - CSV and portable JSON export paths
 - PostgreSQL production path and SQLite-only local evaluation path

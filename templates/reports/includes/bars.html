@@ -1,0 +1,1 @@
+{% for row in rows %}<div class="report-bar"><span>{{ row.label }}</span><meter min="0" max="100" value="{{ row.share }}" aria-label="{{ row.label }}: {{ row.count }}"></meter><strong>{{ row.count }}</strong></div>{% endfor %}
