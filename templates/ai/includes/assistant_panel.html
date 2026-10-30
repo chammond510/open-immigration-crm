@@ -1,4 +1,4 @@
-{% load connect_tags %}
+{% load ai_tags connect_tags %}
 {% if on %}
 <section class="panel" id="assistant">
   <div class="section-heading"><div><h2>Assistant</h2><p>Ask about this matter. Answers are AI drafts for attorney review.</p></div><a href="{% url 'ai_assistant' %}">All conversations</a></div>
@@ -7,6 +7,7 @@
       {% csrf_token %}<input type="hidden" name="matter" value="{{ matter.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}#assistant">
       <div class="field"><label for="{{ form.message.id_for_label }}">Ask about {{ matter.matter_number }}</label>{{ form.message }}</div>
       {% if connections|length > 1 %}<div class="field"><label for="{{ form.connection.id_for_label }}">{{ form.connection.label }}</label>{{ form.connection }}</div>{% else %}<input type="hidden" name="connection" value="{{ connections.0.pk }}">{% endif %}
+      {% ai_usage_notes connections %}
       <div class="form-actions"><button class="button primary" type="submit">Ask</button></div>
     </form>
   {% else %}

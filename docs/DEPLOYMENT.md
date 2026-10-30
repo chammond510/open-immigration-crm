@@ -117,7 +117,7 @@ Billing is visible to superusers and to staff given the **Can view and manage bi
 
 ## Connecting services
 
-Superusers connect firm-wide services on the **Connections** page; staff can connect services that are personal to them, such as their own calendar. For providers that use OAuth sign-in, a superuser first registers the firm's own app in the provider's developer console. The connector's page shows the exact redirect URI to enter there (`https://<your-host>/connections/oauth/callback/`); that URI must be reachable by staff browsers, not by the provider. The fictional example connectors appear in the catalog only when `CONNECTORS_SHOW_HIDDEN=true`, which defaults to on only with `DEBUG=true`.
+Superusers connect firm-wide services on the **Connections** page; staff can connect services that are personal to them, such as their own calendar. For providers that use OAuth sign-in, a superuser first registers the firm's own app in the provider's developer console. The connector's page shows the exact redirect URI to enter there (`https://<your-host>/connections/oauth/callback/`); that URI must be reachable by staff browsers, not by the provider. The fictional example connectors appear in the catalog only when `CONNECTORS_SHOW_HIDDEN=true`, which defaults to on only with `DEBUG=true`. Beta connectors that wait on a provider's confirmation are offered only when their flag is listed in `CONNECTOR_FLAGS`, separated by commas: `CONNECTOR_FLAGS=chatgpt_plan` offers the ChatGPT plan connector (see [AI features](AI.md)). Removing a flag stops that connector's connections.
 
 ## Provider webhooks
 

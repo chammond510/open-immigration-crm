@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load connect_tags %}
+{% load ai_tags connect_tags %}
 {% block title %}Assistant · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading"><div><p class="eyebrow">AI features</p><h1>Assistant</h1><p>Ask about clients, matters, deadlines, and the practice. The assistant looks things up in the CRM as you. Each change it proposes waits for you to confirm it, and it drafts emails and texts but never sends them. Its answers are AI drafts for attorney review.</p></div></div>
@@ -12,6 +12,7 @@
       <h2>New conversation</h2>
       <div class="field"><label for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>{{ form.message }}</div>
       {% if connections|length > 1 %}<div class="field"><label for="{{ form.connection.id_for_label }}">{{ form.connection.label }}</label>{{ form.connection }}</div>{% else %}<input type="hidden" name="connection" value="{{ connections.0.pk }}">{% endif %}
+      {% ai_usage_notes connections %}
       <div class="form-actions"><button class="button primary" type="submit">Ask</button></div>
     </form>
   {% else %}

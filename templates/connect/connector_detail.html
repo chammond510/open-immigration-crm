@@ -44,7 +44,7 @@
               {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
             </div>
           {% endfor %}
-          <div class="form-actions"><button class="button primary" type="submit">{% if is_oauth %}Continue to sign-in{% else %}Connect{% endif %}</button><a class="button" href="{% url 'connections' %}">Cancel</a></div>
+          <div class="form-actions"><button class="button primary" type="submit">{% if is_oauth %}{{ connector.auth.button_label }}{% else %}Connect{% endif %}</button><a class="button" href="{% url 'connections' %}">Cancel</a></div>
         </form>
       </section>
     {% elif not may_connect %}

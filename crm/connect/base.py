@@ -148,6 +148,12 @@ class KeyExchangeAuth:
 
     authorize_url: str
     docs_url: str = ""
+    # For providers that accept only a loopback callback on the staff member's own
+    # computer: the sign-in lands on this unreachable address, and staff paste the
+    # address back into the CRM. Only its port may differ.
+    loopback_redirect: str = ""
+    # The sign-in button's words, where the provider requires its own.
+    button_label: str = "Continue to sign-in"
 
 
 SIGN_IN_TYPES = (OAuthAuth, KeyExchangeAuth)
@@ -272,6 +278,13 @@ class Connector:
     search_scopes: tuple[tuple[str, str], ...] = ()
     # Hidden connectors (such as the fictional example) stay out of the catalog.
     hidden = False
+    # For AI plans billed to a staff member's own subscription: a label shown wherever
+    # they choose the connection, and where they manage that plan's usage.
+    usage_label = ""
+    usage_url = ""
+    # A Beta flag: when set, the connector is offered only while the CONNECTOR_FLAGS
+    # setting lists it. Turning the flag off again stops its connections from working.
+    flag = ""
 
     def __init__(self, connection):
         self.connection = connection
@@ -319,13 +332,26 @@ class Connector:
         """
         raise NotImplementedError
 
-    def authorize_query(self, callback_url, code_challenge, state):
+    def authorize_query(self, callback_url, code_challenge, state, nonce=""):
         """For KeyExchangeAuth: the sign-in address's query parameters."""
         raise NotImplementedError
 
-    def exchange_code(self, code, code_verifier, callback_url):
-        """For KeyExchangeAuth: the credentials to store for a returned sign-in code."""
+    def exchange_code(self, code, code_verifier, callback_url, *, returned=None, nonce=""):
+        """For KeyExchangeAuth: the credentials to store for a returned sign-in code.
+
+        ``returned`` holds everything the sign-in sent back, such as an issued client ID,
+        and ``nonce`` the value sent with this attempt, for checking an ID token.
+        """
         raise NotImplementedError
+
+    def refresh_credentials(self, credentials):
+        """For KeyExchangeAuth sign-ins whose access expires: renewed credentials.
+
+        Raise ConnectorError with status 400 or 401 when the provider ended the
+        sign-in, so staff are asked to sign in again. Core runs this under a row
+        lock, so a rotating refresh token is never spent twice.
+        """
+        raise ConnectorError("Sign in again to keep this connection working.", status=401)
 
     def webhook_challenge(self, url, body, headers):
         """Answer a provider's check that the address is ours, before any verification.

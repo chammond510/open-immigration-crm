@@ -61,8 +61,10 @@ class ConnectionTestForm(forms.Form):
 class AIConnectionField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         mine = " (yours)" if obj.owner_id else ""
+        cls = obj.connector_class
+        plan = f" · {cls.usage_label}" if cls is not None and cls.usage_label else ""
         preview = " · preview mode" if obj.preview_mode else ""
-        return f"{obj.label}{mine}{preview}"
+        return f"{obj.label}{mine}{plan}{preview}"
 
 
 def connection_field(user, initial=None):

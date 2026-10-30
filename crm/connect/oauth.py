@@ -3,13 +3,17 @@
 Sign-in starts from a link rather than a form: the content security policy's
 ``form-action 'self'`` would block a form submission that redirects to the
 provider.
+
+A provider that accepts only a loopback callback, on the staff member's own
+computer, sends the browser to an address that cannot load. Staff paste that
+address back, and ``pasted_params`` reads the code from it.
 """
 
 import base64
 import hashlib
 import secrets
 import time
-from urllib.parse import quote, urlencode
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -53,21 +57,30 @@ def requested_scopes(cls, capabilities):
 
 
 def remember(request, connection):
-    """A one-time state and PKCE verifier for this sign-in; returns (state, challenge)."""
+    """A one-time state, nonce, and PKCE verifier for this sign-in; returns them for the URL."""
     state = secrets.token_urlsafe(32)
+    nonce = secrets.token_urlsafe(32)
     verifier, challenge = pkce_pair()
     request.session[PENDING_KEY] = {
         "state": state,
         "connection": str(connection.pk),
         "verifier": verifier,
+        "nonce": nonce,
         "created": time.time(),
     }
-    return state, challenge
+    return state, challenge, nonce
+
+
+def redirect_uri(request, cls):
+    """Where the provider sends the browser back: the CRM, or a loopback address."""
+    return getattr(cls.auth, "loopback_redirect", "") or callback_url(request)
 
 
 def key_exchange_url(request, connection):
-    state, challenge = remember(request, connection)
-    query = connection.connector().authorize_query(callback_url(request), challenge, state)
+    state, challenge, nonce = remember(request, connection)
+    query = connection.connector().authorize_query(
+        redirect_uri(request, connection.connector_class), challenge, state, nonce=nonce
+    )
     authorize_url = connection.connector_class.auth.authorize_url
     separator = "&" if "?" in authorize_url else "?"
     return f"{authorize_url}{separator}{urlencode(query)}"
@@ -89,7 +102,7 @@ def authorization_url(request, connection):
     app = ConnectorApp.objects.filter(connector_key=cls.key).first()
     if app is None:
         raise ValidationError(f"A superuser must first enter the firm's {cls.name} app details.")
-    state, challenge = remember(request, connection)
+    state, challenge, _ = remember(request, connection)
     query = {
         "response_type": "code",
         "client_id": app.client_id,
@@ -106,6 +119,25 @@ def authorization_url(request, connection):
         raise ValidationError(str(exc)) from None
     separator = "&" if "?" in authorize_url else "?"
     return f"{authorize_url}{separator}{urlencode(query)}"
+
+
+def pasted_params(cls, pasted):
+    """The sign-in's answer from the loopback address staff pasted back.
+
+    Only the address the sign-in was sent to is accepted; its port may differ.
+    """
+    expected = urlsplit(cls.auth.loopback_redirect)
+    given = urlsplit(str(pasted or "").strip())
+    if (given.scheme, given.hostname, given.path) != (
+        expected.scheme,
+        expected.hostname,
+        expected.path,
+    ):
+        raise ValidationError(
+            f"Paste the whole address your browser landed on. It starts with "
+            f"{expected.scheme}://{expected.hostname}."
+        )
+    return dict(parse_qsl(given.query))
 
 
 def post_form(url, data):
@@ -167,7 +199,17 @@ def access_token(connection):
         if needs_refresh(credentials):
             cls = locked.connector_class
             app = ConnectorApp.objects.filter(connector_key=locked.connector_key).first()
-            if not credentials.get("refresh_token") or app is None or cls is None:
+            if cls is not None and isinstance(cls.auth, KeyExchangeAuth):
+                try:
+                    credentials = locked.connector().refresh_credentials(credentials)
+                except ConnectorError as exc:
+                    if exc.status not in (400, 401):
+                        raise
+                    failure = str(exc) or "Sign in again to keep this connection working."
+                else:
+                    locked.credentials = credentials
+                    locked.save(update_fields=["credentials", "updated_at"])
+            elif not credentials.get("refresh_token") or app is None or cls is None:
                 failure = "Sign in again to keep this connection working."
             else:
                 try:
@@ -197,10 +239,14 @@ def access_token(connection):
     return credentials["access_token"]
 
 
-def finish(request):
-    """Validate the callback, exchange the code, and store the tokens. Returns the connection."""
+def finish(request, params=None):
+    """Validate the callback, exchange the code, and store the tokens. Returns the connection.
+
+    ``params`` is the answer from a pasted loopback address; otherwise the request's query.
+    """
+    params = request.GET if params is None else params
     pending = request.session.pop(PENDING_KEY, None) or {}
-    state = request.GET.get("state", "")
+    state = params.get("state", "")
     if (
         not pending
         or not secrets.compare_digest(state, pending.get("state", ""))
@@ -211,11 +257,15 @@ def finish(request):
     cls = connection.connector_class if connection else None
     if cls is None or not isinstance(cls.auth, SIGN_IN_TYPES):
         raise ValidationError("The connection for this sign-in no longer exists.")
-    if request.GET.get("error") or not request.GET.get("code"):
+    if params.get("error") or not params.get("code"):
         raise ConnectorError("Sign-in was cancelled or refused at the provider.")
     if isinstance(cls.auth, KeyExchangeAuth):
         connection.credentials = connection.connector().exchange_code(
-            request.GET["code"], pending["verifier"], callback_url(request)
+            params["code"],
+            pending["verifier"],
+            redirect_uri(request, cls),
+            returned=dict(params.items()),
+            nonce=pending.get("nonce", ""),
         )
         connection.status = Connection.Status.ACTIVE
         connection.last_error = ""
@@ -227,7 +277,7 @@ def finish(request):
         app_url(cls.auth.token_url, app),
         {
             "grant_type": "authorization_code",
-            "code": request.GET["code"],
+            "code": params["code"],
             "redirect_uri": callback_url(request),
             "client_id": app.client_id,
             "client_secret": app.client_secret,

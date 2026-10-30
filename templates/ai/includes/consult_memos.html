@@ -1,4 +1,4 @@
-{% load connect_tags %}
+{% load ai_tags connect_tags %}
 {% if show %}
 <section class="panel" id="consult-memos">
   <div class="section-heading"><div><h2>Consult prep</h2><p>Internal memos for upcoming consults, drafted by AI from this contact's records.</p></div></div>
@@ -26,6 +26,7 @@
           {% if connections|length > 1 %}<label class="sr-only" for="memo-connection-{{ consult.appointment.pk }}">Prepare through</label><select id="memo-connection-{{ consult.appointment.pk }}" name="connection">{% for connection in connections %}<option value="{{ connection.pk }}">{{ connection.label }}{% if connection.owner_id %} (yours){% endif %}{% if connection.preview_mode %} · preview mode{% endif %}</option>{% endfor %}</select>{% else %}<input type="hidden" name="connection" value="{{ connections.0.pk }}">{% endif %}
           <button class="button" type="submit">{% if consult.memo.body %}Prepare again{% else %}Prepare a memo now{% endif %}</button>
         </form>
+        {% ai_usage_notes connections %}
       {% elif on and not connections %}
         <div class="prompt-stack">{% connect_prompt "ai_models" "to prepare consult memos" %}</div>
       {% endif %}

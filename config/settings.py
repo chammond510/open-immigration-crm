@@ -211,6 +211,10 @@ CONNECTORS_OUTBOUND_ENABLED = env_bool("CONNECTORS_OUTBOUND_ENABLED", True)
 CONNECTORS_OUTBOUND_HOURLY_LIMIT = int(os.environ.get("CONNECTORS_OUTBOUND_HOURLY_LIMIT", "200"))
 # Hidden connectors (the fictional examples) appear in the catalog for testing.
 CONNECTORS_SHOW_HIDDEN = env_bool("CONNECTORS_SHOW_HIDDEN", DEBUG)
+# Beta connectors offered only behind a flag, by flag name, such as "chatgpt_plan".
+CONNECTOR_FLAGS = frozenset(
+    flag.strip() for flag in os.environ.get("CONNECTOR_FLAGS", "").split(",") if flag.strip()
+)
 CONNECTOR_WEBHOOK_MAX_BYTES = int(os.environ.get("CONNECTOR_WEBHOOK_MAX_BYTES", str(1024 * 1024)))
 
 # REST API (/api/v1/). It stays off until a superuser turns it on under API access.

@@ -4,12 +4,27 @@
 {% block content %}
 <div class="page-heading">
   <div><p class="eyebrow"><a href="{% url 'connections' %}">Connections</a> · {{ connector.name|default:connection.connector_key }}</p><h1 class="with-monogram"><span class="monogram" aria-hidden="true">{{ monogram }}</span>{{ connection.label }}</h1><p><span class="badge {{ connection.status }}">{{ connection.get_status_display }}</span> {% if connection.owner %}Personal connection for {{ connection.owner }}{% else %}Shared by the whole firm{% endif %}{% if connection.preview_mode and not disconnected %} · Preview mode{% endif %}</p></div>
-  {% if can_manage and connector and not disconnected %}<div class="actions">{% if is_oauth %}<a class="button primary" href="{% url 'connection_oauth_start' connection.pk %}">{% if signed_in %}Reconnect{% else %}Sign in to {{ connector.name }}{% endif %}</a>{% endif %}{% if signed_in %}<form method="post" action="{% url 'connection_test' connection.pk %}">{% csrf_token %}<button class="button" type="submit">Test connection</button></form>{% endif %}</div>{% endif %}
+  {% if can_manage and connector and not disconnected %}<div class="actions">{% if is_oauth and not loopback %}<a class="button primary" href="{% url 'connection_oauth_start' connection.pk %}">{% if signed_in %}Reconnect{% else %}Sign in to {{ connector.name }}{% endif %}</a>{% endif %}{% if signed_in %}<form method="post" action="{% url 'connection_test' connection.pk %}">{% csrf_token %}<button class="button" type="submit">Test connection</button></form>{% endif %}</div>{% endif %}
 </div>
 {% if not connector %}<div class="privacy-note">The connector for this connection is not installed on this site, so the connection is inactive.</div>{% endif %}
 {% if disconnected %}<div class="privacy-note">Disconnected. Stored credentials were deleted; history is kept below.{% if connector %} <a href="{% url 'connector_detail' connection.connector_key %}">Connect {{ connector.name }} again</a>.{% endif %}</div>{% endif %}
 {% if worker_stopped %}<div class="privacy-note">The background worker has not checked in recently, so syncs and webhook processing are paused. Start it with <code>python manage.py run_worker</code>.</div>{% endif %}
 {% if is_oauth and not signed_in and not disconnected %}<div class="privacy-note">Finish connecting by signing in to {{ connector.name }}.</div>{% endif %}
+{% if loopback and can_manage and not disconnected %}
+  <section class="panel stacked-form loopback-sign-in" id="sign-in">
+    <div><h2>{% if signed_in %}Sign in again{% else %}Sign in{% endif %}</h2><p class="muted">This sign-in comes back to your own computer rather than the CRM, so it takes one extra step.</p></div>
+    <ol class="steps">
+      <li><a class="button sign-in-button" href="{% url 'connection_oauth_start' connection.pk %}" target="_blank" rel="noopener">{{ connector.auth.button_label }}</a> opens the sign-in in a new tab.</li>
+      <li>After you sign in, that tab shows a page that cannot be reached. That is expected.</li>
+      <li>Copy the whole address from that tab's address bar, and paste it here within ten minutes.</li>
+    </ol>
+    <form method="post" action="{% url 'connection_oauth_paste' connection.pk %}" class="stacked-form">
+      {% csrf_token %}
+      <div class="field"><label for="sign-in-address">Address from the sign-in tab</label><input id="sign-in-address" name="address" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:…" required></div>
+      <div class="form-actions"><button class="button primary" type="submit">Finish signing in</button></div>
+    </form>
+  </section>
+{% endif %}
 {% if connection.last_error and not disconnected %}<div class="message error">Last problem: {{ connection.last_error }}</div>{% endif %}
 {% if connector and not connection.data_flows_acknowledged and not disconnected %}<div class="privacy-note">{% if user.is_superuser %}Review what this connection sends and receives, then confirm below. Nothing is sent through it until you do.{% else %}A superuser must review what this connection sends and receives before it is used.{% endif %}</div>{% endif %}
 <div class="detail-grid">
