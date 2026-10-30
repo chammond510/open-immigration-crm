@@ -6,6 +6,24 @@
   {% elif matter and matter.primary_contact.texting_opted_out_at %}
     <p class="muted">{{ matter.primary_contact }} has opted out of texts.</p>
   {% endif %}
+  {% if text_connections and text_to %}
+    <details class="inline-add" id="send-text">
+      <summary>Send a text{% if matter %} to {{ text_to }}{% endif %}</summary>
+      {% if text_to.texting_opted_out_at %}<p class="muted">{{ text_to }} opted out of texts, so none can be sent.</p>
+      {% elif not text_to.phone_e164 %}<p class="muted">Add a valid mobile number for {{ text_to }} to send a text.</p>
+      {% else %}
+      <form method="post" action="{% url 'communication_send_text' %}" class="compact-form stacked-form">
+        {% csrf_token %}<input type="hidden" name="contact" value="{{ text_to.pk }}">{% if matter %}<input type="hidden" name="matter" value="{{ matter.pk }}">{% endif %}<input type="hidden" name="next" value="{{ request.get_full_path }}#communications">
+        <div class="form-grid">
+          {% if text_connections|length > 1 %}<div class="field full-field"><label for="text-connection-{{ text_to.pk }}">Send through</label><select id="text-connection-{{ text_to.pk }}" name="connection">{% for connection in text_connections %}<option value="{{ connection.pk }}">{{ connection.label }}{% if connection.owner_id %} (yours){% endif %}{% if connection.preview_mode %} · preview mode{% endif %}</option>{% endfor %}</select></div>
+          {% else %}<input type="hidden" name="connection" value="{{ text_connections.0.pk }}">{% endif %}
+          <div class="field full-field"><label for="text-body-{{ text_to.pk }}">Text to {{ text_to.phone_e164 }}</label><textarea id="text-body-{{ text_to.pk }}" name="body" rows="3" maxlength="{{ text_max_length }}" required></textarea><small>Sent through {% if text_connections|length > 1 %}the connection you choose{% else %}{{ text_connections.0.label }}{% if text_connections.0.preview_mode %}, which is in preview mode: the text is recorded but not sent{% endif %}{% endif %}. Long texts arrive in several parts.</small></div>
+        </div>
+        <div class="form-actions"><button class="button primary" type="submit">Send text</button></div>
+      </form>
+      {% endif %}
+    </details>
+  {% endif %}
   <details class="inline-add">
     <summary>Log a call, text, email, or meeting</summary>
     <form method="post" action="{% url 'communication_create' %}" class="compact-form stacked-form">
@@ -18,4 +36,5 @@
   </details>
   <div class="comm-list">{% for item in communications %}{% include "comms/includes/communication_item.html" %}{% empty %}<div class="empty-state compact"><p>Nothing logged yet.</p></div>{% endfor %}</div>
   {% if not communications %}<div class="prompt-stack">{% connect_prompt "phone" "to log calls automatically" %}{% connect_prompt "mailbox" "to file emails automatically" %}</div>{% endif %}
+  {% if not text_connections %}<div class="prompt-stack">{% connect_prompt "texting" "to send and receive texts here" %}</div>{% endif %}
 </section>

@@ -140,7 +140,8 @@ class WebhookEndpointTests(TestCase):
 
         with self.captureOnCommitCallbacks(execute=True):
             duplicate = self.deliver(event_body())
-        self.assertContains(duplicate, "duplicate")
+        # A repeat delivery gets the same answer and is not queued again.
+        self.assertEqual((duplicate.status_code, duplicate.content), (200, b"ok"))
         self.assertEqual(WebhookEvent.objects.count(), 1)
         self.assertEqual(enqueued(process_webhook_event), 1)
 

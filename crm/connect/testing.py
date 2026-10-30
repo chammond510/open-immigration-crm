@@ -33,6 +33,11 @@ class ConnectorContract:
     # Outbound action -> payload that should succeed.
     outbound_examples: dict = {}
     webhook_secret = "fictional-webhook-secret"
+    # The address webhooks are verified against, for providers that sign it.
+    webhook_url = "https://crm.example.test/hooks/fictional-token/"
+    # False for providers that sign inside the body, such as with a JWT; their own
+    # tests must then show that an unsigned body is refused.
+    signature_in_headers = True
 
     def setUp(self):
         super().setUp()
@@ -110,10 +115,14 @@ class ConnectorContract:
             self.skipTest("This connector does not receive webhooks.")
         connector = cls(self.make_connection())
         body, headers = self.make_webhook(self.webhook_secret)
-        self.assertTrue(connector.verify_webhook(body, headers, self.webhook_secret))
-        self.assertFalse(connector.verify_webhook(body, headers, "a-different-secret"))
-        self.assertFalse(connector.verify_webhook(body + b" ", headers, self.webhook_secret))
-        self.assertFalse(connector.verify_webhook(body, {}, self.webhook_secret))
+        url = self.webhook_url
+        self.assertTrue(connector.verify_webhook(body, headers, self.webhook_secret, url=url))
+        self.assertFalse(connector.verify_webhook(body, headers, "a-different-secret", url=url))
+        self.assertFalse(
+            connector.verify_webhook(body + b" ", headers, self.webhook_secret, url=url)
+        )
+        if self.signature_in_headers:
+            self.assertFalse(connector.verify_webhook(body, {}, self.webhook_secret, url=url))
         envelope = connector.parse_webhook(body, headers)
         self.assertIsInstance(envelope, WebhookEnvelope)
         self.assertTrue(envelope.event_id)

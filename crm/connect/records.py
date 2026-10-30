@@ -68,11 +68,16 @@ class TextRecord(TypedRecord):
     remote: str
     body: str = ""
     status: str = ""  # For example received, sent, delivered, or failed.
+    # The provider's own reading of an opt-out reply: "stop", "start", or empty. Core
+    # also checks the body for the standard keywords.
+    opt_out: str = ""
 
     def problems(self):
         problems = super().problems()
         if self.direction not in DIRECTIONS:
             problems.append("direction must be inbound or outbound")
+        if self.opt_out not in ("", "stop", "start"):
+            problems.append("opt_out must be stop, start, or empty")
         return problems
 
 

@@ -326,14 +326,29 @@ def connection_webhooks(request, pk):
     except ValidationError as exc:
         messages.error(request, " ".join(exc.messages))
         return redirect("connection_detail", pk=pk)
+    webhook_url = request.build_absolute_uri(reverse("connector_webhook", args=[token]))
+    registered, register_error = "", ""
+    if cls.webhooks.register_label and request.POST.get("register") == "on":
+        try:
+            registered = connection.connector().register_webhook(webhook_url, secret) or "Done."
+        except ConnectorError as exc:
+            register_error = str(exc)
+        record_audit(
+            request.user,
+            "connection.webhook_registered",
+            connection,
+            "registered" if not register_error else f"failed: {register_error}",
+        )
     return render(
         request,
         "connect/webhook_details.html",
         {
             "connection": connection,
             "connector": cls,
-            "webhook_url": request.build_absolute_uri(reverse("connector_webhook", args=[token])),
-            "secret": "" if provider_secret else secret,
+            "webhook_url": webhook_url,
+            "secret": "" if cls.webhooks.secret_source != "crm" else secret,
+            "registered": registered,
+            "register_error": register_error,
         },
     )
 

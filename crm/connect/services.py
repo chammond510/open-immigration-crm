@@ -30,7 +30,9 @@ def clean_settings(cls, config):
         value = str(config.get(setting.name, setting.default)).strip()
         if setting.choices and value not in dict(setting.choices):
             raise ValidationError(f"Choose a valid {setting.label.lower()}.")
-        if setting.validate:
+        if not value and setting.required and not setting.choices:
+            raise ValidationError(f"Enter the {setting.label.lower()}.")
+        if setting.validate and value:
             setting.validate(value)
         cleaned[setting.name] = value
     return cleaned
@@ -148,6 +150,13 @@ def enable_webhooks(connection, actor, provider_secret=""):
         raise ValidationError("This connection does not receive webhooks.")
     if cls.webhooks.secret_source == "provider" and not provider_secret:
         raise ValidationError(f"Paste the signing secret {cls.name} shows for this webhook.")
+    if cls.webhooks.secret_source == "credential":
+        # The provider signs with a credential staff already entered, such as an auth token.
+        provider_secret = (connection.credentials or {}).get(cls.webhooks.secret_credential, "")
+        if not provider_secret:
+            raise ValidationError(
+                "Connect again to enter the credentials webhooks are signed with."
+            )
     token = secrets.token_urlsafe(32)
     secret = provider_secret or secrets.token_urlsafe(32)
     connection.webhook_token_hash = hashlib.sha256(token.encode()).hexdigest()

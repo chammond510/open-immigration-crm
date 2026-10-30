@@ -51,6 +51,7 @@
         {% csrf_token %}
         <div><h2>Webhooks</h2><p class="muted">{% if webhooks_on %}On. The address and secret were shown once when issued.{% else %}{{ connector.name }} can send events to a private address for this connection.{% endif %}</p></div>
         {% if provider_secret_form %}{% for field in provider_secret_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}{% endif %}
+        {% if webhooks.register_label %}<div class="field"><label class="check-label wrap" for="webhook-register"><input id="webhook-register" type="checkbox" name="register" checked><span>{{ webhooks.register_label }}</span></label></div>{% endif %}
         <div class="form-actions"><button class="button" type="submit">{% if webhooks_on %}Issue a new address and secret{% else %}Turn on webhooks{% endif %}</button></div>
       </form>
     {% endif %}

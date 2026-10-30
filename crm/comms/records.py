@@ -10,7 +10,7 @@ from datetime import timedelta
 
 from django.db.models.signals import post_save
 
-from crm.connect.records import INBOUND, CallRecord, EmailRecord, TextRecord
+from crm.connect.records import INBOUND, OUTBOUND, CallRecord, EmailRecord, TextRecord
 from crm.connect.signals import records_received
 from crm.matching import match_contact, match_staff, normalize_email
 from crm.models import Contact
@@ -23,6 +23,17 @@ logger = logging.getLogger(__name__)
 # Carrier keywords (CTIA): these replies opt a number out of texts, or back in.
 STOP_WORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"}
 START_WORDS = {"START", "UNSTOP"}
+# How far along a text's delivery is; a status never moves to a lower rank.
+STATUS_RANK = {
+    "queued": 1,
+    "accepted": 1,
+    "sending": 2,
+    "sent": 3,
+    "delivered": 4,
+    "undelivered": 4,
+    "failed": 4,
+    "read": 5,
+}
 CHANNELS = {
     CallRecord: Communication.Channel.CALL,
     TextRecord: Communication.Channel.TEXT,
@@ -47,10 +58,33 @@ def communication_fields(record):
         fields["summary"] = "\n\n".join(notes)
     elif isinstance(record, TextRecord):
         fields["summary"] = record.body
+        fields["delivery_status"] = record.status[:20]
     else:
         fields["subject"] = record.subject[:255]
         fields["summary"] = record.snippet
     return fields
+
+
+def keep_stored_values(fields, existing):
+    """A later copy of a record, such as a delivery update, adds to what is stored.
+
+    The first time seen is kept, empty values do not erase stored ones, new summary
+    paragraphs are added, and a delivery status never moves back, since providers'
+    updates can arrive out of order.
+    """
+    del fields["occurred_at"]
+    for name in ("subject", "summary", "duration", "delivery_status"):
+        if name in fields and not fields[name]:
+            del fields[name]
+    status = fields.get("delivery_status")
+    if status and STATUS_RANK.get(status, 0) < STATUS_RANK.get(existing.delivery_status, 0):
+        del fields["delivery_status"]
+    # Providers send parts of a record separately, such as a call's recording link and
+    # its recap, so new paragraphs are added to the stored ones.
+    if fields.get("summary") and existing.summary:
+        paragraphs = existing.summary.split("\n\n")
+        paragraphs += [p for p in fields["summary"].split("\n\n") if p not in paragraphs]
+        fields["summary"] = "\n\n".join(paragraphs)
 
 
 def store_one(connection, record):
@@ -58,6 +92,12 @@ def store_one(connection, record):
     existing = Communication.objects.filter(
         source_connection=connection, external_id=record.external_id
     ).first()
+    if existing:
+        keep_stored_values(fields, existing)
+    elif isinstance(record, TextRecord) and record.direction == OUTBOUND and not record.body:
+        # A delivery update for a text this CRM has no copy of, such as one another
+        # app sent from the same number.
+        return None
     contact = match_contact(record.remote)
     # Never undo a link staff made by hand when the provider sends the record again.
     if contact or not (existing and existing.contact_id):
@@ -71,10 +111,10 @@ def store_one(connection, record):
     contact = communication.contact
     if isinstance(record, TextRecord) and record.direction == INBOUND and contact:
         keyword = record.body.strip().upper()
-        if keyword in STOP_WORDS:
-            set_texting_opt_out(contact, True, reason=f"Replied {keyword} by text")
-        elif keyword in START_WORDS:
-            set_texting_opt_out(contact, False, reason=f"Replied {keyword} by text")
+        if record.opt_out == "stop" or keyword in STOP_WORDS:
+            set_texting_opt_out(contact, True, reason=f"Replied {keyword or 'STOP'} by text")
+        elif record.opt_out == "start" or keyword in START_WORDS:
+            set_texting_opt_out(contact, False, reason=f"Replied {keyword or 'START'} by text")
     return communication
 
 

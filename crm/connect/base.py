@@ -87,14 +87,16 @@ class CredentialField:
 class SettingField:
     """A non-secret choice made when connecting, kept in the connection's ``config``.
 
-    With ``choices`` staff pick from a list; otherwise they type a value.
-    ``validate`` may raise ``ValidationError`` for a value the connector cannot use.
+    With ``choices`` staff pick from a list; otherwise they type a value, which
+    may be left blank unless ``required``. ``validate`` may raise ``ValidationError``
+    for a value the connector cannot use; it is not called for a blank value.
     """
 
     name: str
     label: str
     choices: tuple[tuple[str, str], ...] = ()
     default: str = ""
+    required: bool = True
     help_text: str = ""
     validate: Callable[[str], None] | None = None
 
@@ -160,7 +162,7 @@ class SyncBatch:
     warning: str = ""
 
 
-WEBHOOK_SECRET_SOURCES = ("crm", "provider")
+WEBHOOK_SECRET_SOURCES = ("crm", "provider", "credential")
 
 
 @dataclass(frozen=True)
@@ -168,13 +170,23 @@ class WebhookSpec:
     """How a provider delivers events to the connection's private /hooks/ URL.
 
     ``secret_source`` is "crm" when the CRM generates the signing secret for staff
-    to paste at the provider, or "provider" when staff paste the provider's secret
-    into the CRM.
+    to paste at the provider, "provider" when staff paste the provider's secret
+    into the CRM, or "credential" when the provider signs with one of the
+    connection's credentials, named by ``secret_credential``.
+
+    ``register_label`` offers to set the address at the provider when webhooks are
+    turned on, through ``Connector.register_webhook()``; it says what that changes.
+    ``ack_body`` and ``ack_content_type`` are the answer to an accepted event, for
+    providers that read it, such as one that would text a plain-text answer back.
     """
 
     capabilities: tuple[str, ...]
     secret_source: str = "crm"
+    secret_credential: str = ""
     instructions: str = ""
+    register_label: str = ""
+    ack_body: str = "ok"
+    ack_content_type: str = "text/plain"
 
 
 @dataclass(frozen=True)
@@ -259,10 +271,19 @@ class Connector:
     def revoke(self):
         """Revoke the stored credentials at the provider, if it supports that."""
 
-    def verify_webhook(self, body, headers, secret):
+    def verify_webhook(self, body, headers, secret, *, url=""):
         """Return True only if ``body`` carries a valid provider signature made with ``secret``.
 
+        ``url`` is the address the request came to, for providers that sign it.
         Use a constant-time comparison. Never accept an unsigned request.
+        """
+        raise NotImplementedError
+
+    def register_webhook(self, url, secret):
+        """Set ``url`` as the provider's delivery address for this connection.
+
+        Only for connectors whose ``webhooks.register_label`` offers it. Return a
+        short note for staff, or raise ConnectorError.
         """
         raise NotImplementedError
 

@@ -14,6 +14,7 @@ from crm.connect.base import (
     DataFlows,
     Maturity,
     SettingField,
+    WebhookSpec,
 )
 from crm.connect.checks import connector_load_check
 from crm.connect.registry import (
@@ -83,6 +84,28 @@ class ManifestTests(SimpleTestCase):
         self.assertIn(
             "wanted entries", " ".join(manifest_problems(make_connector(maturity=Maturity.WANTED)))
         )
+
+    def test_webhook_secrets_and_registration_are_checked(self):
+        problems = " ".join(
+            manifest_problems(
+                make_connector(
+                    webhooks=WebhookSpec(
+                        capabilities=(Capability.PHONE,),
+                        secret_source="credential",
+                        secret_credential="password",
+                        register_label="Set it up for me.",
+                    )
+                )
+            )
+        )
+        self.assertIn("name one of the credential fields", problems)
+        self.assertIn("must implement register_webhook()", problems)
+        spec = WebhookSpec(
+            capabilities=(Capability.PHONE,),
+            secret_source="credential",
+            secret_credential="api_key",
+        )
+        self.assertEqual(manifest_problems(make_connector(webhooks=spec)), [])
 
     def test_settings_fields_are_checked(self):
         good = (

@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from ..forms import CommunicationForm
 from ..models import Communication
+from ..texting import MAX_LENGTH, texting_connections
 
 register = template.Library()
 
@@ -35,4 +36,7 @@ def communications_panel(context, contact=None, matter=None):
         "communications": communications[:PANEL_LIMIT],
         "total": communications.count(),
         "form": form,
+        "text_to": contact or (matter.primary_contact if matter else None),
+        "text_connections": texting_connections(context["user"]),
+        "text_max_length": MAX_LENGTH,
     }

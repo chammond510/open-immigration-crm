@@ -2,7 +2,7 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -10,12 +10,14 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from crm.connect.models import OutboundRequest
 from crm.models import Contact, Matter
 from crm.services import audit
 
 from .forms import CommunicationForm
 from .models import Communication
 from .services import set_texting_opt_out
+from .texting import send_text, texting_connections
 
 staff_required = user_passes_test(
     lambda user: user.is_active and user.is_staff,
@@ -170,6 +172,52 @@ def communication_create(request):
         )
         return redirect(safe_next(request, fallback))
     return render(request, "comms/communication_form.html", {"form": form})
+
+
+@staff_required
+@require_POST
+def communication_send_text(request):
+    contact = get_object_or_404(Contact, pk=request.POST.get("contact"))
+    matter = Matter.objects.filter(pk=request.POST.get("matter") or None).first()
+    fallback = (
+        reverse("matter_detail", args=[matter.pk])
+        if matter
+        else reverse("contact_detail", args=[contact.pk])
+    )
+    connections = {str(c.pk): c for c in texting_connections(request.user)}
+    connection = connections.get(request.POST.get("connection", ""))
+    if connection is None:
+        raise PermissionDenied
+    if (
+        matter
+        and contact != matter.primary_contact
+        and not matter.parties.filter(contact=contact).exists()
+    ):
+        raise PermissionDenied
+    try:
+        outbound = send_text(
+            connection,
+            contact=contact,
+            body=request.POST.get("body", ""),
+            actor=request.user,
+            matter=matter,
+        )
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+        return redirect(safe_next(request, fallback))
+    if outbound.status == OutboundRequest.Status.SENT:
+        messages.success(request, f"Text sent through {connection.label}.")
+    elif outbound.status == OutboundRequest.Status.PREVIEWED:
+        messages.info(
+            request,
+            f"{connection.label} is in preview mode, so the text was recorded but not sent. "
+            "A superuser can turn preview mode off on the connection's page.",
+        )
+    elif outbound.status == OutboundRequest.Status.FAILED:
+        messages.error(request, f"The text was not sent: {outbound.error}")
+    else:
+        messages.error(request, f"The text was not sent. {outbound.error}")
+    return redirect(safe_next(request, fallback))
 
 
 @staff_required

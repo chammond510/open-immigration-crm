@@ -37,7 +37,8 @@ def receive_webhook(request, token):
     if len(body) > settings.CONNECTOR_WEBHOOK_MAX_BYTES:
         return plain(413, "too large")
     secret = connection.webhook_secret or ""
-    if not secret or not connector.verify_webhook(body, request.headers, secret):
+    url = request.build_absolute_uri()
+    if not secret or not connector.verify_webhook(body, request.headers, secret, url=url):
         return plain(401, "invalid signature")
     try:
         envelope = connector.parse_webhook(body, request.headers)
@@ -55,5 +56,7 @@ def receive_webhook(request, token):
             )
             transaction.on_commit(lambda: process_webhook_event.enqueue(event.pk))
     except IntegrityError:
-        return plain(200, "duplicate")
-    return plain(200, "ok")
+        # A repeat delivery; it gets the same answer as the first.
+        pass
+    spec = connector.webhooks
+    return HttpResponse(spec.ack_body, status=200, content_type=spec.ack_content_type)
