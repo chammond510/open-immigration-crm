@@ -242,6 +242,9 @@ class ExternalRef(models.Model):
     object_id = models.CharField(max_length=64)
     external_id = models.CharField(max_length=255)
     etag = models.CharField(max_length=255, blank=True)
+    # True when the CRM created the provider item, such as an appointment it put on a
+    # calendar; only those are changed or removed from the CRM.
+    created_by_crm = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

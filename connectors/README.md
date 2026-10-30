@@ -8,6 +8,7 @@ Each subpackage here is one optional provider adapter. Core code never imports t
 connectors/
   catalog.toml          wanted providers shown in the catalog before a connector exists
   dialpad/              Dialpad calls and texts, by signed webhook, with a call backfill
+  google_workspace/     each staff member's Gmail and Google Calendar
   example/              a fictional connector that tests the framework (hidden from the catalog)
     __init__.py         the connector class, registered with @register
     test_example.py     the shared contract tests plus connector-specific tests
@@ -31,6 +32,12 @@ connectors/
    - `ack_body` and `ack_content_type` are the answer to an accepted event, for providers that act on it. Twilio, for one, would text a plain-text answer back to the sender.
 
    Texting connectors declare a `send_text` outbound action. Its payload is `{"to": E.164 number, "body": text, "staff_email": the sender's email}`, and it returns the provider's message ID. Core's "Send a text" form uses it through the outbound policy and logs the sent text under that ID, so the provider's own copy and later delivery updates (`TextRecord.status`) land on the same communication. A `TextRecord` can carry `opt_out` (`stop` or `start`) when the provider recognized an opt-out reply itself.
+
+   Mailbox connectors declare a `send_email` outbound action. Its payload is `{"to": address, "subject": text, "body": plain text, "staff_email": the sender's email}`, and it returns the provider's message ID, which should be the ID the mailbox's own copy syncs under. Core's "Send an email" form uses it like "Send a text".
+
+   Calendar connectors that take the CRM's appointments declare `save_event` and `delete_event`. The `save_event` payload is `{"event_id": the provider's ID or "", "title", "starts_at", "ends_at" (ISO 8601), "time_zone", "description", "crm_id"}`, and it returns the event's ID; create the event when `event_id` is empty or no longer exists. Add no attendees and send no invitations. Core puts each appointment on its staff member's connected calendars and keeps it in step, and it only changes events it created (`ExternalRef.created_by_crm`). List both actions in `owner_sync_actions`, which lets them run automatically on a personal connection, but only for records assigned to its owner.
+
+   A connector can declare a setting named `unmatched` with the choices `keep` and `skip`. With `skip`, core stores only records whose other party is a known contact, instead of sending the rest to Needs matching. Email between staff members is never stored.
 
    Automation connectors (the `automation` capability) must declare a `deliver_event` outbound action. Its payload is `{"id": ..., "event": {...}}`; the ID stays the same across retries. Core builds events in `crm/events/` and sends them through the outbound policy from the worker.
 

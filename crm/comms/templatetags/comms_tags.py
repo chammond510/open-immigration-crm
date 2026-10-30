@@ -1,6 +1,7 @@
 from django import template
 from django.utils import timezone
 
+from ..emailing import email_connections
 from ..forms import CommunicationForm
 from ..models import Communication
 from ..texting import MAX_LENGTH, texting_connections
@@ -39,4 +40,5 @@ def communications_panel(context, contact=None, matter=None):
         "text_to": contact or (matter.primary_contact if matter else None),
         "text_connections": texting_connections(context["user"]),
         "text_max_length": MAX_LENGTH,
+        "email_connections": email_connections(context["user"]),
     }

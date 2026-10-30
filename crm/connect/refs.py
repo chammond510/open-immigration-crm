@@ -21,11 +21,15 @@ def find(connection, model, external_id):
     return record, ref
 
 
-def link(connection, record, external_id, etag=""):
+def link(connection, record, external_id, etag="", *, created_by_crm=None):
+    """Link a record to a provider item; ``created_by_crm`` marks items the CRM made there."""
+    defaults = {"object_id": str(record.pk), "etag": etag}
+    if created_by_crm is not None:
+        defaults["created_by_crm"] = created_by_crm
     ref, _ = ExternalRef.objects.update_or_create(
         connection=connection,
         content_type=ContentType.objects.get_for_model(type(record)),
         external_id=external_id,
-        defaults={"object_id": str(record.pk), "etag": etag},
+        defaults=defaults,
     )
     return ref

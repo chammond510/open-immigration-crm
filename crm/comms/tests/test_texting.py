@@ -1,8 +1,10 @@
 from datetime import UTC, datetime, timedelta
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
+from crm.comms.emailing import MAX_BODY, email_connections, send_email
 from crm.comms.models import Communication
 from crm.comms.texting import MAX_LENGTH, texting_connections
 from crm.connect.models import Connection, OutboundRequest
@@ -194,3 +196,21 @@ class ProviderUpdateTests(TextingTestCase):
             stored.summary,
             "Recording: https://recordings.example.test/1\n\nAsked about the interview.",
         )
+
+
+class SendEmailValidationTests(TextingTestCase):
+    def test_emails_are_checked_before_anything_is_sent(self):
+        self.assertEqual(email_connections(self.staff), [])
+        cases = [
+            ({"subject": "  ", "body": "Hello"}, "Write a subject and a message."),
+            ({"subject": "Forms", "body": "x" * (MAX_BODY + 1)}, "Keep the subject under"),
+        ]
+        for fields, message in cases:
+            with self.assertRaisesMessage(ValidationError, message):
+                send_email(self.connection, contact=self.contact, actor=self.staff, **fields)
+        self.contact.email = "not an address"
+        with self.assertRaisesMessage(ValidationError, "Add a valid email address"):
+            send_email(
+                self.connection, contact=self.contact, subject="Hi", body="Hello", actor=self.staff
+            )
+        self.assertFalse(OutboundRequest.objects.exists())

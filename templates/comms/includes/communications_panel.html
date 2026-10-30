@@ -24,6 +24,24 @@
       {% endif %}
     </details>
   {% endif %}
+  {% if email_connections and text_to %}
+    <details class="inline-add" id="send-email">
+      <summary>Send an email{% if matter %} to {{ text_to }}{% endif %}</summary>
+      {% if not text_to.email %}<p class="muted">Add an email address for {{ text_to }} to send an email.</p>
+      {% else %}
+      <form method="post" action="{% url 'communication_send_email' %}" class="compact-form stacked-form">
+        {% csrf_token %}<input type="hidden" name="contact" value="{{ text_to.pk }}">{% if matter %}<input type="hidden" name="matter" value="{{ matter.pk }}">{% endif %}<input type="hidden" name="next" value="{{ request.get_full_path }}#communications">
+        <div class="form-grid">
+          {% if email_connections|length > 1 %}<div class="field full-field"><label for="email-connection-{{ text_to.pk }}">Send from</label><select id="email-connection-{{ text_to.pk }}" name="connection">{% for connection in email_connections %}<option value="{{ connection.pk }}">{{ connection.label }}{% if connection.owner_id %} (yours){% endif %}{% if connection.preview_mode %} · preview mode{% endif %}</option>{% endfor %}</select></div>
+          {% else %}<input type="hidden" name="connection" value="{{ email_connections.0.pk }}">{% endif %}
+          <div class="field full-field"><label for="email-subject-{{ text_to.pk }}">Subject</label><input id="email-subject-{{ text_to.pk }}" name="subject" maxlength="255" required></div>
+          <div class="field full-field"><label for="email-body-{{ text_to.pk }}">Message to {{ text_to.email }}</label><textarea id="email-body-{{ text_to.pk }}" name="body" rows="6" required></textarea><small>Sent as plain text from {% if email_connections|length > 1 %}the mailbox you choose{% else %}{{ email_connections.0.label }}{% if email_connections.0.preview_mode %}, which is in preview mode: the email is recorded but not sent{% endif %}{% endif %}.</small></div>
+        </div>
+        <div class="form-actions"><button class="button primary" type="submit">Send email</button></div>
+      </form>
+      {% endif %}
+    </details>
+  {% endif %}
   <details class="inline-add">
     <summary>Log a call, text, email, or meeting</summary>
     <form method="post" action="{% url 'communication_create' %}" class="compact-form stacked-form">

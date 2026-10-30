@@ -227,6 +227,10 @@ class Connector:
     maintainers: tuple[str, ...] = ()
     # Outbound action name -> the capability it belongs to.
     outbound_actions: dict[str, str] = {}
+    # Actions that only keep a personal connection's own account in step with the CRM,
+    # such as putting its owner's appointments on their own calendar. They may run
+    # automatically, but only for records assigned to the connection's owner.
+    owner_sync_actions: frozenset[str] = frozenset()
     # Capabilities the worker pulls on a schedule, and how often.
     sync_capabilities: frozenset[str] = frozenset()
     sync_interval = timedelta(minutes=15)

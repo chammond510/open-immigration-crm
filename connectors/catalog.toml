@@ -51,9 +51,9 @@ capabilities = ["texting"]
 
 # Mailbox, calendar, and storage suites
 [[connector]]
-key = "google_workspace"
-name = "Google Workspace"
-capabilities = ["mailbox", "calendar", "storage"]
+key = "google_drive"
+name = "Google Drive"
+capabilities = ["storage"]
 
 [[connector]]
 key = "microsoft_365"

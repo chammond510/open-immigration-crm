@@ -81,9 +81,16 @@ def keep_stored_values(fields, existing):
         del fields["delivery_status"]
     # Providers send parts of a record separately, such as a call's recording link and
     # its recap, so new paragraphs are added to the stored ones.
+    # A paragraph already in the stored text, such as a mailbox's snippet of an email
+    # the CRM sent, is not added again.
     if fields.get("summary") and existing.summary:
+        stored = " ".join(existing.summary.split())
         paragraphs = existing.summary.split("\n\n")
-        paragraphs += [p for p in fields["summary"].split("\n\n") if p not in paragraphs]
+        paragraphs += [
+            p
+            for p in fields["summary"].split("\n\n")
+            if p not in paragraphs and " ".join(p.split()) not in stored
+        ]
         fields["summary"] = "\n\n".join(paragraphs)
 
 
@@ -98,7 +105,13 @@ def store_one(connection, record):
         # A delivery update for a text this CRM has no copy of, such as one another
         # app sent from the same number.
         return None
+    elif isinstance(record, EmailRecord) and match_staff(record.remote):
+        # Email between staff members is internal, not client correspondence.
+        return None
     contact = match_contact(record.remote)
+    if not contact and not existing and (connection.config or {}).get("unmatched") == "skip":
+        # The connection is set to keep only records from known contacts.
+        return None
     # Never undo a link staff made by hand when the provider sends the record again.
     if contact or not (existing and existing.contact_id):
         fields["contact"] = contact
