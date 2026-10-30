@@ -128,12 +128,22 @@ class ConnectorRegistry:
         self._connectors[cls.key] = cls
         return cls
 
+    @staticmethod
+    def offered(cls):
+        """Whether a connector is offered: always, or while its Beta flag is on."""
+        return not cls.flag or cls.flag in settings.CONNECTOR_FLAGS
+
     def get(self, key):
-        return self._connectors.get(key)
+        cls = self._connectors.get(key)
+        return cls if cls is not None and self.offered(cls) else None
 
     def connectors(self, *, include_hidden=False):
         return sorted(
-            (cls for cls in self._connectors.values() if include_hidden or not cls.hidden),
+            (
+                cls
+                for cls in self._connectors.values()
+                if (include_hidden or not cls.hidden) and self.offered(cls)
+            ),
             key=lambda cls: cls.name.lower(),
         )
 
@@ -178,7 +188,7 @@ class ConnectorRegistry:
             for cls in self.connectors(include_hidden=include_hidden)
         }
         for wanted in read_catalog_file(getattr(settings, "CONNECTOR_CATALOG", None)):
-            if wanted.key not in entries and wanted.key not in self._connectors:
+            if wanted.key not in entries and self.get(wanted.key) is None:
                 entries[wanted.key] = wanted
         return sorted(entries.values(), key=lambda entry: entry.name.lower())
 

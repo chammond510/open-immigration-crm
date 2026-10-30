@@ -428,3 +428,9 @@ td.wrap { white-space: normal; min-width: 220px; }
 .research-result-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .research-result .prose { margin: 6px 0 0; font-size: 13px; }
 .research-result .inline-actions input { flex: 1 1 220px; min-width: 0; }
+
+/* Sign-in that lands on a loopback address */
+.loopback-sign-in .steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.sign-in-button { background: #000; border-color: #000; color: #fff; }
+.sign-in-button:hover, .sign-in-button:focus-visible { background: #222; color: #fff; }
+.usage-note { margin: 6px 0 0; color: var(--muted); font-size: 12px; }

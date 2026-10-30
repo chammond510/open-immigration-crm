@@ -82,7 +82,7 @@ class OpenRouterConnector(Connector):
             timeout=300,
         )
 
-    def authorize_query(self, callback_url, code_challenge, state):
+    def authorize_query(self, callback_url, code_challenge, state, nonce=""):
         return {
             "callback_url": callback_url,
             "code_challenge": code_challenge,
@@ -90,7 +90,7 @@ class OpenRouterConnector(Connector):
             "state": state,
         }
 
-    def exchange_code(self, code, code_verifier, callback_url):
+    def exchange_code(self, code, code_verifier, callback_url, *, returned=None, nonce=""):
         answer = ProviderClient(API_URL, name="OpenRouter", retries=1).post(
             "/auth/keys",
             json={"code": code, "code_verifier": code_verifier, "code_challenge_method": "S256"},

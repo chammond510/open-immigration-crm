@@ -1,0 +1,1 @@
+{% for connection, connector in notes %}<p class="usage-note"><span class="badge">{{ connector.usage_label }}</span> {{ connection.label }} · <a href="{{ connector.usage_url }}" target="_blank" rel="noopener noreferrer">Manage usage</a></p>{% endfor %}

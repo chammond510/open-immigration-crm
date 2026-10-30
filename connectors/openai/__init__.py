@@ -66,6 +66,62 @@ def to_items(message):
     return items
 
 
+def text_format(payload):
+    """Structured output as the Responses API's strict ``text.format``."""
+    return {
+        "format": {
+            "type": "json_schema",
+            "name": payload.get("schema_name") or "answer",
+            "schema": strict_schema(payload["schema"]),
+            "strict": True,
+        }
+    }
+
+
+def read_response(answer, payload, model, name):
+    """A Responses API response as core's ``generate`` answer."""
+    output = answer.get("output") or []
+    text = "".join(
+        part.get("text", "")
+        for item in output
+        if item.get("type") == "message"
+        for part in item.get("content") or []
+        if part.get("type") == "output_text"
+    )
+    calls = []
+    for item in output:
+        if item.get("type") == "function_call":
+            try:
+                arguments = json.loads(item.get("arguments") or "{}")
+            except ValueError:
+                arguments = {}
+            calls.append(
+                {
+                    "id": item.get("call_id", ""),
+                    "name": item.get("name", ""),
+                    "arguments": arguments,
+                }
+            )
+    data = None
+    if payload.get("schema") and answer.get("status") == "completed" and not calls:
+        try:
+            data = json.loads(text)
+        except ValueError:
+            raise ConnectorError(f"{name}'s answer did not follow the requested format.") from None
+    usage = answer.get("usage") or {}
+    return {
+        "id": answer.get("id", ""),
+        "model": answer.get("model") or model,
+        "text": text,
+        "tool_calls": calls,
+        "data": data,
+        "input_tokens": usage.get("input_tokens"),
+        "output_tokens": usage.get("output_tokens"),
+        "stop_reason": "tool_use" if calls else answer.get("status", ""),
+        "raw": output,
+    }
+
+
 @register
 class OpenAIConnector(Connector):
     key = "openai"
@@ -158,54 +214,5 @@ class OpenAIConnector(Connector):
                 for t in payload["tools"]
             ]
         if payload.get("schema"):
-            body["text"] = {
-                "format": {
-                    "type": "json_schema",
-                    "name": payload.get("schema_name") or "answer",
-                    "schema": strict_schema(payload["schema"]),
-                    "strict": True,
-                }
-            }
-        answer = self.call("POST", "/responses", json=body)
-        output = answer.get("output") or []
-        text = "".join(
-            part.get("text", "")
-            for item in output
-            if item.get("type") == "message"
-            for part in item.get("content") or []
-            if part.get("type") == "output_text"
-        )
-        calls = []
-        for item in output:
-            if item.get("type") == "function_call":
-                try:
-                    arguments = json.loads(item.get("arguments") or "{}")
-                except ValueError:
-                    arguments = {}
-                calls.append(
-                    {
-                        "id": item.get("call_id", ""),
-                        "name": item.get("name", ""),
-                        "arguments": arguments,
-                    }
-                )
-        data = None
-        if payload.get("schema") and answer.get("status") == "completed" and not calls:
-            try:
-                data = json.loads(text)
-            except ValueError:
-                raise ConnectorError(
-                    "OpenAI's answer did not follow the requested format."
-                ) from None
-        usage = answer.get("usage") or {}
-        return {
-            "id": answer.get("id", ""),
-            "model": answer.get("model") or model,
-            "text": text,
-            "tool_calls": calls,
-            "data": data,
-            "input_tokens": usage.get("input_tokens"),
-            "output_tokens": usage.get("output_tokens"),
-            "stop_reason": "tool_use" if calls else answer.get("status", ""),
-            "raw": output,
-        }
+            body["text"] = text_format(payload)
+        return read_response(self.call("POST", "/responses", json=body), payload, model, "OpenAI")

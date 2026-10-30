@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load connect_tags %}
+{% load ai_tags connect_tags %}
 {% block title %}{{ conversation.title }} · Assistant · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'ai_assistant' %}">Assistant</a>{% if conversation.matter %} · <a href="{% url 'matter_detail' conversation.matter.pk %}">{{ conversation.matter.matter_number }}</a>{% endif %}</p><h1>{{ conversation.title }}</h1><p>Answers and drafts are AI drafts for attorney review. Changes wait for you to confirm them, and nothing is sent.</p></div><div class="actions"><form method="post" action="{% url 'ai_conversation_delete' conversation.pk %}" data-confirm="Delete this conversation?">{% csrf_token %}<button class="button" type="submit">Delete</button></form></div></div>
@@ -68,6 +68,7 @@
       {% csrf_token %}
       <div class="field"><label for="{{ form.message.id_for_label }}">Reply</label>{{ form.message }}</div>
       {% if form.connection.field.queryset.count > 1 %}<div class="field"><label for="{{ form.connection.id_for_label }}">{{ form.connection.label }}</label>{{ form.connection }}</div>{% else %}{% for connection in form.connection.field.queryset %}<input type="hidden" name="connection" value="{{ connection.pk }}">{% empty %}<p class="muted">No AI connection you may use is available.</p>{% endfor %}{% endif %}
+      {% ai_usage_notes form.connection.field.queryset %}
       <div class="form-actions"><button class="button primary" type="submit">Send to the assistant</button></div>
     </form>
   {% else %}

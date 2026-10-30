@@ -85,3 +85,15 @@ def assistant_panel(context, matter):
         "form": AskForm(user=user, auto_id="id_ask_%s") if on else None,
         "conversations": Conversation.objects.filter(owner=user, matter=matter)[:5] if on else [],
     }
+
+
+@register.inclusion_tag("ai/includes/usage_notes.html")
+def ai_usage_notes(connections):
+    """For connections billed to a staff member's own plan: its label and where to manage it."""
+    return {
+        "notes": [
+            (connection, connection.connector_class)
+            for connection in connections
+            if connection.connector_class is not None and connection.connector_class.usage_label
+        ]
+    }

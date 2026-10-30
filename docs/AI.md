@@ -47,6 +47,23 @@ Each feature is off until a superuser ticks it in **AI features**. Whatever a fe
 
 Then, in **AI features**, choose the connection for background work, if any. A superuser turns off preview mode on the connection when the firm is ready.
 
+### ChatGPT plan (Beta, behind a flag)
+
+Each staff member can power their own AI requests with their own ChatGPT plan, through Sign in with ChatGPT. It is off unless the installation sets `CONNECTOR_FLAGS=chatgpt_plan`. It stays Beta until OpenAI confirms in writing that a firm-hosted web app used by several staff may use plan usage this way, and its data terms are known.
+
+- **Signing in.** OpenAI sends the sign-in back only to the staff member's own computer (`http://127.0.0.1`), so connecting takes one extra step:
+  1. On the connection's page, **Continue with ChatGPT** opens the sign-in in a new tab.
+  2. After signing in, that tab shows a page that cannot be reached.
+  3. The staff member pastes that tab's address back into the CRM, which finishes the sign-in.
+- **Checks.** The CRM checks the sign-in's ID token against OpenAI's published keys, and requires that plan usage was allowed.
+- **Their own requests only.** A plan runs only its owner's own requests, never another person's or background work. A superuser still reviews what the connection sends before it is used, as with any connection.
+- **Usage.** Wherever staff choose the connection, it is labelled **Using ChatGPT plan**, with a **Manage usage** link to their ChatGPT settings. When the plan's limit is reached, the request stops; OpenAI never bills another way.
+- **Requests.** Each request is sent with `store: false`. Disconnecting revokes the sign-in at OpenAI. A staff member can also disconnect the CRM in ChatGPT, under Settings, Security and login, Sign in with ChatGPT.
+- **Not yet in place.**
+  - OpenAI's ChatGPT logo is not on the button, because OpenAI does not publish the logo file.
+  - OpenAI cannot yet revoke plan access for one server alone.
+  - OpenAI's documentation names Plus and Pro plans, and does not say whether Business or Enterprise workspaces can use this.
+
 ## Data terms
 
 Check each provider's terms before sending client information. The firm remains responsible for that choice. As of October 2026, the providers' own documentation says:
@@ -54,4 +71,5 @@ Check each provider's terms before sending client information. The firm remains 
 - **Anthropic** does not train on commercial API content. It keeps flagged content longer, and offers zero data retention by arrangement.
 - **OpenAI** does not use API data for training unless the firm opts in. It keeps abuse-monitoring logs for 30 days, and zero data retention needs its approval.
 - **OpenRouter** stores no prompts or answers by default. The model providers it routes to have their own policies, which is why the CRM always asks it to deny data collection.
+- **A ChatGPT plan through Sign in with ChatGPT** is sent with `store: false`. OpenAI's documentation for this says plan usage gives the app no access to the user's ChatGPT conversations, but says nothing more on retention or training. Consumer plans also carry different terms from business plans and API access.
 - **A model the firm runs itself** keeps everything on the firm's own machines.

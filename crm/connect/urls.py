@@ -9,6 +9,7 @@ urlpatterns = [
     path("oauth/callback/", pages.connection_oauth_callback, name="connection_oauth_callback"),
     path("<uuid:pk>/", pages.connection_detail, name="connection_detail"),
     path("<uuid:pk>/sign-in/", pages.connection_oauth_start, name="connection_oauth_start"),
+    path("<uuid:pk>/sign-in/paste/", pages.connection_oauth_paste, name="connection_oauth_paste"),
     path("<uuid:pk>/acknowledge/", pages.connection_acknowledge, name="connection_acknowledge"),
     path("<uuid:pk>/test/", pages.connection_test, name="connection_test"),
     path("<uuid:pk>/settings/", pages.connection_settings, name="connection_settings"),

@@ -277,6 +277,7 @@ def connection_detail(request, pk):
         "monogram": monogram(cls.name if cls else connection.label),
         "can_manage": can_manage(request.user, connection),
         "is_oauth": is_oauth,
+        "loopback": is_oauth and bool(getattr(cls.auth, "loopback_redirect", "")),
         "signed_in": bool(connection.credentials),
         "webhooks": webhooks,
         "webhooks_on": bool(connection.webhook_token_hash),
@@ -442,6 +443,26 @@ def connection_oauth_start(request, pk):
 @staff_required
 @require_GET
 def connection_oauth_callback(request):
+    return finish_sign_in(request)
+
+
+@staff_required
+@require_POST
+def connection_oauth_paste(request, pk):
+    """Finish a loopback sign-in from the address staff pasted back."""
+    connection = managed_connection_or_404(request, pk)
+    cls = connection.connector_class
+    if cls is None or not getattr(cls.auth, "loopback_redirect", ""):
+        raise Http404
+    try:
+        params = oauth.pasted_params(cls, request.POST.get("address", ""))
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+        return redirect("connection_detail", pk=pk)
+    return finish_sign_in(request, params)
+
+
+def finish_sign_in(request, params=None):
     pending = request.session.get(oauth.PENDING_KEY) or {}
     connection = visible_connections(request.user).filter(pk=pending.get("connection")).first()
     if connection is None or not can_manage(request.user, connection):
@@ -449,7 +470,7 @@ def connection_oauth_callback(request):
         messages.error(request, "This sign-in link expired or did not come from this CRM.")
         return redirect("connections")
     try:
-        connection = oauth.finish(request)
+        connection = oauth.finish(request, params)
     except ValidationError as exc:
         messages.error(request, " ".join(exc.messages))
         return redirect("connection_detail", pk=connection.pk)
@@ -462,6 +483,12 @@ def connection_oauth_callback(request):
     record_audit(request.user, "connection.signed_in", connection)
     if check_connection(connection):
         messages.success(request, f"Connected to {connection.connector_class.name}.")
+        if connection.connector_class.usage_label:
+            messages.info(
+                request,
+                f"{connection.connector_class.usage_label}: AI requests you send through this "
+                "connection count toward your own plan's usage.",
+            )
     else:
         messages.error(request, "Signed in, but the connection test failed.")
     return redirect("connection_detail", pk=connection.pk)
