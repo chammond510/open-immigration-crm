@@ -17,6 +17,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Private PDF, DOCX, PNG, and JPEG document storage
 - Blank intake-form builder with expiring, revocable, single-use links
 - Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff
+- A JSON API for scripts and automation tools, off until a superuser turns it on, with scoped, expiring, revocable tokens and a log of every request (see [API](docs/API.md))
 - Audit records for important actions
 - CSV and portable JSON export paths
 - PostgreSQL production path and SQLite-only local evaluation path

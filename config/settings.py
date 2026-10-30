@@ -95,6 +95,7 @@ INSTALLED_APPS = [
     "crm.comms.apps.CommsConfig",
     "crm.billing.apps.BillingConfig",
     "crm.notices.apps.NoticesConfig",
+    "crm.api.apps.ApiConfig",
 ]
 
 MIDDLEWARE = [
@@ -202,6 +203,9 @@ CONNECTORS_OUTBOUND_HOURLY_LIMIT = int(os.environ.get("CONNECTORS_OUTBOUND_HOURL
 # Hidden connectors (the fictional examples) appear in the catalog for testing.
 CONNECTORS_SHOW_HIDDEN = env_bool("CONNECTORS_SHOW_HIDDEN", DEBUG)
 CONNECTOR_WEBHOOK_MAX_BYTES = int(os.environ.get("CONNECTOR_WEBHOOK_MAX_BYTES", str(1024 * 1024)))
+
+# REST API (/api/v1/). It stays off until a superuser turns it on under API access.
+API_HOURLY_LIMIT = int(os.environ.get("API_HOURLY_LIMIT", "1000"))
 
 # Background work runs in `python manage.py run_worker`, which keeps its queue in
 # the application database. No Redis or message broker is involved.

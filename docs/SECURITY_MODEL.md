@@ -69,6 +69,18 @@ Connectors change the risk picture in these ways:
 - **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models will pass an outbound policy and start in preview mode.
 - **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings. Each connection has its own unguessable URL token, stored only as a hash. A verified event's payload is stored minimized and encrypted, and deleted once the worker has processed it.
 
+## API tokens
+
+An API token is a bearer credential that acts as one staff member without two-factor sign-in, so the API's defaults are cautious:
+- **Off by default.** The API is off until a superuser turns it on.
+- **Superusers only by default.** Only superusers can create tokens unless a superuser allows staff tokens.
+- **Limited.** Every token is scoped to the records it needs, expires within a year, and can be revoked at once.
+- **Hashed.** Only a SHA-256 hash of each token is stored.
+- **Logged.** Every request is logged, without query strings or bodies.
+- **Two-factor rule.** When the firm requires two-factor sign-in, tokens of users who have not set it up are refused.
+
+Store tokens in the automation tool's secret store, give each tool its own token, and revoke any token that may have leaked.
+
 ## Intake link handling
 
 An intake URL is sensitive. Send it only to its intended recipient, keep expiry short, revoke it if misdirected, and do not place it in analytics or third-party link shorteners. The default referrer policy and CSP reduce browser leakage, but the recipient's device and delivery channel remain outside this application's control.
