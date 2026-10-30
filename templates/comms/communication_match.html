@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Match a communication · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'communication_list' %}?matching=needed">Needs matching</a></p><h1>Match {{ communication.get_channel_display|lower }} {% if communication.direction == "inbound" %}from{% else %}to{% endif %} {{ communication.counterpart|default:"an unknown party" }}</h1><p>{{ communication.occurred_at|date:"M j, Y g:i a" }}{% if communication.source_connection %} · via {{ communication.source_connection }}{% endif %}</p></div></div>
+  {% if communication.subject or communication.summary %}<section class="panel"><strong>{{ communication.subject }}</strong>{% if communication.summary %}<p class="prose">{{ communication.summary|truncatechars:600|linebreaksbr }}</p>{% endif %}</section>{% endif %}
+  <section class="panel stacked-form">
+    <div><h2>Find the contact</h2><p class="muted">Search by name, phone, or email. Matching is never guessed from part of a number.</p></div>
+    <form method="get" class="filter-bar"><label class="sr-only" for="match-q">Search contacts</label><input id="match-q" type="search" name="q" value="{{ query }}" placeholder="Name, phone, or email"><button class="button" type="submit">Search</button></form>
+    {% for contact in candidates %}
+      <form method="post" class="mini-record">{% csrf_token %}<input type="hidden" name="contact" value="{{ contact.pk }}">
+        <div><strong>{{ contact }}</strong><span>{{ contact.phone|default:"" }}{% if contact.phone and contact.email %} · {% endif %}{{ contact.email|default:"" }}</span></div>
+        <div class="actions">{% if same_count %}<label class="check-label"><input type="checkbox" name="include_same" checked> and {{ same_count }} more from this {% if "@" in communication.counterpart %}address{% else %}number{% endif %}</label>{% endif %}<button class="button primary" type="submit">Link</button></div>
+      </form>
+    {% empty %}{% if query %}<p class="muted">No contacts match "{{ query }}".</p>{% endif %}{% endfor %}
+  </section>
+  <section class="panel"><h2>Not a contact yet?</h2><p class="muted">Create one with this {% if "@" in communication.counterpart %}email address{% else %}phone number{% endif %}. Communications from it are linked as soon as the contact is saved.</p><a class="button" href="{% url 'contact_create' %}?{{ create_query }}">Create a contact</a></section>
+</div>
+{% endblock %}

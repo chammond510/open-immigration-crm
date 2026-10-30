@@ -6,3 +6,8 @@ class CommsConfig(AppConfig):
     name = "crm.comms"
     label = "comms"
     verbose_name = "Communications"
+
+    def ready(self):
+        from . import records
+
+        records.connect()

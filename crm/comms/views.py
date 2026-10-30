@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
@@ -51,6 +53,10 @@ def communication_list(request):
         communications = communications.filter(channel=channel)
     if direction in Communication.Direction.values:
         communications = communications.filter(direction=direction)
+    unmatched = Communication.objects.filter(contact__isnull=True, matter__isnull=True)
+    matching_only = request.GET.get("matching") == "needed"
+    if matching_only:
+        communications = communications.filter(contact__isnull=True, matter__isnull=True)
     if query:
         communications = communications.filter(
             Q(subject__icontains=query)
@@ -72,6 +78,61 @@ def communication_list(request):
             "selected_direction": direction,
             "filter_contact": contact,
             "filter_matter": matter,
+            "needs_matching": unmatched.count(),
+            "matching_only": matching_only,
+        },
+    )
+
+
+@staff_required
+@require_http_methods(["GET", "POST"])
+def communication_match(request, pk):
+    """Link a communication that matched no contact, and others from the same number or address."""
+    communication = get_object_or_404(
+        Communication.objects.select_related("source_connection"),
+        pk=pk,
+        contact__isnull=True,
+        matter__isnull=True,
+    )
+    same = Communication.objects.filter(
+        contact__isnull=True,
+        matter__isnull=True,
+        counterpart_key=communication.counterpart_key,
+    ).exclude(pk=communication.pk)
+    if not communication.counterpart_key:
+        same = same.none()
+    if request.method == "POST":
+        contact = get_object_or_404(Contact, pk=request.POST.get("contact"))
+        linked = [communication.pk]
+        if request.POST.get("include_same") == "on":
+            linked += list(same.values_list("pk", flat=True))
+        Communication.objects.filter(pk__in=linked).update(contact=contact)
+        audit(request, "communication.matched", communication, f"{len(linked)} linked")
+        messages.success(
+            request,
+            f"Linked {len(linked)} communication{'s' if len(linked) != 1 else ''} to {contact}.",
+        )
+        return redirect(reverse("communication_list") + "?matching=needed")
+    query = request.GET.get("q", "").strip()
+    candidates = Contact.objects.none()
+    if query:
+        candidates = Contact.objects.filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(email__icontains=query)
+            | Q(phone__icontains=query)
+        )[:20]
+    remote = communication.counterpart
+    create_params = {"email": remote} if "@" in remote else {"phone": remote}
+    return render(
+        request,
+        "comms/communication_match.html",
+        {
+            "communication": communication,
+            "same_count": same.count(),
+            "query": query,
+            "candidates": candidates,
+            "create_query": urlencode(create_params),
         },
     )
 

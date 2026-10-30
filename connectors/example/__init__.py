@@ -16,15 +16,17 @@ from crm.connect.base import (
     CredentialField,
     DataFlows,
     Maturity,
-    Record,
     SyncBatch,
     WebhookEnvelope,
     WebhookSpec,
 )
+from crm.connect.records import TextRecord
 from crm.connect.registry import register
 
 EPOCH = datetime(2026, 1, 5, 9, 0, tzinfo=UTC)
 SIGNATURE_HEADER = "X-Example-Signature"
+# A number in the 555-0100 to 555-0199 range North America reserves for fiction.
+FICTIONAL_SENDER = "+12025550143"
 
 
 def sign(body, secret):
@@ -62,11 +64,12 @@ class ExampleConnector(Connector):
     def sync(self, capability, cursor):
         start = int((cursor or {}).get("after", 0))
         records = [
-            Record(
+            TextRecord(
                 external_id=f"example-message-{number}",
-                kind="message",
                 occurred_at=EPOCH + timedelta(minutes=number),
-                data={"body": f"Fictional message {number}"},
+                direction="inbound",
+                remote=FICTIONAL_SENDER,
+                body=f"Fictional message {number}",
             )
             for number in range(start + 1, start + 4)
         ]
@@ -91,6 +94,7 @@ class ExampleConnector(Connector):
         # Keep only what processing needs.
         payload = {
             "id": str(event["id"]),
+            "from": str(event.get("from", ""))[:40],
             "body": str(event.get("body", ""))[:1000],
             "sent_at": str(event.get("sent_at", "")),
         }
@@ -102,10 +106,11 @@ class ExampleConnector(Connector):
         sent_at = payload.get("sent_at")
         occurred_at = datetime.fromisoformat(sent_at) if sent_at else EPOCH
         return [
-            Record(
+            TextRecord(
                 external_id=payload["id"],
-                kind="message",
                 occurred_at=occurred_at,
-                data={"body": payload.get("body", "")},
+                direction="inbound",
+                remote=payload.get("from") or FICTIONAL_SENDER,
+                body=payload.get("body", ""),
             )
         ]

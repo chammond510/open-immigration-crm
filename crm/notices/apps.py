@@ -6,3 +6,8 @@ class NoticesConfig(AppConfig):
     name = "crm.notices"
     label = "notices"
     verbose_name = "USCIS notices"
+
+    def ready(self):
+        from . import records
+
+        records.connect()

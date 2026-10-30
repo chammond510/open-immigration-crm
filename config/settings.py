@@ -217,6 +217,8 @@ API_HOURLY_LIMIT = int(os.environ.get("API_HOURLY_LIMIT", "1000"))
 # authorization server. It stays off until a superuser turns it on under AI
 # assistants. See docs/MCP.md.
 MCP_HOURLY_LIMIT = int(os.environ.get("MCP_HOURLY_LIMIT", "1000"))
+# Phone numbers written without a country code are read as this region's (ISO 3166 code).
+PHONE_DEFAULT_REGION = os.environ.get("PHONE_DEFAULT_REGION", "US").upper()
 OAUTH2_PROVIDER_APPLICATION_MODEL = "oauth2_provider.Application"
 OAUTH2_PROVIDER = {
     "SCOPES": {

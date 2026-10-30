@@ -1,0 +1,191 @@
+"""Typed records each capability's connectors produce.
+
+Connectors return these from ``sync()`` and ``handle_webhook()``. Core features
+store them: calls, texts, and emails become communications, calendar events and
+bookings become appointments, payments are recorded on invoices, and case status
+readings are recorded on matters. ``problems()`` lists what is wrong with a
+record; the contract tests require it to be empty.
+"""
+
+import re
+from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
+
+from .base import Capability, Record
+
+INBOUND, OUTBOUND = "inbound", "outbound"
+DIRECTIONS = (INBOUND, OUTBOUND)
+RECEIPT_PATTERN = re.compile(r"^[A-Z]{3}\d{10}$")
+
+
+def aware(value):
+    return value is not None and value.tzinfo is not None
+
+
+@dataclass(frozen=True, kw_only=True)
+class TypedRecord(Record):
+    kind: str = ""
+    # Email of the staff member whose account, line, or calendar it came from, if known.
+    staff_email: str = ""
+
+    def problems(self):
+        problems = []
+        if not self.external_id:
+            problems.append("external_id is required")
+        if not aware(self.occurred_at):
+            problems.append("occurred_at must be a timezone-aware datetime")
+        return problems
+
+
+@dataclass(frozen=True, kw_only=True)
+class CallRecord(TypedRecord):
+    kind: str = "call"
+    direction: str
+    remote: str  # The other party's phone number, as the provider gives it.
+    duration_seconds: int | None = None
+    outcome: str = ""  # For example completed, missed, or voicemail.
+    summary: str = ""  # A recap or notes from the provider, if any.
+    recording_url: str = ""
+
+    def problems(self):
+        problems = super().problems()
+        if self.direction not in DIRECTIONS:
+            problems.append("direction must be inbound or outbound")
+        if self.duration_seconds is not None and self.duration_seconds < 0:
+            problems.append("duration_seconds cannot be negative")
+        if self.recording_url and not self.recording_url.startswith("https://"):
+            problems.append("recording_url must use HTTPS")
+        return problems
+
+
+@dataclass(frozen=True, kw_only=True)
+class TextRecord(TypedRecord):
+    kind: str = "text"
+    direction: str
+    remote: str
+    body: str = ""
+    status: str = ""  # For example received, sent, delivered, or failed.
+
+    def problems(self):
+        problems = super().problems()
+        if self.direction not in DIRECTIONS:
+            problems.append("direction must be inbound or outbound")
+        return problems
+
+
+@dataclass(frozen=True, kw_only=True)
+class EmailRecord(TypedRecord):
+    kind: str = "email"
+    direction: str
+    remote: str  # The other party's address: the sender of inbound mail, else the first recipient.
+    subject: str = ""
+    snippet: str = ""  # A short plain-text excerpt; full bodies stay at the provider.
+    thread_id: str = ""
+
+    def problems(self):
+        problems = super().problems()
+        if self.direction not in DIRECTIONS:
+            problems.append("direction must be inbound or outbound")
+        if "@" not in self.remote:
+            problems.append("remote must be an email address")
+        return problems
+
+
+@dataclass(frozen=True, kw_only=True)
+class CalendarEventRecord(TypedRecord):
+    """``occurred_at`` is the start time."""
+
+    kind: str = "calendar_event"
+    title: str
+    ends_at: object = None
+    location: str = ""
+    attendee_emails: tuple = ()
+    cancelled: bool = False
+    etag: str = ""
+
+    def problems(self):
+        problems = super().problems()
+        if not self.title:
+            problems.append("title is required")
+        if self.ends_at is not None and not aware(self.ends_at):
+            problems.append("ends_at must be timezone-aware")
+        return problems
+
+
+@dataclass(frozen=True, kw_only=True)
+class BookingRecord(TypedRecord):
+    """A booked appointment, such as a consultation. ``occurred_at`` is the start time."""
+
+    kind: str = "booking"
+    title: str
+    invitee_name: str = ""
+    invitee_email: str = ""
+    invitee_phone: str = ""
+    ends_at: object = None
+    location: str = ""
+    cancelled: bool = False
+    answers: dict = field(default_factory=dict)  # Booking questions and their answers.
+    tracking: dict = field(default_factory=dict)  # For example utm_source and utm_campaign.
+
+    def problems(self):
+        problems = super().problems()
+        if not self.title:
+            problems.append("title is required")
+        if not (self.invitee_email or self.invitee_phone):
+            problems.append("invitee_email or invitee_phone is required")
+        return problems
+
+
+@dataclass(frozen=True, kw_only=True)
+class PaymentRecord(TypedRecord):
+    kind: str = "payment"
+    amount: str  # Decimal as text, such as "250.00".
+    currency: str = "USD"
+    status: str = "completed"  # completed, failed, or refunded.
+    reference: str = ""  # The invoice number the payer entered or the link carried.
+    method: str = "card"  # A Payment.Method value.
+    deposit_account: str = ""  # operating or trust, when the provider's account says.
+    payer_email: str = ""
+
+    def problems(self):
+        problems = super().problems()
+        try:
+            if Decimal(self.amount) <= 0:
+                problems.append("amount must be positive")
+        except (InvalidOperation, TypeError):
+            problems.append("amount must be a decimal string")
+        if self.status not in ("completed", "failed", "refunded"):
+            problems.append("status must be completed, failed, or refunded")
+        if self.deposit_account not in ("", "operating", "trust"):
+            problems.append("deposit_account must be operating or trust")
+        return problems
+
+
+@dataclass(frozen=True, kw_only=True)
+class CaseStatusRecord(TypedRecord):
+    """``occurred_at`` is when the status was checked."""
+
+    kind: str = "case_status"
+    receipt_number: str
+    status_title: str
+    status_text: str = ""
+
+    def problems(self):
+        problems = super().problems()
+        if not RECEIPT_PATTERN.match(self.receipt_number or ""):
+            problems.append("receipt_number must be three letters and ten digits")
+        if not self.status_title:
+            problems.append("status_title is required")
+        return problems
+
+
+# The record types each capability's connectors may produce.
+RECORD_TYPES = {
+    Capability.PHONE: (CallRecord,),
+    Capability.TEXTING: (TextRecord,),
+    Capability.MAILBOX: (EmailRecord,),
+    Capability.CALENDAR: (CalendarEventRecord,),
+    Capability.SCHEDULING: (BookingRecord,),
+    Capability.PAYMENTS: (PaymentRecord,),
+    Capability.CASE_STATUS: (CaseStatusRecord,),
+}

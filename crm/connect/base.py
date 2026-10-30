@@ -168,7 +168,14 @@ class WebhookEnvelope:
 
 
 class ConnectorError(Exception):
-    """A provider failure. The message is stored and shown, so it must not contain client data."""
+    """A provider failure. The message is stored and shown, so it must not contain client data.
+
+    ``status`` is the provider's HTTP status, when there was one.
+    """
+
+    def __init__(self, message="", *, status=None):
+        super().__init__(message)
+        self.status = status
 
 
 class Connector:
@@ -201,6 +208,12 @@ class Connector:
     @property
     def credentials(self):
         return self.connection.credentials or {}
+
+    def access_token(self):
+        """For OAuth connectors: a current access token, refreshed when it is about to expire."""
+        from .oauth import access_token
+
+        return access_token(self.connection)
 
     def test_connection(self):
         """Raise ConnectorError unless the stored credentials work."""

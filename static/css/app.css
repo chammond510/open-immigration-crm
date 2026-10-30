@@ -389,3 +389,4 @@ td.wrap { white-space: normal; min-width: 220px; }
 .consent-scopes li { margin-bottom: 6px; }
 .consent-panel .stacked-form { margin-top: 16px; }
 .setup-steps { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.button.small { min-height: 28px; padding: 3px 10px; font-size: 12px; }

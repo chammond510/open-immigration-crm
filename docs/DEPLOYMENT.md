@@ -133,6 +133,10 @@ The JSON API at `/api/v1/` is off until a superuser turns it on under **API acce
 - **Limits.** Each token is limited to `API_HOURLY_LIMIT` requests an hour (default 1000). Bodies over 256 KB are refused.
 - **Request log.** Every request is logged. Old rows can be removed with `python manage.py prune_api_log --days 365`.
 
+## Phone numbers
+
+Phone numbers are matched in E.164 form. Numbers written without a country code are read as `PHONE_DEFAULT_REGION`'s (an ISO 3166 code; default `US`). Set it to the firm's own country.
+
 ## AI assistants (MCP)
 
 The MCP server lets staff use the CRM from Claude or ChatGPT; see [AI assistants](MCP.md). It is off until a superuser turns it on under **AI assistants**.

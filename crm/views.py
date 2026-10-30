@@ -381,7 +381,11 @@ def pipeline(request):
 @staff_required
 @require_http_methods(["GET", "POST"])
 def contact_create(request):
-    form = ContactForm(request.POST or None, initial={"assigned_to": request.user})
+    initial = {"assigned_to": request.user}
+    for name in ("phone", "email"):
+        if request.GET.get(name):
+            initial[name] = request.GET[name][:254]
+    form = ContactForm(request.POST or None, initial=initial)
     if form.is_valid():
         contact = form.save()
         add_activity(

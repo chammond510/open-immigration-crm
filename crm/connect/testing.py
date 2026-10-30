@@ -14,6 +14,7 @@ from django.contrib.auth import get_user_model
 
 from .base import Connector, ConnectorError, Record, SyncBatch, WebhookEnvelope
 from .models import Connection
+from .records import RECORD_TYPES
 from .registry import manifest_problems
 
 
@@ -59,12 +60,19 @@ class ConnectorContract:
         """
         raise NotImplementedError
 
-    def assert_records(self, records):
+    def assert_records(self, records, capability=None):
+        """Each record is the typed record its capability produces, with no problems."""
+        expected = RECORD_TYPES.get(capability, ())
         for record in records:
             self.assertIsInstance(record, Record)
             self.assertTrue(record.external_id)
             self.assertIsInstance(record.occurred_at, datetime)
             self.assertIsNotNone(record.occurred_at.tzinfo, "Record times must be aware.")
+            if expected:
+                self.assertIsInstance(
+                    record, expected, f"{capability} connectors return {expected[0].__name__}."
+                )
+                self.assertEqual(record.problems(), [])
 
     def test_contract_manifest_is_complete(self):
         self.assertEqual(manifest_problems(self.connector_class), [])
@@ -85,7 +93,7 @@ class ConnectorContract:
             self.assertIsInstance(batch, SyncBatch)
             self.assertIsInstance(batch.cursor, dict)
             json.dumps(batch.cursor)
-            self.assert_records(batch.records)
+            self.assert_records(batch.records, capability)
 
     def test_contract_outbound_actions_return_references(self):
         connector = self.connector_class(self.make_connection())
@@ -108,4 +116,6 @@ class ConnectorContract:
         self.assertTrue(envelope.event_id)
         self.assertIn(envelope.capability, cls.webhooks.capabilities)
         json.dumps(envelope.payload)
-        self.assert_records(connector.handle_webhook(envelope.capability, envelope.payload))
+        self.assert_records(
+            connector.handle_webhook(envelope.capability, envelope.payload), envelope.capability
+        )
