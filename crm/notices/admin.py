@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CaseNotice, CaseStatusCheck
+from .models import CaseNotice, CaseStatusCheck, CaseStatusProblem
 
 
 @admin.register(CaseNotice)
@@ -16,4 +16,12 @@ class CaseStatusCheckAdmin(admin.ModelAdmin):
     list_display = ("checked_at", "receipt_number", "status_title", "changed", "matter")
     list_filter = ("changed",)
     search_fields = ("receipt_number", "status_title", "matter__matter_number")
-    raw_id_fields = ("matter", "recorded_by", "source_connection")
+    raw_id_fields = ("matter", "recorded_by", "source_connection", "review_task")
+
+
+@admin.register(CaseStatusProblem)
+class CaseStatusProblemAdmin(admin.ModelAdmin):
+    list_display = ("receipt_number", "kind", "last_seen_at", "matter")
+    list_filter = ("kind",)
+    search_fields = ("receipt_number", "matter__matter_number")
+    raw_id_fields = ("matter", "source_connection")

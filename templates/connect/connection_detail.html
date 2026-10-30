@@ -32,6 +32,7 @@
   <aside class="detail-aside">
     <section class="panel facts"><h2>Details</h2><dl>
       <dt>Capabilities</dt><dd>{{ capability_labels|join:", "|default:"—" }}</dd>
+      {% for label, value in settings %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
       <dt>Connected by</dt><dd>{{ connection.created_by|default:"—" }} · {{ connection.created_at|date:"M j, Y" }}</dd>
       <dt>Last success</dt><dd>{{ connection.last_success_at|date:"M j, g:i a"|default:"—" }}</dd>
       <dt>Reviewed</dt><dd>{% if connection.data_flows_acknowledged %}{{ connection.data_flows_acknowledged_by|default:"—" }} · {{ connection.data_flows_acknowledged_at|date:"M j, Y" }}{% else %}Not yet{% endif %}</dd>

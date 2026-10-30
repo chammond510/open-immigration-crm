@@ -37,7 +37,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
   - `CustomFieldsMixin` adds the active fields to `ContactForm` and `MatterForm`, so the web pages and the API validate them the same way.
   - Values of inactive fields are kept.
 - `Invoice`, `InvoiceLine`, and `Payment` (in `crm/billing/`) hold invoices numbered when issued, lines marked earned fee or advance (trust), and payments recording the account they were deposited to. Each time entry can be billed once (`InvoiceLine.time_entry`), and voiding an invoice frees its time. `BillingSettings` and `StaffRate` hold rates and defaults. A `PaymentPlan` splits an issued invoice's balance into `PaymentPlanInstallment`s; payments apply to the earliest installment first, so installment status is derived rather than stored. Each installment has a reminder `WorkItem` that completes itself when the installment is paid, and only one plan per invoice is in force at a time. Billing pages require the `billing.access_billing` permission. Core keeps no trust ledger.
-- `CaseNotice` and `CaseStatusCheck` (in `crm/notices/`) hold USCIS notices on a matter and receipt-number status readings. Receipt numbers are normalized (three letters, ten digits). A notice's response due date and appointment each drive one `WorkItem` that moves when the notice changes and is left alone once completed. A receipt notice fills the matter's blank receipt number, filing date, and priority date. A status reading that differs from the last one for the receipt is noted on the matter's activity.
+- `CaseNotice` and `CaseStatusCheck` (in `crm/notices/`) hold USCIS notices on a matter and receipt-number status readings. Receipt numbers are normalized (three letters, ten digits). A notice's response due date and appointment each drive one `WorkItem` that moves when the notice changes and is left alone once completed. A receipt notice fills the matter's blank receipt number, filing date, and priority date. A status reading that differs from the last one for the receipt is noted on the matter's activity. `CaseStatusProblem` keeps a receipt number a case status connector could not get a status for, until a status is recorded.
 - `Communication` (in `crm/comms/`) is a call, text, email, or meeting linked to a contact and optionally a matter, logged by staff or recorded by a connector (stored once per connection and provider ID). `Contact.texting_opted_out_at` records a texting opt-out, which the outbound policy enforces.
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
@@ -84,7 +84,7 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
 
     It records every attempt as an `OutboundRequest`, storing only safe error text.
   - `testing.ConnectorContract` holds the shared contract tests. They block network access.
-- `connectors/<provider>/` holds one optional adapter package per provider. `connectors/example/` is a fictional connector, hidden from the catalog, that exercises the framework. `connectors/webhooks/` is the built-in automation connector: it signs each event with the Standard Webhooks scheme and posts it to the firm's chosen address.
+- `connectors/<provider>/` holds one optional adapter package per provider. `connectors/example/` is a fictional connector, hidden from the catalog, that exercises the framework. `connectors/webhooks/` is the built-in automation connector: it signs each event with the Standard Webhooks scheme and posts it to the firm's chosen address. `connectors/uscis_case_status/` checks receipt numbers through the firm's own USCIS developer app.
 
 - **Worker.** `python manage.py run_worker` runs two things:
   - a scheduler thread that records a `WorkerHeartbeat` and queues a `SyncRun` for each due capability of each active connection;
@@ -94,7 +94,9 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
   - `crm/comms/records.py` stores calls, texts, and emails, handles STOP and START replies, and links unmatched records when a contact gains that number or address.
   - `crm/appointments.py` stores calendar events (only those with a known contact) and bookings.
   - `crm/billing/records.py` records payments. It never guesses the operating or trust account for an invoice with advance lines.
-  - `crm/notices/records.py` records case status readings.
+  - `crm/notices/records.py` records case status readings. An automatic reading that changes the status creates a review task (`crm/notices/alerts.py` sets its title and priority from USCIS's status title), and updates the receipt's open review task if there is one.
+
+  Lookup connectors, such as case status, ask core what to check with `crm.connect.lookups.due()`. Core registers the answer: `crm/notices/tracking.py` lists receipt numbers on exactly one open matter that have not been checked in 20 hours, never-checked first. A sync that stops early returns what it has with a warning, which is shown on the connection.
 
   A record that fails to store is logged by kind and connection only, and the rest of the batch continues.
 - **Matching** (`crm/matching.py`). Phone numbers are kept in E.164 form (`Contact.phone_e164`, `Communication.counterpart_key`), parsed with `PHONE_DEFAULT_REGION`. Emails are compared case-insensitively. A match must be exact and unique; there is no partial-number matching. Unmatched communications wait in the Needs matching list.

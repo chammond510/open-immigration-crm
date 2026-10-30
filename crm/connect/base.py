@@ -84,6 +84,22 @@ class CredentialField:
 
 
 @dataclass(frozen=True)
+class SettingField:
+    """A non-secret choice made when connecting, kept in the connection's ``config``.
+
+    With ``choices`` staff pick from a list; otherwise they type a value.
+    ``validate`` may raise ``ValidationError`` for a value the connector cannot use.
+    """
+
+    name: str
+    label: str
+    choices: tuple[tuple[str, str], ...] = ()
+    default: str = ""
+    help_text: str = ""
+    validate: Callable[[str], None] | None = None
+
+
+@dataclass(frozen=True)
 class ApiKeyAuth:
     """Staff paste one or more values from the provider's settings."""
 
@@ -139,6 +155,9 @@ class Record:
 class SyncBatch:
     records: list[Record]
     cursor: dict
+    # Set when the sync stopped early but kept what it received, such as at a rate
+    # limit. It is shown to staff, so it must not contain client data.
+    warning: str = ""
 
 
 WEBHOOK_SECRET_SOURCES = ("crm", "provider")
@@ -190,6 +209,7 @@ class Connector:
     maturity = Maturity.BETA
     capabilities: frozenset[str] = frozenset()
     auth: ApiKeyAuth | OAuthAuth | PublicDataAuth | None = None
+    settings_fields: tuple[SettingField, ...] = ()
     connection_scope = ConnectionScope.FIRM
     data_flows: DataFlows | None = None
     maintainers: tuple[str, ...] = ()
@@ -208,6 +228,11 @@ class Connector:
     @property
     def credentials(self):
         return self.connection.credentials or {}
+
+    def setting(self, name):
+        """The connection's value for one of ``settings_fields``, or that field's default."""
+        field = next(f for f in self.settings_fields if f.name == name)
+        return (self.connection.config or {}).get(name, field.default)
 
     def access_token(self):
         """For OAuth connectors: a current access token, refreshed when it is about to expire."""

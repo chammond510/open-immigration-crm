@@ -26,6 +26,8 @@ class ConnectorContract:
     connector_class: type[Connector] | None = None
     valid_credentials: dict = {}
     invalid_credentials: dict = {}
+    # Values for the connector's settings_fields; defaults fill the rest.
+    connection_config: dict = {}
     # Capability -> cursor to start from, for every capability the connector syncs.
     sync_examples: dict = {}
     # Outbound action -> payload that should succeed.
@@ -51,6 +53,7 @@ class ConnectorContract:
             owner=owner,
             enabled_capabilities=sorted(cls.capabilities),
             credentials=self.valid_credentials if credentials is None else credentials,
+            config=dict(self.connection_config),
         )
 
     def make_webhook(self, secret):

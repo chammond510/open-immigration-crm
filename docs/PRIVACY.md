@@ -1,6 +1,6 @@
 # Privacy and data handling
 
-Open Immigration CRM performs no telemetry, analytics, advertising, AI inference, email delivery, cloud-drive sync, or payment processing. Core application behavior has no intentional outbound provider calls. Planned optional connectors will send data only to providers a firm chooses to connect, after a superuser acknowledges what each one sends; see the [security model](SECURITY_MODEL.md). Telemetry stays excluded.
+Open Immigration CRM performs no telemetry, analytics, advertising, AI inference, email delivery, cloud-drive sync, or payment processing. Core application behavior has no intentional outbound provider calls. Optional connectors send data only to providers a firm chooses to connect, after a superuser acknowledges what each one sends. For example, the USCIS Case Status connector sends the receipt numbers of open matters to USCIS, and only in production; see the [security model](SECURITY_MODEL.md). Telemetry stays excluded.
 
 ## Data locations
 

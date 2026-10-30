@@ -117,6 +117,15 @@ class HttpClientTests(TestCase):
                 lambda r: httpx.Response(200, content=b"<html>"), lambda: client().get("/x")
             )
 
+    def test_requests_can_be_spaced(self):
+        spaced = client(min_interval=0.5)
+        for _ in range(3):
+            self.run_with(lambda r: httpx.Response(204), lambda: spaced.get("/x"))
+        self.assertEqual(len(self.waits), 2)
+        self.assertTrue(all(0.4 < wait <= 0.5 for wait in self.waits))
+        self.run_with(lambda r: httpx.Response(204), lambda: client().get("/x"))
+        self.assertEqual(len(self.waits), 2)
+
     def test_addresses(self):
         with self.assertRaisesMessage(ConnectorError, "HTTPS"):
             http.ProviderClient("http://api.example.test").get("/x")
@@ -259,6 +268,13 @@ class RecordTests(TestCase):
                 receipt_number="IOE0912345678",
                 status_title="Case Was Received",
             ),
+            CaseStatusRecord(
+                external_id="s",
+                occurred_at=NOW,
+                receipt_number="IOE0912345678",
+                problem="not_found",
+                status_text="The source's own explanation.",
+            ),
         ]
         for record in records:
             self.assertEqual(record.problems(), [], record.kind)
@@ -295,6 +311,16 @@ class RecordTests(TestCase):
             (
                 CaseStatusRecord(
                     external_id="s", occurred_at=NOW, receipt_number="bad", status_title=""
+                ),
+                2,
+            ),
+            (
+                CaseStatusRecord(
+                    external_id="s",
+                    occurred_at=NOW,
+                    receipt_number="IOE0912345678",
+                    status_title="Case Was Received",
+                    problem="lost",
                 ),
                 2,
             ),

@@ -1,8 +1,9 @@
 """One HTTPS client for every connector.
 
-It adds timeouts, retries that honour ``Retry-After`` on 429 and 5xx answers, a
-response size limit, and a pagination helper. Failures become ``ConnectorError``
-messages that are safe to show staff. Tests swap the transport for
+It adds timeouts, retries that honour ``Retry-After`` on 429 and 5xx answers,
+optional spacing between requests, a response size limit, and a pagination
+helper. Failures become ``ConnectorError`` messages that are safe to show staff.
+Tests swap the transport for
 ``httpx.MockTransport`` with ``use_transport``; nothing reaches the network.
 """
 
@@ -86,7 +87,10 @@ class ProviderClient:
         retries=3,
         allow_local_http=False,
         max_bytes=MAX_RESPONSE_BYTES,
+        min_interval=0,
     ):
+        """``min_interval`` is the least number of seconds between this client's requests,
+        for providers that limit requests per second."""
         self.base_url = base_url.rstrip("/")
         self.name = name
         self.headers = {"User-Agent": USER_AGENT, **(headers or {})}
@@ -95,9 +99,19 @@ class ProviderClient:
         self.retries = retries
         self.allow_local_http = allow_local_http
         self.max_bytes = max_bytes
+        self.min_interval = min_interval
+        self.last_sent = None
 
     def url(self, path):
         return path if path.startswith(("http://", "https://")) else self.base_url + path
+
+    def pace(self):
+        """Wait until ``min_interval`` has passed since this client's previous request."""
+        if self.min_interval and self.last_sent is not None:
+            wait = self.last_sent + self.min_interval - time.monotonic()
+            if wait > 0:
+                sleep(wait)
+        self.last_sent = time.monotonic()
 
     def request(self, method, path, *, expected=(200, 201, 202, 204), **kwargs):
         """Send a request and return the ``httpx.Response``; raise ConnectorError on failure."""
@@ -109,6 +123,7 @@ class ProviderClient:
             timeout=self.timeout, transport=_transport, follow_redirects=False
         ) as client:
             while True:
+                self.pace()
                 try:
                     with client.stream(
                         method, url, headers=headers, auth=self.auth, **kwargs

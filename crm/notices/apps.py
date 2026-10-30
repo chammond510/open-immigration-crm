@@ -8,6 +8,7 @@ class NoticesConfig(AppConfig):
     verbose_name = "USCIS notices"
 
     def ready(self):
-        from . import records
+        from . import records, tracking
 
         records.connect()
+        tracking.connect()
