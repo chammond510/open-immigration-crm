@@ -28,7 +28,14 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `Activity` is an append-oriented note/status/event stream.
 - `WorkItem` unifies a task, deadline, or appointment.
 - `TimeEntry` records tracked working time against a matter or contact; one timer runs per user, and no rates or amounts are stored.
-- `ChecklistItem` is firm-authored and scoped to a single matter.
+- `ChecklistItem` is firm-authored and scoped to a single matter. An item that came from a workflow phase links to it (`ChecklistItem.phase`) and outlives it.
+- `WorkflowTemplate`, `PhaseTemplate`, and `ItemTemplate` (in `crm/workflows/`) are firm-written workflows; none ship with the project. Applying one creates a `MatterWorkflow` with `MatterPhase`s and copies the items onto the matter's checklist, so later template edits do not change matters already using it.
+  - One phase is in progress at a time.
+  - A phase with due days puts a deadline in the work queue when it starts, and completing the phase completes that deadline.
+  - A template can apply itself to new matters of one case type, through a `post_save` signal on `Matter`.
+- `CustomField` (in `crm/customfields/`) defines a firm's extra contact or matter fields. Values live on the record (`Contact.custom_fields`, `Matter.custom_fields`, a JSON object keyed by each field's fixed `key`).
+  - `CustomFieldsMixin` adds the active fields to `ContactForm` and `MatterForm`, so the web pages and the API validate them the same way.
+  - Values of inactive fields are kept.
 - `Invoice`, `InvoiceLine`, and `Payment` (in `crm/billing/`) hold invoices numbered when issued, lines marked earned fee or advance (trust), and payments recording the account they were deposited to. Each time entry can be billed once (`InvoiceLine.time_entry`), and voiding an invoice frees its time. `BillingSettings` and `StaffRate` hold rates and defaults. A `PaymentPlan` splits an issued invoice's balance into `PaymentPlanInstallment`s; payments apply to the earliest installment first, so installment status is derived rather than stored. Each installment has a reminder `WorkItem` that completes itself when the installment is paid, and only one plan per invoice is in force at a time. Billing pages require the `billing.access_billing` permission. Core keeps no trust ledger.
 - `CaseNotice` and `CaseStatusCheck` (in `crm/notices/`) hold USCIS notices on a matter and receipt-number status readings. Receipt numbers are normalized (three letters, ten digits). A notice's response due date and appointment each drive one `WorkItem` that moves when the notice changes and is left alone once completed. A receipt notice fills the matter's blank receipt number, filing date, and priority date. A status reading that differs from the last one for the receipt is noted on the matter's activity.
 - `Communication` (in `crm/comms/`) is a call, text, email, or meeting linked to a contact and optionally a matter, logged by staff or recorded by a connector (stored once per connection and provider ID). `Contact.texting_opted_out_at` records a texting opt-out, which the outbound policy enforces.

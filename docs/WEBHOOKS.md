@@ -28,6 +28,7 @@ To change the address or secret, disconnect and connect again.
 | `matter.created` | A matter is opened |
 | `matter.updated` | A matter is changed |
 | `matter.status_changed` | A matter's status changes; `changes` has the old and new status |
+| `matter.phase_started` | A matter's workflow moves to a new phase, including its first; `changes` has the previous and new phase names |
 | `work_item.created` | A task, deadline, or appointment is added, including deadlines created from a notice |
 | `work_item.completed` | A task, deadline, or appointment is completed |
 | `note.created` | A note is added (not system activity) |

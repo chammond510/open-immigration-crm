@@ -69,6 +69,8 @@ Paths end with a slash.
 ## Reading
 
 Records use the model's field names.
+- **Custom fields.** Contacts and matters include `custom_fields`, an object keyed by each custom field's key. `/api/v1/` lists the active fields with their types and choices.
+- **Workflow.** Matters include `workflow`: its name, the phase in progress, and when it finished, or `null`.
 - **Linked records** appear as their IDs, the same values you send when writing. Contacts, matters, notices, and communications have UUIDs; users, work items, notes, and time entries have whole-number IDs.
 - **Money** is a string with two decimals, such as `"1500.00"`.
 - **Times** are ISO 8601 with a time zone offset.
@@ -88,6 +90,10 @@ To keep another system in step, poll with `updated_since` set to the time of you
 
 POST creates a record and PATCH changes one. Send a JSON object with `Content-Type: application/json`. Bodies are limited to 256 KB.
 - **PATCH changes only the fields you name.** Every other field keeps its value.
+- **Custom fields.** Send them as an object, for example `"custom_fields": {"referral_source": "Website"}`.
+  - Values are checked against each field's type and choices.
+  - `null` clears a value, and fields you leave out keep theirs.
+  - Errors name the field as `custom_fields.<key>`.
 - **New records** get the same defaults the web form uses. `assigned_to` defaults to the token's user.
 - **Rejected fields.** A field that is unknown or read-only, such as `id` or `matter_number`, is rejected rather than ignored.
 - **Same side effects as the web pages.** A new contact or matter gets a "created" activity. A stage or status change is noted on the record. A notice's response due date becomes a deadline. A status check that differs from the last one is noted on the matter.

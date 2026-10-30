@@ -11,6 +11,7 @@ from django.utils import timezone
 from crm.billing.models import Invoice
 from crm.comms.forms import CommunicationForm
 from crm.comms.models import Communication
+from crm.customfields.models import CustomField, active_fields
 from crm.forms import ContactForm, MatterForm, WorkItemForm
 from crm.models import Activity, Contact, Matter, TimeEntry, WorkItem
 from crm.notices.forms import CaseNoticeForm, StatusCheckForm
@@ -32,6 +33,7 @@ from .http import (
     read_json,
     user_param,
     uuid_param,
+    with_custom_fields,
 )
 
 CONTACT_FIELDS = ContactForm._meta.fields
@@ -110,6 +112,19 @@ def index(request):
                 name: request.build_absolute_uri(reverse(url_name))
                 for name, url_name in ENDPOINTS.items()
             },
+            "custom_fields": {
+                applies_to: [
+                    {
+                        "key": field.key,
+                        "label": field.label,
+                        "type": field.field_type,
+                        "required": field.required,
+                        "choices": field.choice_list,
+                    }
+                    for field in active_fields(applies_to)
+                ]
+                for applies_to in CustomField.AppliesTo.values
+            },
             "choices": {
                 "contact.status": Contact.Status.values,
                 "contact.stage": Contact.Stage.values,
@@ -141,7 +156,7 @@ def contacts(request):
     if request.method == "POST":
         form = bind(
             ContactForm,
-            read_json(request),
+            with_custom_fields(read_json(request)),
             writable=CONTACT_FIELDS,
             initial={"assigned_to": request.user.pk},
         )
@@ -177,7 +192,10 @@ def contact_detail(request, pk):
     if request.method == "PATCH":
         before_stage = contact.stage
         contact = bind(
-            ContactForm, read_json(request), writable=CONTACT_FIELDS, instance=contact
+            ContactForm,
+            with_custom_fields(read_json(request)),
+            writable=CONTACT_FIELDS,
+            instance=contact,
         ).save()
         if contact.stage != before_stage:
             add_activity(
@@ -194,7 +212,9 @@ def contact_detail(request, pk):
 
 
 def matter_records():
-    return Matter.objects.select_related("primary_contact").prefetch_related("parties")
+    return Matter.objects.select_related("primary_contact", "workflow").prefetch_related(
+        "parties", "workflow__phases"
+    )
 
 
 @endpoint("matters", methods=("GET", "POST"))
@@ -202,7 +222,7 @@ def matters(request):
     if request.method == "POST":
         form = bind(
             MatterForm,
-            read_json(request),
+            with_custom_fields(read_json(request)),
             writable=MATTER_FIELDS,
             initial={"assigned_to": request.user.pk},
         )
@@ -245,7 +265,10 @@ def matter_detail(request, pk):
     if request.method == "PATCH":
         before_status = matter.status
         matter = bind(
-            MatterForm, read_json(request), writable=MATTER_FIELDS, instance=matter
+            MatterForm,
+            with_custom_fields(read_json(request)),
+            writable=MATTER_FIELDS,
+            instance=matter,
         ).save()
         if matter.status != before_status:
             add_activity(

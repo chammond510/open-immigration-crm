@@ -18,6 +18,7 @@ from crm.billing.models import (
     StaffRate,
 )
 from crm.comms.models import Communication
+from crm.customfields.models import CustomField
 from crm.models import (
     Activity,
     AuditLog,
@@ -34,6 +35,13 @@ from crm.models import (
     WorkItem,
 )
 from crm.notices.models import CaseNotice, CaseStatusCheck
+from crm.workflows.models import (
+    ItemTemplate,
+    MatterPhase,
+    MatterWorkflow,
+    PhaseTemplate,
+    WorkflowTemplate,
+)
 
 MODELS: tuple[type[Model], ...] = (
     FirmProfile,
@@ -44,6 +52,11 @@ MODELS: tuple[type[Model], ...] = (
     Communication,
     WorkItem,
     TimeEntry,
+    WorkflowTemplate,
+    PhaseTemplate,
+    ItemTemplate,
+    MatterWorkflow,
+    MatterPhase,
     ChecklistItem,
     Document,
     IntakeForm,
@@ -58,6 +71,7 @@ MODELS: tuple[type[Model], ...] = (
     PaymentPlanInstallment,
     CaseNotice,
     CaseStatusCheck,
+    CustomField,
     AuditLog,
 )
 

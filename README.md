@@ -14,6 +14,8 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - One-click time tracking against a matter or contact, with per-record totals
 - Billing for staff granted access: hourly rates, invoices whose lines are marked earned fee or trust advance, manually recorded payments with the account they were deposited to, payment plans with staff reminders, and a printable invoice
 - Firm-created per-matter checklists—zero legal templates ship with the project
+- Firm-written workflow templates: phases with checklist items and optional phase deadlines, applied to a matter by hand or automatically for new matters of a case type
+- Custom fields on contacts and matters (text, number, date, choice, yes or no), shown on forms and record pages and carried in exports, the API, and webhooks
 - Private PDF, DOCX, PNG, and JPEG document storage
 - Blank intake-form builder with expiring, revocable, single-use links
 - Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff

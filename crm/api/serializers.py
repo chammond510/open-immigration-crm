@@ -1,6 +1,7 @@
 """JSON shapes for API records. Linked records appear as their IDs, the same
 values the API accepts when writing; money is a string with two decimals."""
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 
 
@@ -56,10 +57,25 @@ def contact(record, request):
         "stage": record.stage,
         "assigned_to": record.assigned_to_id,
         "notes": record.notes,
+        "custom_fields": record.custom_fields,
         "texting_opted_out_at": iso(record.texting_opted_out_at),
         "created_at": iso(record.created_at),
         "updated_at": iso(record.updated_at),
         "web_url": web_url(request, "contact_detail", record.pk),
+    }
+
+
+def workflow(matter):
+    """The matter's workflow and the phase in progress, or None."""
+    try:
+        applied = matter.workflow
+    except ObjectDoesNotExist:
+        return None
+    current = next((p for p in applied.phases.all() if p.status == "in_progress"), None)
+    return {
+        "name": applied.name,
+        "current_phase": current.name if current else None,
+        "completed_at": iso(applied.completed_at),
     }
 
 
@@ -82,6 +98,8 @@ def matter(record, request):
             {"contact": str(party.contact_id), "role": party.role, "notes": party.notes}
             for party in record.parties.all()
         ],
+        "custom_fields": record.custom_fields,
+        "workflow": workflow(record),
         "closed_at": iso(record.closed_at),
         "created_at": iso(record.created_at),
         "updated_at": iso(record.updated_at),

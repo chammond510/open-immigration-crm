@@ -259,8 +259,10 @@ class RecordCommunicationTests(TestCase):
 
 
 class MoveActivitiesMigrationTests(TransactionTestCase):
-    before = [("comms", "0001_communications")]
-    after = [("comms", "0002_move_call_and_meeting_activities")]
+    # Pin crm too, so later crm migrations are unapplied while the historical models are used.
+    crm = ("crm", "0005_texting_opt_out_and_activity_kinds")
+    before = [("comms", "0001_communications"), crm]
+    after = [("comms", "0002_move_call_and_meeting_activities"), crm]
 
     def migrate(self, targets):
         executor = MigrationExecutor(connection)

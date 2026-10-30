@@ -1,0 +1,25 @@
+<section class="panel" id="checklist">
+  <div class="section-heading"><div><h2>{% if workflow %}Workflow: {{ workflow.name }}{% else %}Checklist{% endif %}</h2><p>{% if workflow %}{% if workflow.completed_at %}Finished {{ workflow.completed_at|date:"M j, Y" }}{% elif current %}Phase {{ current_number }} of {{ phases|length }}: {{ current.name }}{% endif %} · {{ done_count }} of {{ item_count }} item{{ item_count|pluralize }} done{% else %}Firm-created steps for this matter. No legal checklist is preloaded.{% endif %}</p></div></div>
+  {% if workflow %}
+    <div class="phase-list">
+      {% for phase in phases %}
+        <div class="phase is-{{ phase.status }}">
+          <div class="phase-heading">
+            <div><strong>{{ forloop.counter }}. {{ phase.name }}</strong> <span class="badge phase-{{ phase.status }}">{{ phase.get_status_display }}</span>{% if phase.due_item and phase.status == "in_progress" %}<span class="muted"> · due {{ phase.due_item.scheduled_for|date:"M j, Y" }}</span>{% endif %}</div>
+            {% if phase.status == "in_progress" %}<div class="actions">
+              <form method="post" action="{% url 'workflow_phase_finish' phase.pk %}" data-confirm="Skip {{ phase.name }}?{% if phase.checklist %} Its open items stay open.{% endif %}"><input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"><input type="hidden" name="skip" value="1"><button class="button" type="submit">Skip</button></form>
+              <form method="post" action="{% url 'workflow_phase_finish' phase.pk %}"><input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"><button class="button primary" type="submit">Complete phase</button></form>
+            </div>{% endif %}
+          </div>
+          {% if phase.checklist %}<div class="checklist">{% for item in phase.checklist %}{% include "workflows/includes/checklist_row.html" %}{% endfor %}</div>{% endif %}
+        </div>
+      {% endfor %}
+      {% if loose_items %}<div class="phase"><div class="phase-heading"><div><strong>Other items</strong></div></div><div class="checklist">{% for item in loose_items %}{% include "workflows/includes/checklist_row.html" %}{% endfor %}</div></div>{% endif %}
+    </div>
+  {% else %}
+    <div class="checklist">{% for item in loose_items %}{% include "workflows/includes/checklist_row.html" %}{% empty %}<div class="empty-state compact"><p>No checklist items. Add only steps approved by your firm.</p></div>{% endfor %}</div>
+    {% if apply_form %}<form method="post" action="{% url 'workflow_apply' matter.pk %}" class="inline-apply"><input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"><label for="{{ apply_form.template.id_for_label }}">Apply a workflow</label>{{ apply_form.template }}<button class="button" type="submit">Apply</button></form>{% elif user.is_superuser %}<p class="fine-print">Workflows add phases and checklist items to a matter. <a href="{% url 'workflow_template_create' %}">Write your firm's first workflow</a>.</p>{% endif %}
+  {% endif %}
+  <details class="inline-add"><summary>Add checklist item</summary><form method="post" action="{% url 'checklist_add' matter.pk %}" class="stacked-form compact-form"><input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">{{ checklist_form.as_div }}{% if current %}<p class="fine-print">The item is added to the current phase, {{ current.name }}.</p>{% endif %}<button class="button primary" type="submit">Add item</button></form></details>
+  {% if workflow and user.is_superuser %}<form method="post" action="{% url 'workflow_remove' matter.pk %}" class="inline-remove" data-confirm="Remove the workflow from this matter? Its checklist items stay, and open phase deadlines are deleted."><input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"><button class="text-button danger-text" type="submit">Remove workflow</button></form>{% endif %}
+</section>

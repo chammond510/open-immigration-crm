@@ -7,6 +7,7 @@ EVENT_GROUPS = {
         "matter.created": "A matter is opened",
         "matter.updated": "A matter is changed",
         "matter.status_changed": "A matter's status changes",
+        "matter.phase_started": "A matter's workflow moves to a new phase",
     },
     "Work and notes": {
         "work_item.created": "A task, deadline, or appointment is added",

@@ -17,6 +17,9 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 
+from crm.customfields.forms import PREFIX as CUSTOM_PREFIX
+from crm.customfields.forms import CustomFieldsMixin
+from crm.customfields.models import active_fields
 from crm.events.context import event_origin
 from crm.services import client_ip
 from crm.two_factor import confirmed_device, firm_requires_two_factor
@@ -209,11 +212,40 @@ def read_json(request):
     return data
 
 
+def public_name(name):
+    """How a form field is named in API requests and errors."""
+    if name == "__all__":
+        return "record"
+    if name.startswith(CUSTOM_PREFIX):
+        return f"custom_fields.{name[len(CUSTOM_PREFIX) :]}"
+    return name
+
+
 def form_errors(form):
     return {
-        ("record" if name == "__all__" else name): [error["message"] for error in errors]
+        public_name(name): [error["message"] for error in errors]
         for name, errors in form.errors.get_json_data().items()
     }
+
+
+def with_custom_fields(data):
+    """Turn a "custom_fields" object into the form's custom field names."""
+    custom = data.pop("custom_fields", None)
+    stray = sorted(name for name in data if name.startswith(CUSTOM_PREFIX))
+    if stray:
+        raise ApiError(
+            400, "unknown_fields", "Send custom field values inside custom_fields.", fields=stray
+        )
+    if custom is None:
+        return data
+    if not isinstance(custom, dict):
+        raise ApiError(
+            400,
+            "invalid",
+            "Some fields are not valid.",
+            fields={"custom_fields": ["Send an object of field keys and values."]},
+        )
+    return {**data, **{CUSTOM_PREFIX + str(key): value for key, value in custom.items()}}
 
 
 def bind(form_class, data, *, writable, instance=None, **form_kwargs):
@@ -222,7 +254,12 @@ def bind(form_class, data, *, writable, instance=None, **form_kwargs):
     Fields the request leaves out keep the record's current values, or for a new
     record the form's defaults, so a PATCH changes only what it names.
     """
-    unknown = sorted(set(data) - set(writable))
+    if issubclass(form_class, CustomFieldsMixin):
+        writable = [
+            *writable,
+            *(CUSTOM_PREFIX + field.key for field in active_fields(form_class.custom_fields_for)),
+        ]
+    unknown = sorted(public_name(name) for name in set(data) - set(writable))
     if unknown:
         raise ApiError(
             400,
@@ -230,7 +267,9 @@ def bind(form_class, data, *, writable, instance=None, **form_kwargs):
             "These fields are unknown or read-only: " + ", ".join(unknown) + ".",
             fields=unknown,
         )
-    nested = sorted(name for name, value in data.items() if isinstance(value, (dict, list)))
+    nested = sorted(
+        public_name(name) for name, value in data.items() if isinstance(value, (dict, list))
+    )
     if nested:
         raise ApiError(
             400, "invalid", "These fields take a single value: " + ", ".join(nested) + "."

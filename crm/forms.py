@@ -6,6 +6,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.utils import timezone
 from django.utils.text import slugify
 
+from .customfields.forms import CustomFieldsMixin
 from .models import (
     Activity,
     ChecklistItem,
@@ -51,7 +52,9 @@ class TwoFactorDisableForm(forms.Form):
     )
 
 
-class ContactForm(forms.ModelForm):
+class ContactForm(CustomFieldsMixin, forms.ModelForm):
+    custom_fields_for = "contact"
+
     class Meta:
         model = Contact
         fields = [
@@ -87,9 +90,12 @@ class ContactForm(forms.ModelForm):
             is_active=True,
             is_staff=True,
         )
+        self.add_custom_fields()
 
 
-class MatterForm(forms.ModelForm):
+class MatterForm(CustomFieldsMixin, forms.ModelForm):
+    custom_fields_for = "matter"
+
     class Meta:
         model = Matter
         fields = [
@@ -118,6 +124,7 @@ class MatterForm(forms.ModelForm):
             is_active=True,
             is_staff=True,
         )
+        self.add_custom_fields()
 
 
 class MatterPartyForm(forms.ModelForm):
