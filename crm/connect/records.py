@@ -16,6 +16,7 @@ from .base import Capability, Record
 INBOUND, OUTBOUND = "inbound", "outbound"
 DIRECTIONS = (INBOUND, OUTBOUND)
 RECEIPT_PATTERN = re.compile(r"^[A-Z]{3}\d{10}$")
+PAYMENT_STATUSES = ("completed", "failed", "refunded", "partially_refunded")
 # Why a case status source could not give a status for a receipt number.
 NOT_FOUND, INVALID_RECEIPT, UNAVAILABLE = "not_found", "invalid_receipt", "unavailable"
 CASE_STATUS_PROBLEMS = (NOT_FOUND, INVALID_RECEIPT, UNAVAILABLE)
@@ -151,7 +152,8 @@ class PaymentRecord(TypedRecord):
     kind: str = "payment"
     amount: str  # Decimal as text, such as "250.00".
     currency: str = "USD"
-    status: str = "completed"  # completed, failed, or refunded.
+    # completed, failed, refunded (in full), or partially_refunded.
+    status: str = "completed"
     reference: str = ""  # The invoice number the payer entered or the link carried.
     method: str = "card"  # A Payment.Method value.
     deposit_account: str = ""  # operating or trust, when the provider's account says.
@@ -164,8 +166,8 @@ class PaymentRecord(TypedRecord):
                 problems.append("amount must be positive")
         except (InvalidOperation, TypeError):
             problems.append("amount must be a decimal string")
-        if self.status not in ("completed", "failed", "refunded"):
-            problems.append("status must be completed, failed, or refunded")
+        if self.status not in PAYMENT_STATUSES:
+            problems.append(f"status must be one of {', '.join(PAYMENT_STATUSES)}")
         if self.deposit_account not in ("", "operating", "trust"):
             problems.append("deposit_account must be operating or trust")
         return problems
