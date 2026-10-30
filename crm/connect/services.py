@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from crm.models import AuditLog
 
-from .base import ApiKeyAuth, ConnectionScope, ConnectorError
+from .base import ApiKeyAuth, Capability, ConnectionScope, ConnectorError
 from .models import Connection
 from .registry import registry
 
@@ -158,8 +158,11 @@ def visible_connections(user):
 
 
 def needs_worker(connection):
+    """Syncs, received webhooks, and automation event deliveries all run in the worker."""
     cls = connection.connector_class
-    return cls is not None and bool(cls.sync_capabilities or cls.webhooks)
+    return cls is not None and bool(
+        cls.sync_capabilities or cls.webhooks or Capability.AUTOMATION in cls.capabilities
+    )
 
 
 def connection_alerts(user):

@@ -69,6 +69,11 @@ def manifest_problems(cls):
     stray = set(cls.outbound_actions.values()) - set(cls.capabilities)
     if stray:
         problems.append(f"outbound actions use undeclared capabilities: {', '.join(sorted(stray))}")
+    if (
+        Capability.AUTOMATION in cls.capabilities
+        and cls.outbound_actions.get("deliver_event") != Capability.AUTOMATION
+    ):
+        problems.append("automation connectors must declare the deliver_event outbound action")
     return problems
 
 

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load connect_tags %}
+{% load connect_tags events_tags %}
 {% block title %}{{ connection.label }} · Connections · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading">
@@ -18,12 +18,13 @@
       {% include "connect/includes/data_flows.html" with flows=connector.data_flows %}
       {% if user.is_superuser and not connection.data_flows_acknowledged and not disconnected %}<form method="post" action="{% url 'connection_acknowledge' connection.pk %}" class="panel">{% csrf_token %}<button class="button primary" type="submit">I reviewed this, and the firm accepts it</button></form>{% endif %}
     {% endif %}
-    <section class="panel"><div class="section-heading"><div><h2>Recent syncs</h2><p>Scheduled pulls of new records.</p></div></div>
+    {% events_panel connection %}
+    {% if not connector or connector.sync_capabilities %}<section class="panel"><div class="section-heading"><div><h2>Recent syncs</h2><p>Scheduled pulls of new records.</p></div></div>
       {% for run in sync_runs %}<div class="mini-record"><div><strong>{{ run.capability|capability_label }}</strong><span>{{ run.created_at|date:"M j, g:i a" }}{% if run.records_received %} · {{ run.records_received }} record{{ run.records_received|pluralize }}{% endif %}{% if run.error %} · {{ run.error }}{% endif %}</span></div><span class="badge {{ run.status }}">{{ run.get_status_display }}</span></div>{% empty %}<p class="muted">No syncs yet.</p>{% endfor %}
-    </section>
-    <section class="panel"><div class="section-heading"><div><h2>Recent webhook events</h2><p>Events the provider sent to this connection.</p></div></div>
+    </section>{% endif %}
+    {% if not connector or connector.webhooks %}<section class="panel"><div class="section-heading"><div><h2>Recent webhook events</h2><p>Events the provider sent to this connection.</p></div></div>
       {% for event in webhook_events %}<div class="mini-record"><div><strong>{{ event.capability|capability_label }}</strong><span>{{ event.received_at|date:"M j, g:i a" }}{% if event.error %} · {{ event.error }}{% endif %}</span></div><span class="badge {{ event.status }}">{{ event.get_status_display }}</span></div>{% empty %}<p class="muted">No events received.</p>{% endfor %}
-    </section>
+    </section>{% endif %}
     <section class="panel"><div class="section-heading"><div><h2>Recent outbound actions</h2><p>Everything sent, previewed, or blocked through this connection.</p></div></div>
       {% for item in outbound_requests %}<div class="mini-record"><div><strong>{{ item.summary|default:item.action }}</strong><span>{{ item.created_at|date:"M j, g:i a" }} · {% if item.is_automation %}Automation{% else %}{{ item.actor|default:"Unknown" }}{% endif %}{% if item.error %} · {{ item.error }}{% endif %}</span></div><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></div>{% empty %}<p class="muted">Nothing sent yet.</p>{% endfor %}
     </section>

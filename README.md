@@ -18,6 +18,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Blank intake-form builder with expiring, revocable, single-use links
 - Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff
 - A JSON API for scripts and automation tools, off until a superuser turns it on, with scoped, expiring, revocable tokens and a log of every request (see [API](docs/API.md))
+- Signed outbound webhooks for automation tools: the firm chooses which CRM events are sent, and each one is retried and recorded (see [Outbound webhooks](docs/WEBHOOKS.md))
 - Audit records for important actions
 - CSV and portable JSON export paths
 - PostgreSQL production path and SQLite-only local evaluation path
@@ -33,7 +34,7 @@ The **Connections** page lists the services the CRM can connect to; see the [con
 - **Explicit about data.** Each connector states what it sends and receives, and a superuser acknowledges that before turning it on.
 - **Cautious by default.** Anything a connector would send out starts in preview mode, and AI features are opt-in and off by default.
 
-The connector framework, background worker, webhooks, and Connections page are in place. No connector for a real provider has shipped yet; the catalog lists those people have asked for as Wanted.
+The connector framework, background worker, webhooks, and Connections page are in place. The first connector is the built-in, vendor-neutral **Webhooks** connector, which sends signed CRM events to n8n, Zapier, Make, or any address the firm chooses. No connector for a specific provider has shipped yet; the catalog lists those people have asked for as Wanted.
 
 ## Quick start with Docker
 

@@ -37,6 +37,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
 - `Connection`, `OutboundRequest`, `SyncRun`, `WebhookEvent`, `WorkerHeartbeat`, and `ConnectorApp` (in `crm/connect/`) hold connected provider accounts, the outbound log, sync history, received provider events, and worker check-ins; see Connectors below.
 - `ApiSettings`, `ApiToken`, and `ApiRequestLog` (in `crm/api/`) hold the firm's API switches, scoped bearer tokens that act as one staff member (only a SHA-256 hash is stored), and a log row for every API request. See [API](API.md).
+- `EventDelivery` (in `crm/events/`) is one CRM event queued for one automation connection. Model signals emit events after a change commits, whichever path made it. The worker sends each delivery through the outbound policy and retries failures with backoff. The payload is encrypted and deleted once the delivery settles. See [Outbound webhooks](WEBHOOKS.md).
 - `TwoFactorDevice` holds a user's authenticator secret, encrypted with `FIELD_ENCRYPTION_KEYS`; `RecoveryCode` stores only SHA-256 hashes of single-use recovery codes.
 
 ## Trust boundaries
@@ -74,11 +75,11 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
 
     It records every attempt as an `OutboundRequest`, storing only safe error text.
   - `testing.ConnectorContract` holds the shared contract tests. They block network access.
-- `connectors/<provider>/` holds one optional adapter package per provider. `connectors/example/` is a fictional connector, hidden from the catalog, that exercises the framework.
+- `connectors/<provider>/` holds one optional adapter package per provider. `connectors/example/` is a fictional connector, hidden from the catalog, that exercises the framework. `connectors/webhooks/` is the built-in automation connector: it signs each event with the Standard Webhooks scheme and posts it to the firm's chosen address.
 
 - **Worker.** `python manage.py run_worker` runs two things:
   - a scheduler thread that records a `WorkerHeartbeat` and queues a `SyncRun` for each due capability of each active connection;
-  - the `django-tasks-db` worker, which runs syncs and webhook processing from a queue table in the application database.
+  - the `django-tasks-db` worker, which runs syncs, webhook processing, and event deliveries from a queue table in the application database.
 
   Each sync resumes from the previous successful run's cursor. Synced and webhook records are delivered through the `records_received` signal; features subscribe to it, and the framework keeps only the run or event record.
 - **Webhooks.** `/hooks/<token>/` accepts provider events.

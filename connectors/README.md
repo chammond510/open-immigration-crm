@@ -10,6 +10,7 @@ connectors/
   example/              a fictional connector that tests the framework (hidden from the catalog)
     __init__.py         the connector class, registered with @register
     test_example.py     the shared contract tests plus connector-specific tests
+  webhooks/             the built-in automation connector: signed events to any address
 ```
 
 ## Writing a connector
@@ -19,6 +20,10 @@ connectors/
    - `sync()` for the capabilities listed in `sync_capabilities` (the worker runs it every `sync_interval`);
    - `perform()` for outbound actions;
    - for providers that push events, a `webhooks` spec plus `verify_webhook()` (constant-time signature check; never accept unsigned requests), `parse_webhook()` (keep only what processing needs), and `handle_webhook()`.
+
+   Automation connectors (the `automation` capability) must declare a `deliver_event` outbound action. Its payload is `{"id": ..., "event": {...}}`; the ID stays the same across retries. Core builds events in `crm/events/` and sends them through the outbound policy from the worker.
+
+   A credential field can set `generate` to a function that proposes a value, such as a signing secret, which the connect form shows once for staff to copy to the provider.
 
    Raise `ConnectorError` for provider failures. Its message is stored and shown to staff, so never include client data in it. Synced and webhook records reach features through the `crm.connect.signals.records_received` signal; calls, texts, and emails are stored with `crm.comms.services.record_communication`, which keeps one copy per provider ID, and case status connectors record readings with `crm.notices.services.record_status`.
 3. Describe in `data_flows` exactly what the connector sends and receives, in plain language. Raise its `version` whenever that changes, so firms review it again.

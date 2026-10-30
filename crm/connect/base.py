@@ -1,5 +1,6 @@
 """What a connector declares and the behavior every connector provides."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
@@ -27,6 +28,7 @@ class Capability(models.TextChoices):
     MARKETING = "marketing", "Marketing analytics"
     SIGN_IN = "sign_in", "Sign-in (SSO)"
     MIGRATION = "migration", "Migration"
+    AUTOMATION = "automation", "Automation"
 
 
 # How "Connect your ..." prompts name each capability.
@@ -51,6 +53,7 @@ CAPABILITY_NOUNS = {
     Capability.MARKETING: "marketing accounts",
     Capability.SIGN_IN: "sign-in provider",
     Capability.MIGRATION: "previous practice system",
+    Capability.AUTOMATION: "automation tool",
 }
 
 
@@ -67,10 +70,17 @@ class ConnectionScope(models.TextChoices):
 
 @dataclass(frozen=True)
 class CredentialField:
+    """One value staff enter when connecting.
+
+    ``generate`` makes the CRM propose a fresh value, such as a signing secret
+    for staff to copy into the provider. It is shown only on the connect form.
+    """
+
     name: str
     label: str
     secret: bool = True
     help_text: str = ""
+    generate: Callable[[], str] | None = None
 
 
 @dataclass(frozen=True)
@@ -79,6 +89,8 @@ class ApiKeyAuth:
 
     fields: tuple[CredentialField, ...]
     docs_url: str = ""
+    # How the catalog names this kind of setup, such as "Webhook address".
+    label: str = "API key"
 
 
 @dataclass(frozen=True)

@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = (
         "Run the connector worker: a scheduler thread that records a heartbeat and queues "
-        "due syncs, plus the database task worker that runs syncs and webhook processing."
+        "due syncs, plus the database task worker that runs syncs, webhook processing, "
+        "and event deliveries."
     )
 
     def add_arguments(self, parser):

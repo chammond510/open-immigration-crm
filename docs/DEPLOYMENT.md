@@ -133,6 +133,14 @@ The JSON API at `/api/v1/` is off until a superuser turns it on under **API acce
 - **Limits.** Each token is limited to `API_HOURLY_LIMIT` requests an hour (default 1000). Bodies over 256 KB are refused.
 - **Request log.** Every request is logged. Old rows can be removed with `python manage.py prune_api_log --days 365`.
 
+## Outbound webhooks
+
+The **Webhooks** connector sends the CRM events a superuser chooses to an automation tool's address; see [Outbound webhooks](WEBHOOKS.md).
+- **Worker.** Deliveries need the worker running.
+- **Network.** The worker makes outbound HTTPS requests to that address. Allow them through any egress firewall.
+- **Self-hosted tools.** A tool on the firm's own network, such as n8n in the same Compose project, can be reached over plain `http://` by its service name.
+- **Stopping deliveries.** `CONNECTORS_OUTBOUND_ENABLED=false` stops every delivery at once.
+
 ## Reverse proxy
 
 Terminate TLS at the proxy and forward only to the private Gunicorn port. Preserve the original host, set `X-Forwarded-Proto` to `https`, cap request bodies consistently with `DOCUMENT_UPLOAD_MAX_BYTES`, disable caching for authenticated responses, and do not add third-party analytics to intake pages.

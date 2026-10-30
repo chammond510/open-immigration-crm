@@ -49,7 +49,7 @@ def auth_label(cls):
     if isinstance(cls.auth, OAuthAuth):
         return "Sign in"
     if isinstance(cls.auth, ApiKeyAuth):
-        return "API key"
+        return cls.auth.label
     return "No sign-in"
 
 

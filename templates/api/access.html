@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load connect_tags %}
 {% block title %}API access · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading">
@@ -7,6 +8,7 @@
 </div>
 {% if not api_settings.enabled %}<div class="privacy-note">The API is off, so every token is refused. {% if user.is_superuser %}Turn it on under API settings.{% else %}A superuser can turn it on.{% endif %}</div>{% endif %}
 {% if not can_create %}<div class="privacy-note">Only superusers can create tokens on this installation.</div>{% endif %}
+<div class="prompt-stack page-prompts">{% connect_prompt "automation" "to send CRM events to n8n, Zapier, Make, or any webhook" %}</div>
 <div class="api-page">
   <div class="{% if user.is_superuser %}two-column{% else %}api-page{% endif %}">
     {% if user.is_superuser %}

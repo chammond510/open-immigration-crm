@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 
+from crm.events.context import event_origin
 from crm.services import client_ip
 from crm.two_factor import confirmed_device, firm_requires_two_factor
 
@@ -138,7 +139,7 @@ def endpoint(resource=None, methods=("GET",)):
                 if request.method == "GET":
                     response = view(request, *args, **kwargs)
                 else:
-                    with transaction.atomic():
+                    with event_origin(via="api", api_token=token.prefix), transaction.atomic():
                         response = view(request, *args, **kwargs)
             except ApiError as exc:
                 response = exc.response()
