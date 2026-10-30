@@ -335,19 +335,16 @@ capabilities = ["marketing"]
 
 # Sign-in
 [[connector]]
-key = "oidc"
-name = "OpenID Connect (Google, Microsoft Entra ID, and others)"
-capabilities = ["sign_in"]
-
-[[connector]]
 key = "okta"
 name = "Okta"
 capabilities = ["sign_in"]
+works_through = "oidc"
 
 [[connector]]
 key = "jumpcloud"
 name = "JumpCloud"
 capabilities = ["sign_in"]
+works_through = "oidc"
 
 # Migration from other practice-management systems
 [[connector]]

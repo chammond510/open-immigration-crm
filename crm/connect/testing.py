@@ -9,10 +9,19 @@ import json
 import socket
 from datetime import datetime
 from unittest import mock
+from urllib.parse import parse_qs, urlsplit
 
 from django.contrib.auth import get_user_model
 
-from .base import Connector, ConnectorError, Record, SyncBatch, WebhookEnvelope
+from .base import (
+    Capability,
+    Connector,
+    ConnectorError,
+    Record,
+    StaffIdentity,
+    SyncBatch,
+    WebhookEnvelope,
+)
 from .models import Connection
 from .records import RECORD_TYPES
 from .registry import manifest_problems
@@ -67,6 +76,15 @@ class ConnectorContract:
             credentials=self.valid_credentials if credentials is None else credentials,
             config=dict(self.connection_config),
         )
+
+    def sign_in_answer(self, sign_in_url, nonce):
+        """Return the parameters the provider sends back for one fictional sign-in.
+
+        Required for staff sign-in connectors. ``sign_in_url`` is the address the
+        connector sent the browser to; the answer must prove a sign-in made with
+        ``nonce``.
+        """
+        raise NotImplementedError
 
     def make_webhook(self, secret):
         """Return (body bytes, headers dict) for one validly signed fictional event.
@@ -129,6 +147,33 @@ class ConnectorContract:
             url = str(result.get("url") or "")
             self.assertTrue(not url or url.startswith("https://"), url)
             json.dumps(result)
+
+    def test_contract_staff_sign_in(self):
+        cls = self.connector_class
+        if Capability.SIGN_IN not in cls.capabilities:
+            return
+        connector = cls(self.make_connection())
+        redirect_uri = "https://crm.example.test/accounts/sign-in/callback/"
+        url = connector.sign_in_url(redirect_uri, "state-1", "nonce-1", "challenge-1")
+        query = parse_qs(urlsplit(url).query)
+        self.assertTrue(url.startswith("https://"), url)
+        for name, value in (
+            ("state", "state-1"),
+            ("nonce", "nonce-1"),
+            ("code_challenge", "challenge-1"),
+            ("code_challenge_method", "S256"),
+            ("redirect_uri", redirect_uri),
+        ):
+            self.assertEqual(query.get(name), [value], name)
+        identity = connector.verify_sign_in(
+            self.sign_in_answer(url, "nonce-1"), redirect_uri, "verifier-1", "nonce-1"
+        )
+        self.assertIsInstance(identity, StaffIdentity)
+        self.assertTrue(identity.issuer and identity.subject)
+        with self.assertRaises(ConnectorError):
+            connector.verify_sign_in(
+                self.sign_in_answer(url, "nonce-1"), redirect_uri, "verifier-1", "nonce-2"
+            )
 
     def test_contract_webhooks_verify_parse_and_handle(self):
         cls = self.connector_class

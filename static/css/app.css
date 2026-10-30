@@ -74,6 +74,7 @@ small { color: var(--muted); }
 .button.primary { border-color: var(--accent); background: var(--accent); color: white; }
 .button.primary:hover { border-color: var(--accent-dark); background: var(--accent-dark); color: white; }
 .button.wide { width: 100%; min-height: 42px; }
+.sign-in-options { display: grid; gap: 8px; margin-top: 12px; }
 .text-button { padding: 0; border: 0; background: transparent; cursor: pointer; }
 .danger-text { color: var(--danger) !important; }
 .muted { color: var(--muted); }

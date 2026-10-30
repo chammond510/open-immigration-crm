@@ -18,6 +18,7 @@
       {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
       <button class="button primary wide" type="submit">Sign in</button>
     </form>
+    {% if sign_in_connections %}<div class="sign-in-options">{% for connection in sign_in_connections %}<a class="button wide" href="{% url 'staff_sign_in' connection.pk %}{% if next %}?next={{ next|urlencode }}{% endif %}">Sign in with {{ connection.label }}</a>{% endfor %}</div>{% endif %}
     <p class="fine-print">This application stores sensitive client information. Do not use a shared device.</p>
   </section>
 </div>
