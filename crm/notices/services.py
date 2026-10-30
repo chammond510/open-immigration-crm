@@ -5,7 +5,13 @@ from django.utils import timezone
 
 from crm.models import Activity, AuditLog, WorkItem
 
-from .models import CaseNotice, CaseStatusCheck, normalize_receipt_number, validate_receipt_number
+from .models import (
+    CaseNotice,
+    CaseStatusCheck,
+    CaseStatusProblem,
+    normalize_receipt_number,
+    validate_receipt_number,
+)
 
 RESPONSE_PRIORITY = {
     CaseNotice.Kind.RFE: WorkItem.Priority.HIGH,
@@ -168,6 +174,7 @@ def record_status(
         recorded_by=actor,
         source_connection=source_connection,
     )
+    CaseStatusProblem.objects.filter(receipt_number=receipt_number).delete()
     if check.changed or previous is None:
         Activity.objects.create(
             matter=matter,

@@ -45,7 +45,12 @@ The **Connections** page lists the services the CRM can connect to; see the [con
 - **Explicit about data.** Each connector states what it sends and receives, and a superuser acknowledges that before turning it on.
 - **Cautious by default.** Anything a connector would send out starts in preview mode, and AI features are opt-in and off by default.
 
-The connector framework, background worker, webhooks, and Connections page are in place. The first connector is the built-in, vendor-neutral **Webhooks** connector, which sends signed CRM events to n8n, Zapier, Make, or any address the firm chooses. No connector for a specific provider has shipped yet; the catalog lists those people have asked for as Wanted.
+The connector framework, background worker, webhooks, and Connections page are in place. Connectors so far:
+
+- **Webhooks**, built in and vendor-neutral, sends signed CRM events to n8n, Zapier, Make, or any address the firm chooses.
+- **USCIS Case Status API** (Beta) checks the receipt numbers of open matters once a day through the firm's own developer.uscis.gov app, and creates a review task when a status changes.
+
+The catalog lists the other providers people have asked for as Wanted.
 
 ## Quick start with Docker
 

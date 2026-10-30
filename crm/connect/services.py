@@ -23,6 +23,19 @@ def record_audit(actor, action, connection, detail=""):
     )
 
 
+def clean_settings(cls, config):
+    """The connector's settings from ``config``, with defaults filled in and values checked."""
+    cleaned = dict(config)
+    for setting in cls.settings_fields:
+        value = str(config.get(setting.name, setting.default)).strip()
+        if setting.choices and value not in dict(setting.choices):
+            raise ValidationError(f"Choose a valid {setting.label.lower()}.")
+        if setting.validate:
+            setting.validate(value)
+        cleaned[setting.name] = value
+    return cleaned
+
+
 def create_connection(
     connector_key, *, label, created_by, capabilities, credentials=None, owner=None, config=None
 ):
@@ -47,7 +60,7 @@ def create_connection(
         owner=owner,
         enabled_capabilities=capabilities,
         credentials=credentials,
-        config=config or {},
+        config=clean_settings(cls, config or {}),
         created_by=created_by,
     )
     record_audit(created_by, "connection.created", connection, cls.name)

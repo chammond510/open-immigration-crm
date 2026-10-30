@@ -20,6 +20,7 @@ def notices_panel(context, matter):
         "matter": matter,
         "notices": notices,
         "statuses": latest_statuses(matter),
+        "problems": matter.status_problems.select_related("source_connection"),
         "receipts": receipts,
         "status_form": StatusCheckForm(initial={"receipt_number": receipts[0] if receipts else ""}),
     }

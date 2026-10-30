@@ -53,6 +53,17 @@ def auth_label(cls):
     return "No sign-in"
 
 
+def setting_values(connection):
+    """(label, value) for each of the connector's settings, with choices shown by name."""
+    cls = connection.connector_class
+    config = connection.config or {}
+    return [
+        (setting.label, dict(setting.choices).get(value, value))
+        for setting in (cls.settings_fields if cls else ())
+        if (value := config.get(setting.name, setting.default))
+    ]
+
+
 def catalog_entry(entry, connected_keys):
     return {
         "entry": entry,
@@ -160,6 +171,7 @@ def connector_detail(request, key):
                     capabilities=form.cleaned_data["capabilities"],
                     credentials=form.credentials() if not is_oauth else None,
                     owner=request.user if form.personal else None,
+                    config=form.settings(),
                 )
             except ValidationError as exc:
                 form.add_error(None, exc)
@@ -246,6 +258,7 @@ def connection_detail(request, pk):
             }
         ),
         "capability_labels": [Capability(c).label for c in connection.enabled_capabilities],
+        "settings": setting_values(connection),
         "sync_runs": connection.sync_runs.all()[:5],
         "webhook_events": connection.webhook_events.all()[:5],
         "outbound_requests": connection.outbound_requests.select_related("actor")[:5],

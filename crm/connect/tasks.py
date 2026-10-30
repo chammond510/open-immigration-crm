@@ -67,6 +67,10 @@ def run_sync(sync_run_id):
         run.cursor_after = batch.cursor
         run.records_received = len(batch.records)
         mark_connection(connection)
+        if batch.warning:
+            # It stopped early but kept what it received; staff see why.
+            run.error = batch.warning[:500]
+            mark_connection(connection, run.error)
     run.finished_at = timezone.now()
     run.save(update_fields=["status", "error", "cursor_after", "records_received", "finished_at"])
 

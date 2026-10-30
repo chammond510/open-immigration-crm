@@ -307,11 +307,6 @@ name = "CourtListener"
 capabilities = ["legal_research"]
 
 [[connector]]
-key = "uscis_case_status"
-name = "USCIS Case Status API"
-capabilities = ["case_status"]
-
-[[connector]]
 key = "visa_bulletin"
 name = "Visa Bulletin"
 capabilities = ["case_status"]

@@ -3,6 +3,7 @@ from django import forms
 from .base import ApiKeyAuth, Capability, ConnectionScope
 
 CREDENTIAL_PREFIX = "credential_"
+SETTING_PREFIX = "setting_"
 
 
 class ConnectForm(forms.Form):
@@ -39,6 +40,17 @@ class ConnectForm(forms.Form):
                     max_length=4000,
                     initial=credential.generate() if credential.generate else None,
                 )
+        for setting in connector.settings_fields:
+            name = f"{SETTING_PREFIX}{setting.name}"
+            if setting.choices:
+                self.fields[name] = forms.ChoiceField(choices=setting.choices)
+            else:
+                self.fields[name] = forms.CharField(max_length=500)
+            self.fields[name].label = setting.label
+            self.fields[name].help_text = setting.help_text
+            self.fields[name].initial = setting.default
+            if setting.validate:
+                self.fields[name].validators.append(setting.validate)
         # Only a superuser can accept a connection's data flows for the firm, and
         # the acknowledgment comes last, after everything being agreed to.
         if user.is_superuser:
@@ -52,6 +64,13 @@ class ConnectForm(forms.Form):
             name[len(CREDENTIAL_PREFIX) :]: value.strip()
             for name, value in self.cleaned_data.items()
             if name.startswith(CREDENTIAL_PREFIX)
+        }
+
+    def settings(self):
+        return {
+            name[len(SETTING_PREFIX) :]: value.strip()
+            for name, value in self.cleaned_data.items()
+            if name.startswith(SETTING_PREFIX)
         }
 
 

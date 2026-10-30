@@ -16,6 +16,9 @@ from .base import Capability, Record
 INBOUND, OUTBOUND = "inbound", "outbound"
 DIRECTIONS = (INBOUND, OUTBOUND)
 RECEIPT_PATTERN = re.compile(r"^[A-Z]{3}\d{10}$")
+# Why a case status source could not give a status for a receipt number.
+NOT_FOUND, INVALID_RECEIPT, UNAVAILABLE = "not_found", "invalid_receipt", "unavailable"
+CASE_STATUS_PROBLEMS = (NOT_FOUND, INVALID_RECEIPT, UNAVAILABLE)
 
 
 def aware(value):
@@ -163,19 +166,26 @@ class PaymentRecord(TypedRecord):
 
 @dataclass(frozen=True, kw_only=True)
 class CaseStatusRecord(TypedRecord):
-    """``occurred_at`` is when the status was checked."""
+    """``occurred_at`` is when the status was checked.
+
+    When the source could not give a status, ``problem`` says why, ``status_title``
+    is empty, and ``status_text`` holds the source's own explanation, if any.
+    """
 
     kind: str = "case_status"
     receipt_number: str
-    status_title: str
+    status_title: str = ""
     status_text: str = ""
+    problem: str = ""
 
     def problems(self):
         problems = super().problems()
         if not RECEIPT_PATTERN.match(self.receipt_number or ""):
             problems.append("receipt_number must be three letters and ten digits")
-        if not self.status_title:
-            problems.append("status_title is required")
+        if self.problem and self.problem not in CASE_STATUS_PROBLEMS:
+            problems.append(f"problem must be one of {', '.join(CASE_STATUS_PROBLEMS)}")
+        if bool(self.problem) == bool(self.status_title):
+            problems.append("give either a status_title or a problem")
         return problems
 
 

@@ -55,6 +55,14 @@ def manifest_problems(cls):
         problems.append("auth must be ApiKeyAuth, OAuthAuth, or PublicDataAuth")
     if cls.connection_scope not in ConnectionScope.values:
         problems.append("connection_scope must be firm or user")
+    names = [setting.name for setting in cls.settings_fields]
+    if len(set(names)) != len(names) or not all(KEY_PATTERN.match(name) for name in names):
+        problems.append("settings_fields need unique lowercase names")
+    if any(
+        setting.choices and setting.default not in dict(setting.choices)
+        for setting in cls.settings_fields
+    ):
+        problems.append("a setting's default must be one of its choices")
     flows = cls.data_flows
     if flows is None or flows.version < 1 or not (flows.sends or flows.receives):
         problems.append("data_flows must have a version of at least 1 and list what moves")

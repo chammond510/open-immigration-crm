@@ -119,9 +119,42 @@ class CaseStatusCheck(models.Model):
         on_delete=models.SET_NULL,
         related_name="status_checks",
     )
+    # The task created for staff to review this change, for automatic readings.
+    review_task = models.ForeignKey(
+        WorkItem, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
 
     class Meta:
         ordering = ["-checked_at"]
 
     def __str__(self):
         return f"{self.receipt_number}: {self.status_title}"
+
+
+class CaseStatusProblem(models.Model):
+    """A receipt number a case status source could not answer for on its last check.
+
+    It is removed when a status for the receipt number is recorded.
+    """
+
+    class Kind(models.TextChoices):
+        NOT_FOUND = "not_found", "USCIS did not recognize this receipt number"
+        INVALID_RECEIPT = "invalid_receipt", "USCIS said this receipt number is not valid"
+        UNAVAILABLE = "unavailable", "USCIS did not answer"
+
+    matter = models.ForeignKey(Matter, on_delete=models.CASCADE, related_name="status_problems")
+    receipt_number = models.CharField(max_length=13, unique=True)
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    # The source's own explanation, shown to staff as given.
+    detail = models.TextField(blank=True)
+    first_seen_at = models.DateTimeField()
+    last_seen_at = models.DateTimeField(db_index=True)
+    source_connection = models.ForeignKey(
+        "connect.Connection", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["receipt_number"]
+
+    def __str__(self):
+        return f"{self.receipt_number}: {self.get_kind_display()}"

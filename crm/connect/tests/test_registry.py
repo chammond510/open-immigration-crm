@@ -13,6 +13,7 @@ from crm.connect.base import (
     CredentialField,
     DataFlows,
     Maturity,
+    SettingField,
 )
 from crm.connect.checks import connector_load_check
 from crm.connect.registry import (
@@ -82,6 +83,20 @@ class ManifestTests(SimpleTestCase):
         self.assertIn(
             "wanted entries", " ".join(manifest_problems(make_connector(maturity=Maturity.WANTED)))
         )
+
+    def test_settings_fields_are_checked(self):
+        good = (
+            SettingField("region", "Region", choices=(("us", "US"), ("eu", "EU")), default="us"),
+            SettingField("account", "Account"),
+        )
+        self.assertEqual(manifest_problems(make_connector(settings_fields=good)), [])
+        for fields, expected in (
+            ((SettingField("Region", "Region"),), "unique lowercase names"),
+            ((SettingField("a1", "A"), SettingField("a1", "B")), "unique lowercase names"),
+            ((SettingField("region", "Region", choices=(("us", "US"),)),), "one of its choices"),
+        ):
+            problems = " ".join(manifest_problems(make_connector(settings_fields=fields)))
+            self.assertIn(expected, problems)
 
 
 class RegistryTests(SimpleTestCase):
