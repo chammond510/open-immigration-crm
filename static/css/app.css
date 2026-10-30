@@ -418,3 +418,13 @@ td.wrap { white-space: normal; min-width: 220px; }
   .chat-turn.from-staff { max-width: 100%; }
   .ai-suggestion { flex-direction: column; }
 }
+
+/* Legal research */
+.authority-list { margin-top: 14px; }
+.authority .prose { margin: 4px 0 0; font-size: 13px; }
+.subheading { margin: 18px 0 4px; font-size: 13px; }
+.research-result { padding: 14px 0; border-top: 1px solid var(--line-soft); }
+.research-result:first-of-type { border-top: 0; }
+.research-result-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.research-result .prose { margin: 6px 0 0; font-size: 13px; }
+.research-result .inline-actions input { flex: 1 1 220px; min-width: 0; }

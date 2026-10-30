@@ -15,6 +15,7 @@ from crm.mcp.models import McpSettings, McpToolCall
 from crm.mcp.oauth import REGISTRATIONS_PER_HOUR
 from crm.mcp.protocol import MODERN
 from crm.models import AuditLog, WorkItem
+from crm.research.models import Authority
 from crm.tests.factories import make_contact, make_matter, make_user
 from crm.tests.test_two_factor import require_two_factor
 
@@ -361,8 +362,20 @@ class ProtocolTests(McpTestCase):
         )
         matters = self.call("search_matters", {"query": "Lena"})["structuredContent"]["matters"]
         self.assertEqual(matters[0]["matter_number"], self.matter.matter_number)
+        Authority.objects.create(
+            matter=self.matter,
+            connector_key="",
+            external_id="fictional-1",
+            citation="1 Fict. Dec. 1",
+            title="Matter of Example",
+            note="Hardship standard.",
+        )
         summary = self.call("get_matter", {"matter_id": str(self.matter.pk)})["structuredContent"]
         self.assertEqual(summary["matter"]["title"], "Fictional family petition")
+        self.assertEqual(
+            (summary["saved_authorities"][0]["citation"], summary["saved_authorities"][0]["note"]),
+            ("1 Fict. Dec. 1", "Hardship standard."),
+        )
         self.assertEqual(summary["open_work"][0]["title"], "Fictional deadline")
         contact = self.call("get_contact", {"contact_id": str(self.contact.pk)})[
             "structuredContent"

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load research_tags %}
+{% block title %}Research · {{ matter.matter_number }} · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow"><a href="{% url 'matter_detail' matter.pk %}#research">{{ matter.matter_number }}</a> · Legal research</p><h1>{{ search.query }}</h1><p>Searched {{ search.created_at|date:"M j, Y · g:i a" }}{% if search.source %} in {{ search.source }}{% endif %}{% if search.searched_by %} by {{ search.searched_by }}{% endif %}.</p></div></div>
+<div class="page-stack research-page">
+  {% if form.target.field.choices %}
+    <form method="post" action="{% url 'research_search' matter.pk %}" class="panel stacked-form">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="field full-field"><label for="{{ form.query.id_for_label }}">Search again</label>{{ form.query }}</div>
+        {% if form.target.field.choices|length > 1 %}<div class="field full-field"><label for="{{ form.target.id_for_label }}">{{ form.target.label }}</label>{{ form.target }}</div>{% else %}<input type="hidden" name="target" value="{{ form.target.field.choices.0.0 }}">{% endif %}
+      </div>
+      <div class="form-actions"><button class="button primary" type="submit">Search</button></div>
+    </form>
+  {% endif %}
+  {% if search.status == "previewed" %}
+    <div class="privacy-note">{{ search.source }} is in preview mode, so the search was not sent. A superuser can turn preview mode off on the connection's page.</div>
+  {% elif search.status == "failed" %}
+    <div class="message error">The search did not finish: {{ search.error }}</div>
+  {% else %}
+    <section class="panel">
+      <div class="section-heading"><div><h2>Results</h2><p>{% if search.total and search.total > results|length %}The first {{ results|length }} of {{ search.total }}.{% else %}{{ results|length }} result{{ results|length|pluralize }}.{% endif %} Check each authority before relying on it.</p></div></div>
+      {% for index, result, saved in results %}
+        <article class="research-result" id="result-{{ index }}">
+          <div class="research-result-heading">
+            <strong>{% if result.url %}<a href="{{ result.url }}" target="_blank" rel="noopener noreferrer">{{ result.citation|default:result.title }}</a>{% else %}{{ result.citation|default:result.title }}{% endif %}</strong>
+            {% if not result.url %}<span class="muted">No source link</span>{% endif %}
+            {% if saved %}<span class="badge active">Saved</span>{% endif %}
+          </div>
+          <span class="muted">{% if result.citation and result.title %}{{ result.title }} · {% endif %}{% if result.court %}{{ result.court }} · {% endif %}{% if result.decided %}{{ result.decided|iso_date|date:"M j, Y" }} · {% endif %}{{ result.kind }}{% if result.standing %} · {{ result.standing }}{% endif %}</span>
+          {% if result.excerpt %}<p class="prose">{{ result.excerpt }}</p>{% endif %}
+          {% if not saved %}
+            <form method="post" action="{% url 'research_save' search.pk %}" class="inline-actions">
+              {% csrf_token %}<input type="hidden" name="index" value="{{ index }}">
+              <label class="sr-only" for="note-{{ index }}">Note</label><input id="note-{{ index }}" name="note" maxlength="5000" placeholder="Why it matters (optional)">
+              <button class="button" type="submit">Save to matter</button>
+            </form>
+          {% endif %}
+        </article>
+      {% empty %}
+        <p class="muted">Nothing was found. Try other words.</p>
+      {% endfor %}
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

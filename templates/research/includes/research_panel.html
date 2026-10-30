@@ -1,0 +1,44 @@
+{% load connect_tags %}
+<section class="panel" id="research">
+  <div class="section-heading"><div><h2>Legal research</h2><p>Authorities saved to this matter, with citations and links.</p></div></div>
+  {% if connections %}
+    <form method="post" action="{% url 'research_search' matter.pk %}" class="stacked-form">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="field full-field"><label for="{{ form.query.id_for_label }}">{{ form.query.label }}</label>{{ form.query }}<small>Your search is sent to the service you choose, so describe the legal issue rather than the client.</small></div>
+        {% if form.target.field.choices|length > 1 %}<div class="field full-field"><label for="{{ form.target.id_for_label }}">{{ form.target.label }}</label>{{ form.target }}</div>{% else %}<input type="hidden" name="target" value="{{ form.target.field.choices.0.0 }}">{% endif %}
+      </div>
+      <div class="form-actions"><button class="button primary" type="submit">Search</button></div>
+    </form>
+  {% else %}
+    <div class="prompt-stack">{% connect_prompt "legal_research" "to search for authorities from a matter" %}</div>
+  {% endif %}
+  <div class="record-list authority-list">
+    {% for authority in authorities %}
+      <div class="mini-record authority">
+        <div>
+          <strong>{% if authority.url %}<a href="{{ authority.url }}" target="_blank" rel="noopener noreferrer">{{ authority.citation|default:authority.title }}</a>{% else %}{{ authority.citation|default:authority.title }}{% endif %}</strong>
+          <span>{% if authority.citation and authority.title != authority.citation %}{{ authority.title }} · {% endif %}{% if authority.court %}{{ authority.court }} · {% endif %}{% if authority.decided %}{{ authority.decided|date:"M j, Y" }} · {% endif %}{% if authority.standing %}{{ authority.standing }} · {% endif %}{% if authority.source %}from {{ authority.source }}{% else %}added by hand{% endif %}</span>
+          {% if authority.note %}<p class="prose">{{ authority.note|linebreaksbr }}</p>{% endif %}
+        </div>
+        <form method="post" action="{% url 'research_remove' authority.pk %}" data-confirm="Remove this authority from the matter?">{% csrf_token %}<button class="text-button danger-text" type="submit">Remove</button></form>
+      </div>
+    {% empty %}
+      <p class="muted">No authorities saved yet.</p>
+    {% endfor %}
+  </div>
+  <details class="inline-add">
+    <summary>Add an authority by hand</summary>
+    <form method="post" action="{% url 'research_add_by_hand' matter.pk %}" class="compact-form stacked-form">
+      {% csrf_token %}
+      <div class="form-grid">
+        {% for field in manual_form %}<div class="field {% if field.name == 'note' or field.name == 'title' or field.name == 'url' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}</div>{% endfor %}
+      </div>
+      <div class="form-actions"><button class="button primary" type="submit">Save to matter</button></div>
+    </form>
+  </details>
+  {% if searches %}
+    <h3 class="subheading">Recent searches</h3>
+    {% for search in searches %}<div class="mini-record"><div><a href="{% url 'research_search_detail' search.pk %}"><strong>{{ search.query }}</strong></a><span>{{ search.created_at|date:"M j, g:i a" }} · {{ search.searched_by|default:"—" }} · {% if search.status == "done" %}{{ search.results|length }} result{{ search.results|length|pluralize }}{% else %}{{ search.get_status_display }}{% endif %}</span></div></div>{% endfor %}
+  {% endif %}
+</section>

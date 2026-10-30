@@ -267,6 +267,9 @@ class Connector:
     sync_capabilities: frozenset[str] = frozenset()
     sync_interval = timedelta(minutes=15)
     webhooks: WebhookSpec | None = None
+    # For legal research: what a search can cover, as (value, label) pairs, the first
+    # being the default. Core passes the chosen value as the search's ``scope``.
+    search_scopes: tuple[tuple[str, str], ...] = ()
     # Hidden connectors (such as the fictional example) stay out of the catalog.
     hidden = False
 

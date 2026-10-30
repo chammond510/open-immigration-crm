@@ -11,7 +11,7 @@ The server is **off** on a new installation. A superuser turns it on under **AI 
   - The assistant gets a token that acts as that person, with their permissions, for up to an hour at a time. It renews for up to 30 days, and the person can disconnect it at any time.
 - **Reading.** Read tools are available to every connected assistant:
   - search contacts and matters;
-  - contact and matter summaries;
+  - contact and matter summaries, including a matter's saved legal authorities;
   - upcoming work;
   - USCIS notices;
   - communications;
