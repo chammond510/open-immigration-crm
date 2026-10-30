@@ -48,6 +48,16 @@ def store_one(connection, record):
         if existing and not existing.voided_at:
             void_payment(existing, None, f"Refunded at {connection.label}")
         return
+    if record.status == "partially_refunded":
+        # Payments are recorded whole, so a partial refund is left for staff to adjust.
+        if existing and not existing.voided_at:
+            note(
+                connection,
+                "payment.partially_refunded",
+                f"Part of the {existing.amount} payment on {existing.invoice.number} was "
+                "refunded. Void it and record what was kept.",
+            )
+        return
     if record.status != "completed" or existing:
         return
     reference = record.reference.strip()

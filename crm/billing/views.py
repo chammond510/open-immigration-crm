@@ -7,9 +7,11 @@ from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from crm.connect.models import OutboundRequest
 from crm.models import Contact, FirmProfile, Matter
 
 from .forms import (
@@ -21,6 +23,7 @@ from .forms import (
     PaymentPlanForm,
     ReasonForm,
 )
+from .links import create_links, current_links, link_connections, links_needed
 from .models import BillingSettings, Invoice, InvoiceLine, Payment, StaffRate
 from .services import (
     OPEN_STATUSES,
@@ -128,6 +131,9 @@ def invoice_detail(request, pk):
             "earned_total": invoice.subtotal_for(InvoiceLine.Funds.EARNED),
             "advance_total": invoice.subtotal_for(InvoiceLine.Funds.ADVANCE),
             "can_take_payment": invoice.status in OPEN_STATUSES,
+            "link_connections": link_connections(),
+            "payment_links": current_links(invoice),
+            "links_due": links_needed(invoice),
             "plan": plan,
             "schedule": plan.schedule() if plan else [],
             "plan_form": PaymentPlanForm(
@@ -287,6 +293,34 @@ def payment_record(request, pk):
     else:
         messages.success(request, "Payment recorded.")
     return redirect("invoice_detail", pk=pk)
+
+
+@billing_required
+@require_POST
+def payment_links_create(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    connections = {str(c.pk): c for c in link_connections()}
+    connection = connections.get(request.POST.get("connection", ""))
+    if connection is None:
+        raise PermissionDenied
+    try:
+        requests = create_links(connection, invoice, request.user)
+    except ValidationError as exc:
+        report_errors(request, exc)
+        return redirect("invoice_detail", pk=pk)
+    for outbound in requests:
+        if outbound.status == OutboundRequest.Status.SENT:
+            messages.success(request, f"Created a payment link: {outbound.summary}.")
+        elif outbound.status == OutboundRequest.Status.PREVIEWED:
+            messages.info(
+                request,
+                f"{connection.label} is in preview mode, so no link was made. A superuser can "
+                "turn preview mode off on the connection's page.",
+            )
+            break
+        else:
+            messages.error(request, f"No payment link was made: {outbound.error}")
+    return redirect(reverse("invoice_detail", args=[pk]) + "#payment-links")
 
 
 @billing_required

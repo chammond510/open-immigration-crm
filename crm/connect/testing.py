@@ -42,6 +42,9 @@ class ConnectorContract:
     # signing the body, such as Microsoft Graph's clientState. Such a connector must
     # fetch the data an event points to from the provider, never trust the body.
     body_is_signed = True
+    # False for providers that send no secret at all, such as LawPay. Such a connector
+    # must also fetch what an event names from the provider, never trust the body.
+    webhook_uses_secret = True
 
     def setUp(self):
         super().setUp()
@@ -121,7 +124,8 @@ class ConnectorContract:
         body, headers = self.make_webhook(self.webhook_secret)
         url = self.webhook_url
         self.assertTrue(connector.verify_webhook(body, headers, self.webhook_secret, url=url))
-        self.assertFalse(connector.verify_webhook(body, headers, "a-different-secret", url=url))
+        if self.webhook_uses_secret:
+            self.assertFalse(connector.verify_webhook(body, headers, "a-different-secret", url=url))
         if self.body_is_signed:
             self.assertFalse(
                 connector.verify_webhook(body + b" ", headers, self.webhook_secret, url=url)

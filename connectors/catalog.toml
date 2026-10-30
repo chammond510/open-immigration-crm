@@ -139,11 +139,6 @@ capabilities = ["video"]
 
 # Payments and accounting
 [[connector]]
-key = "lawpay"
-name = "LawPay"
-capabilities = ["payments"]
-
-[[connector]]
 key = "stripe"
 name = "Stripe"
 capabilities = ["payments"]

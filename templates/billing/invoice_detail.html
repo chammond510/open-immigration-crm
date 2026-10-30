@@ -46,7 +46,20 @@
             {% if advance_total %}<small class="muted">This invoice includes {{ advance_total|money:currency }} of advances, which belong in the trust account.</small>{% endif %}
             <div class="form-actions"><button class="button primary" type="submit">Record payment</button></div>
           </form>
-          <div class="prompt-stack">{% connect_prompt "payments" "to send a payment link instead" %}</div>
+          {% if not link_connections %}<div class="prompt-stack">{% connect_prompt "payments" "to send a payment link instead" %}</div>{% endif %}
+        {% endif %}
+        {% if link_connections and invoice.status != "draft" %}
+          <div class="payment-links" id="payment-links">
+            <h3>Payment links</h3>
+            {% for link in payment_links %}<div class="field"><label for="link-{{ link.pk }}">{{ link.amount|money:currency }} into the {{ link.get_deposit_account_display|lower }} · {{ link.created_at|date:"M j, Y" }}{% if link.source_connection %} · {{ link.source_connection }}{% endif %}{% if not link.is_current %} · <span class="muted">no longer the amount owed</span>{% endif %}</label><div class="copy-field"><input id="link-{{ link.pk }}" type="text" readonly value="{{ link.url }}"><button class="button" type="button" data-copy-for="link-{{ link.pk }}">Copy</button></div></div>{% empty %}<p class="muted">No links yet.</p>{% endfor %}
+            {% if links_due %}
+              <form method="post" action="{% url 'payment_links_create' invoice.pk %}" class="compact-form">{% csrf_token %}
+                {% if link_connections|length > 1 %}<label for="link-connection">Through</label><select id="link-connection" name="connection">{% for connection in link_connections %}<option value="{{ connection.pk }}">{{ connection.label }}</option>{% endfor %}</select>{% else %}<input type="hidden" name="connection" value="{{ link_connections.0.pk }}">{% endif %}
+                <p class="muted">{% for account, amount in links_due.items %}{{ amount|money:currency }} into {% if account == "trust" %}trust{% else %}operating{% endif %}{% if not forloop.last %}, and {% endif %}{% endfor %}. {% if links_due|length > 1 %}Advances and earned fees get separate links, so each is paid into the right account.{% endif %}</p>
+                <div class="form-actions"><button class="button" type="submit">Create payment link{{ links_due|length|pluralize }}</button></div>
+              </form>
+            {% endif %}
+          </div>
         {% endif %}
       </section>
       {% if invoice.status != "void" and invoice.status != "draft" %}

@@ -129,7 +129,9 @@ def send(connection, action, payload, *, actor=None, is_automation=False, summar
         request.error = decision.reason
     else:
         try:
-            request.provider_ref = str(connection.connector().perform(action, payload))[:255]
+            # The full answer, such as a payment link, for the caller; the stored copy is cut.
+            request.result = str(connection.connector().perform(action, payload))
+            request.provider_ref = request.result[:255]
             request.status = OutboundRequest.Status.SENT
         except ConnectorError as exc:
             request.status = OutboundRequest.Status.FAILED

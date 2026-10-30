@@ -357,3 +357,29 @@ class PaymentPlanInstallment(models.Model):
 
     def __str__(self):
         return f"Installment {self.sequence} of {self.plan}"
+
+
+class PaymentLink(models.Model):
+    """A link a payment processor made for paying part of an invoice into one account.
+
+    An invoice with both earned fees and advances gets one link per account, so
+    advances are paid into trust and earned fees into operating, never mixed.
+    """
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="payment_links")
+    deposit_account = models.CharField(max_length=20, choices=Payment.Account.choices)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    url = models.URLField(max_length=2000)
+    source_connection = models.ForeignKey(
+        "connect.Connection", null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_deposit_account_display()} link for {self.invoice}"
