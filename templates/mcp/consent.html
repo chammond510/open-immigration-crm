@@ -1,0 +1,28 @@
+{% extends "public_base.html" %}
+{% block title %}Allow an assistant · Open Immigration CRM{% endblock %}
+{% block public_content %}
+<div class="login-shell">
+  <section class="login-panel consent-panel">
+    <div class="brand login-brand"><span class="brand-mark">OI</span><span><strong>Open Immigration CRM</strong><small>Signed in as {{ user.get_full_name|default:user.username }}</small></span></div>
+    {% if error %}
+      <div class="login-copy"><p class="eyebrow">AI assistants</p><h1>This request can't be approved</h1><p>{{ error.description|default:error.error }}</p></div>
+      <p class="fine-print">Start again from your assistant's connector settings.</p>
+    {% else %}
+      <div class="login-copy">
+        <p class="eyebrow">AI assistants</p>
+        <h1>Allow {{ application.name|default:"this assistant" }} to use the CRM as you?</h1>
+        <p>After you allow it, you go back to <strong>{{ redirect_host }}</strong>. Allow it only if you started this from your own Claude or ChatGPT account just now.</p>
+      </div>
+      <ul class="consent-scopes">{% for scope in scopes_descriptions %}<li>{{ scope }}</li>{% endfor %}</ul>
+      <p class="fine-print">It sees only what your account can see. Your assistant asks you before anything is added to the CRM, and nothing can be deleted. You can disconnect it at any time under <a href="{{ settings_url }}">AI assistants</a>.</p>
+      <form method="post" class="stacked-form" id="authorizationForm">
+        {% csrf_token %}
+        {% for field in form %}{% if field.is_hidden %}{{ field }}{% endif %}{% endfor %}
+        {% for error in form.non_field_errors %}<div class="message error">{{ error }}</div>{% endfor %}
+        <button class="button primary wide" type="submit" name="allow" value="Authorize">Allow</button>
+        <button class="button wide" type="submit">Cancel</button>
+      </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

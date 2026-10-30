@@ -69,6 +69,17 @@ Connectors change the risk picture in these ways:
 - **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models will pass an outbound policy and start in preview mode.
 - **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings. Each connection has its own unguessable URL token, stored only as a hash. A verified event's payload is stored minimized and encrypted, and deleted once the worker has processed it.
 
+## AI assistants (MCP)
+
+The MCP server gives an assistant the access of the staff member who approved it, so its defaults are cautious:
+- **Off by default.** The server and its write tools are off until a superuser turns them on.
+- **Signing in.** Each person signs in with their own account, including the two-factor sign-in the firm requires, and approves each assistant on a consent page that names where it returns.
+- **Tokens.** Tokens are bound to `/mcp`, stored only as hashes, last an hour, and renew for up to 30 days. Each one can be disconnected at once.
+- **Writes.** Write tools are marked so Claude and ChatGPT ask before each one. Nothing can be deleted.
+- **Logs.** Every call is logged without its contents.
+
+The assistant itself, and its vendor's data terms, are outside the CRM's control. Prefer business plans or API access for client information.
+
 ## Outbound webhooks
 
 Automation events leave the installation, so the defaults are cautious:

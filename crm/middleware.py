@@ -48,6 +48,13 @@ class TwoFactorMiddleware:
             return None
 
 
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; img-src 'self' data:; style-src 'self'; "
+    "script-src 'self'; font-src 'self'; object-src 'none'; "
+    "base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+)
+
+
 class SecurityHeadersMiddleware:
     """Small, dependency-free baseline for browser security headers."""
 
@@ -56,12 +63,7 @@ class SecurityHeadersMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        response.setdefault(
-            "Content-Security-Policy",
-            "default-src 'self'; img-src 'self' data:; style-src 'self'; "
-            "script-src 'self'; font-src 'self'; object-src 'none'; "
-            "base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
-        )
+        response.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         response.setdefault("Referrer-Policy", "same-origin")
         response.setdefault("Cross-Origin-Resource-Policy", "same-origin")

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}AI assistants · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Account</p><h1>AI assistants</h1><p>Add the CRM to Claude or ChatGPT to ask about contacts, matters, deadlines, and notices from your own assistant, using your own plan. Each person signs in as themselves and sees only what their account can see. The <a href="https://github.com/chammond510/open-immigration-crm/blob/main/docs/MCP.md">setup guide</a> has the details.</p></div></div>
+{% if not mcp_settings.enabled %}<div class="privacy-note">The MCP server is off, so no assistant can sign in. {% if user.is_superuser %}Turn it on under MCP settings.{% else %}A superuser can turn it on.{% endif %}</div>{% endif %}
+<div class="page-stack">
+  <div class="two-column">
+    <section class="panel stacked-form">
+      <div><h2>Connect an assistant</h2><p class="muted">Use this address as the connector's server URL.</p></div>
+      <div class="field"><label for="mcp-url">Server URL</label><div class="copy-field"><input id="mcp-url" type="text" readonly value="{{ connector_url }}"><button class="button" type="button" data-copy-for="mcp-url">Copy</button></div></div>
+      <ol class="setup-steps">
+        <li><strong>Claude:</strong> Settings → Connectors → Add custom connector. Paste the URL, choose Connect, and approve on the page that opens.</li>
+        <li><strong>ChatGPT</strong> (Business, Enterprise, or Edu): an admin adds a custom connector with this URL and OAuth sign-in. Each person then connects and approves.</li>
+      </ol>
+      <p class="fine-print">Claude and ChatGPT reach the CRM from their own servers, so this address and the sign-in paths must be reachable from the internet or from their published address ranges. Business plans and API access carry stronger data terms than consumer plans; check them before using client information.</p>
+    </section>
+    {% if user.is_superuser %}
+      <form method="post" class="panel stacked-form">
+        {% csrf_token %}
+        <div><h2>MCP settings</h2><p class="muted">{% if mcp_settings.enabled %}The MCP server is on.{% else %}The MCP server is off on a new installation.{% endif %} Read tools are always available to signed-in assistants; write tools need the setting below.</p></div>
+        {% for field in form %}<label class="check-label wrap" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}<small class="muted">{{ field.help_text }}</small></span></label>{% endfor %}
+        <div class="form-actions"><button class="button" type="submit">Save settings</button></div>
+      </form>
+    {% else %}
+      <section class="panel facts"><h2>What assistants can do</h2><dl>
+        <dt>Read</dt><dd>Contacts, matters, work, notices, communications, your time, and invoices if you have billing access.</dd>
+        <dt>Write</dt><dd>{% if mcp_settings.write_tools_enabled %}Add tasks, notes, communications, and status checks, and mark work done. Your assistant asks you first.{% else %}Off. A superuser can allow it.{% endif %}</dd>
+        <dt>Delete</dt><dd>Never.</dd>
+      </dl></section>
+    {% endif %}
+  </div>
+  <section class="panel flush-panel"><div class="section-heading table-note"><div><h2>Your connected assistants</h2><p>Disconnecting stops the assistant at once; connect again to use it.</p></div></div>
+    {% include "mcp/includes/connections.html" with connections=own_connections show_owner=False %}
+  </section>
+  {% if user.is_superuser %}
+    <section class="panel flush-panel"><div class="section-heading table-note"><div><h2>Other staff connections</h2></div></div>
+      {% include "mcp/includes/connections.html" with connections=other_connections show_owner=True %}
+    </section>
+  {% endif %}
+  <section class="panel flush-panel"><div class="section-heading table-note"><div><h2>Recent tool calls</h2><p>{% if user.is_superuser %}The last 50 calls by any assistant.{% else %}The last 50 calls by your assistants.{% endif %} What was asked and returned is not stored.</p></div></div>
+    {% if recent_calls %}<div class="table-wrap"><table><thead><tr><th>When</th><th>Who</th><th>Assistant</th><th>Tool</th><th class="numeric">Result</th></tr></thead><tbody>
+      {% for call in recent_calls %}<tr><td>{{ call.created_at|date:"M j, g:i:s a" }}</td><td>{{ call.user.get_full_name|default:call.user.username|default:"—" }}</td><td>{{ call.application.name|default:"—" }}</td><td><span class="mono">{{ call.tool }}</span>{% if call.is_write %} <span class="badge pending">Write</span>{% endif %}</td><td class="numeric">{% if call.ok %}<span class="badge succeeded">OK</span>{% else %}<span class="badge failed" title="{{ call.error }}">Error</span>{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state"><h3>No tool calls yet</h3><p>Calls appear here as soon as an assistant uses the CRM.</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -384,3 +384,8 @@ td.wrap { white-space: normal; min-width: 220px; }
   .report-grid { grid-template-columns: 1fr; }
   .report-filters { flex-wrap: wrap; }
 }
+.consent-panel h1 { font-size: 24px; }
+.consent-scopes { margin: 14px 0; padding-left: 18px; }
+.consent-scopes li { margin-bottom: 6px; }
+.consent-panel .stacked-form { margin-top: 16px; }
+.setup-steps { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
