@@ -196,6 +196,8 @@ CONNECTOR_CATALOG = BASE_DIR / "connectors" / "catalog.toml"
 # Turning this off blocks every outbound connector action without a deploy.
 CONNECTORS_OUTBOUND_ENABLED = env_bool("CONNECTORS_OUTBOUND_ENABLED", True)
 CONNECTORS_OUTBOUND_HOURLY_LIMIT = int(os.environ.get("CONNECTORS_OUTBOUND_HOURLY_LIMIT", "200"))
+# Hidden connectors (the fictional examples) appear in the catalog for testing.
+CONNECTORS_SHOW_HIDDEN = env_bool("CONNECTORS_SHOW_HIDDEN", DEBUG)
 CONNECTOR_WEBHOOK_MAX_BYTES = int(os.environ.get("CONNECTOR_WEBHOOK_MAX_BYTES", str(1024 * 1024)))
 
 # Background work runs in `python manage.py run_worker`, which keeps its queue in

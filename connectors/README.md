@@ -26,4 +26,4 @@ connectors/
 5. Add a test case that mixes in `crm.connect.testing.ConnectorContract`, with `sync_examples`, `outbound_examples`, and `make_webhook()` as needed. The contract tests block network access, so use recorded fixtures with fictional `.test` data.
 6. Remove the provider's entry from `catalog.toml` once its connector exists.
 
-Ready connectors need a named maintainer. Connector contributions open fully once the Connections page and OAuth sign-in land, which completes connector Phase 1.
+Ready connectors need a named maintainer. `connectors/example_oauth/` shows an OAuth connector; its sign-in flow runs through the firm's own app registration, entered by a superuser on the connector's page.

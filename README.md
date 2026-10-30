@@ -22,14 +22,14 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 
 Core is everything listed above. It works on its own, makes no outbound calls to outside services, and includes no AI.
 
-Connectors are in development; see the [connector plan](docs/CONNECTOR_PLAN.md). Each one will link the CRM to a service the firm chooses, such as a phone system, mailbox, calendar, payment processor, e-signature service, or AI model, and automate work staff can already do by hand. Connectors are designed to be:
+The **Connections** page lists the services the CRM can connect to; see the [connector plan](docs/CONNECTOR_PLAN.md). Each connector links the CRM to a service the firm chooses, such as a phone system, mailbox, calendar, payment processor, e-signature service, or AI model, and automate work staff can already do by hand. Connectors are designed to be:
 
 - **Optional.** Nothing is connected on a new installation, and every feature keeps a manual path.
 - **Provider-neutral.** Core code talks to a capability such as "phone" or "payments", and each provider is an adapter in `connectors/`. Core never imports provider code; `scripts/check_scope.sh` enforces this.
 - **Explicit about data.** Each connector states what it sends and receives, and a superuser acknowledges that before turning it on.
 - **Cautious by default.** Anything a connector would send out starts in preview mode, and AI features are opt-in and off by default.
 
-No connector has shipped yet.
+The connector framework, background worker, webhooks, and Connections page are in place. No connector for a real provider has shipped yet; the catalog lists those people have asked for as Wanted.
 
 ## Quick start with Docker
 

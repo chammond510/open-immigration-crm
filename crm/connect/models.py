@@ -208,3 +208,23 @@ class WorkerHeartbeat(models.Model):
 
     def __str__(self):
         return f"{self.worker_id} at {self.last_seen_at:%Y-%m-%d %H:%M}"
+
+
+class ConnectorApp(models.Model):
+    """The firm's own OAuth app registration for one provider, entered by a superuser."""
+
+    connector_key = models.CharField(max_length=41, unique=True)
+    client_id = models.CharField(max_length=255)
+    client_secret = EncryptedTextField()
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"OAuth app for {self.connector_key}"

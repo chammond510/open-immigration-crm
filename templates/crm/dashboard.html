@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+{% load connect_tags %}
 {% block title %}Overview · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading">
   <div><p class="eyebrow">{{ today|date:"l, F j" }}</p><h1>Practice overview</h1><p>What needs attention across your active work.</p></div>
   <div class="actions"><a class="button" href="{% url 'contact_create' %}">New contact</a><a class="button primary" href="{% url 'matter_create' %}">New matter</a></div>
 </div>
+{% connection_alert_banner %}
 <div class="metrics">
   <a href="{% url 'matter_list' %}"><strong>{{ open_matters }}</strong><span>Open matters</span></a>
   <a href="{% url 'contact_list' %}"><strong>{{ active_contacts }}</strong><span>Active contacts</span></a>

@@ -53,7 +53,13 @@ The system can hold names, contact information, birth dates, addresses, national
 
 ## Connectors (planned)
 
-No connector has shipped. Two-factor sign-in and encryption of stored secrets, which connectors depend on, are in place. Connectors change the risk picture in these ways:
+The connector framework and Connections page are in place; no connector for a real provider has shipped yet. Controls in place:
+- Only superusers can create firm-wide connections, acknowledge data flows, change outbound settings, or enter OAuth app credentials.
+- Staff manage only their own personal connections.
+- OAuth sign-in uses PKCE and a single-use, expiring state value.
+- OAuth client secrets, tokens, and API keys are stored encrypted and never displayed.
+
+Connectors change the risk picture in these ways:
 
 - **Data leaves the installation.** Each connector sends data to a provider the firm chooses. The connect screen lists what is sent and received, and a superuser must acknowledge it. The firm remains responsible for evaluating each provider and its data-use terms. Consumer and business AI plans often have different terms.
 - **Some features need public reachability.** Provider webhooks and the MCP endpoint must be reachable from the provider's network. Expose only those paths through the reverse proxy, use polling where a provider supports it, or leave those connectors off.

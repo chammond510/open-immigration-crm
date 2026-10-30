@@ -20,7 +20,7 @@ Never contribute real client data, privileged material, credentials, database du
 
 ## Contributing a connector
 
-Connector contributions open once the foundation phase of the connector plan has landed. A connector pull request needs:
+Connector contributions are open; [connectors/README.md](connectors/README.md) explains how to write one. A connector pull request needs:
 
 1. A manifest: name, capabilities, authentication type, maturity, and a plain-language list of the data it sends and receives.
 2. Passing contract tests for each capability it implements, run against recorded fixtures. CI never calls a live service.

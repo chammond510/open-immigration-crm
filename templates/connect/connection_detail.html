@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load connect_tags %}
+{% block title %}{{ connection.label }} · Connections · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><p class="eyebrow"><a href="{% url 'connections' %}">Connections</a> · {{ connector.name|default:connection.connector_key }}</p><h1 class="with-monogram"><span class="monogram" aria-hidden="true">{{ monogram }}</span>{{ connection.label }}</h1><p><span class="badge {{ connection.status }}">{{ connection.get_status_display }}</span> {% if connection.owner %}Personal connection for {{ connection.owner }}{% else %}Shared by the whole firm{% endif %}{% if connection.preview_mode and not disconnected %} · Preview mode{% endif %}</p></div>
+  {% if can_manage and connector and not disconnected %}<div class="actions">{% if is_oauth %}<a class="button primary" href="{% url 'connection_oauth_start' connection.pk %}">{% if signed_in %}Reconnect{% else %}Sign in to {{ connector.name }}{% endif %}</a>{% endif %}{% if signed_in %}<form method="post" action="{% url 'connection_test' connection.pk %}">{% csrf_token %}<button class="button" type="submit">Test connection</button></form>{% endif %}</div>{% endif %}
+</div>
+{% if not connector %}<div class="privacy-note">The connector for this connection is not installed on this site, so the connection is inactive.</div>{% endif %}
+{% if disconnected %}<div class="privacy-note">Disconnected. Stored credentials were deleted; history is kept below.{% if connector %} <a href="{% url 'connector_detail' connection.connector_key %}">Connect {{ connector.name }} again</a>.{% endif %}</div>{% endif %}
+{% if worker_stopped %}<div class="privacy-note">The background worker has not checked in recently, so syncs and webhook processing are paused. Start it with <code>python manage.py run_worker</code>.</div>{% endif %}
+{% if is_oauth and not signed_in and not disconnected %}<div class="privacy-note">Finish connecting by signing in to {{ connector.name }}.</div>{% endif %}
+{% if connection.last_error and not disconnected %}<div class="message error">Last problem: {{ connection.last_error }}</div>{% endif %}
+{% if connector and not connection.data_flows_acknowledged and not disconnected %}<div class="privacy-note">{% if user.is_superuser %}Review what this connection sends and receives, then confirm below. Nothing is sent through it until you do.{% else %}A superuser must review what this connection sends and receives before it is used.{% endif %}</div>{% endif %}
+<div class="detail-grid">
+  <div class="detail-main">
+    {% if connector %}
+      {% include "connect/includes/data_flows.html" with flows=connector.data_flows %}
+      {% if user.is_superuser and not connection.data_flows_acknowledged and not disconnected %}<form method="post" action="{% url 'connection_acknowledge' connection.pk %}" class="panel">{% csrf_token %}<button class="button primary" type="submit">I reviewed this, and the firm accepts it</button></form>{% endif %}
+    {% endif %}
+    <section class="panel"><div class="section-heading"><div><h2>Recent syncs</h2><p>Scheduled pulls of new records.</p></div></div>
+      {% for run in sync_runs %}<div class="mini-record"><div><strong>{{ run.capability|capability_label }}</strong><span>{{ run.created_at|date:"M j, g:i a" }}{% if run.records_received %} · {{ run.records_received }} record{{ run.records_received|pluralize }}{% endif %}{% if run.error %} · {{ run.error }}{% endif %}</span></div><span class="badge {{ run.status }}">{{ run.get_status_display }}</span></div>{% empty %}<p class="muted">No syncs yet.</p>{% endfor %}
+    </section>
+    <section class="panel"><div class="section-heading"><div><h2>Recent webhook events</h2><p>Events the provider sent to this connection.</p></div></div>
+      {% for event in webhook_events %}<div class="mini-record"><div><strong>{{ event.capability|capability_label }}</strong><span>{{ event.received_at|date:"M j, g:i a" }}{% if event.error %} · {{ event.error }}{% endif %}</span></div><span class="badge {{ event.status }}">{{ event.get_status_display }}</span></div>{% empty %}<p class="muted">No events received.</p>{% endfor %}
+    </section>
+    <section class="panel"><div class="section-heading"><div><h2>Recent outbound actions</h2><p>Everything sent, previewed, or blocked through this connection.</p></div></div>
+      {% for item in outbound_requests %}<div class="mini-record"><div><strong>{{ item.summary|default:item.action }}</strong><span>{{ item.created_at|date:"M j, g:i a" }} · {% if item.is_automation %}Automation{% else %}{{ item.actor|default:"Unknown" }}{% endif %}{% if item.error %} · {{ item.error }}{% endif %}</span></div><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></div>{% empty %}<p class="muted">Nothing sent yet.</p>{% endfor %}
+    </section>
+  </div>
+  <aside class="detail-aside">
+    <section class="panel facts"><h2>Details</h2><dl>
+      <dt>Capabilities</dt><dd>{{ capability_labels|join:", "|default:"—" }}</dd>
+      <dt>Connected by</dt><dd>{{ connection.created_by|default:"—" }} · {{ connection.created_at|date:"M j, Y" }}</dd>
+      <dt>Last success</dt><dd>{{ connection.last_success_at|date:"M j, g:i a"|default:"—" }}</dd>
+      <dt>Reviewed</dt><dd>{% if connection.data_flows_acknowledged %}{{ connection.data_flows_acknowledged_by|default:"—" }} · {{ connection.data_flows_acknowledged_at|date:"M j, Y" }}{% else %}Not yet{% endif %}</dd>
+      {% if connection.granted_scopes %}<dt>Permissions granted</dt><dd>{{ connection.granted_scopes|join:", " }}</dd>{% endif %}
+    </dl></section>
+    {% if user.is_superuser and connector and not disconnected %}
+      <form method="post" action="{% url 'connection_settings' connection.pk %}" class="panel stacked-form">
+        {% csrf_token %}
+        <div><h2>Outbound settings</h2><p class="muted">New connections start in preview mode: outbound actions are recorded but not sent.</p></div>
+        {% for field in settings_form %}<label class="check-label wrap" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>{% endfor %}
+        <div class="form-actions"><button class="button" type="submit">Save settings</button></div>
+      </form>
+    {% endif %}
+    {% if webhooks and can_manage and not disconnected %}
+      <form method="post" action="{% url 'connection_webhooks' connection.pk %}" class="panel stacked-form" {% if webhooks_on %}data-confirm="The current webhook address and secret will stop working. Continue?"{% endif %}>
+        {% csrf_token %}
+        <div><h2>Webhooks</h2><p class="muted">{% if webhooks_on %}On. The address and secret were shown once when issued.{% else %}{{ connector.name }} can send events to a private address for this connection.{% endif %}</p></div>
+        {% if provider_secret_form %}{% for field in provider_secret_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}{% endif %}
+        <div class="form-actions"><button class="button" type="submit">{% if webhooks_on %}Issue a new address and secret{% else %}Turn on webhooks{% endif %}</button></div>
+      </form>
+    {% endif %}
+    {% if can_manage and not disconnected %}
+      <form method="post" action="{% url 'connection_disconnect' connection.pk %}" class="panel stacked-form" data-confirm="Disconnect {{ connection.label }}? Stored credentials will be deleted.">
+        {% csrf_token %}
+        <div><h2>Disconnect</h2><p class="muted">Revokes access at the provider where possible and deletes stored credentials. History is kept.</p></div>
+        <div class="form-actions"><button class="button danger" type="submit">Disconnect</button></div>
+      </form>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

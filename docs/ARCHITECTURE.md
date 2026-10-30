@@ -32,7 +32,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
-- `Connection`, `OutboundRequest`, `SyncRun`, `WebhookEvent`, and `WorkerHeartbeat` (in `crm/connect/`) hold connected provider accounts, the outbound log, sync history, received provider events, and worker check-ins; see Connectors below.
+- `Connection`, `OutboundRequest`, `SyncRun`, `WebhookEvent`, `WorkerHeartbeat`, and `ConnectorApp` (in `crm/connect/`) hold connected provider accounts, the outbound log, sync history, received provider events, and worker check-ins; see Connectors below.
 - `TwoFactorDevice` holds a user's authenticator secret, encrypted with `FIELD_ENCRYPTION_KEYS`; `RecoveryCode` stores only SHA-256 hashes of single-use recovery codes.
 
 ## Trust boundaries
@@ -73,9 +73,21 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
   - An event is stored only after its signature verifies, and it is stored minimized and encrypted. It is answered quickly, deduplicated by provider event ID, and processed by the worker, which then deletes the payload.
   - Unknown tokens, inactive connections, bad signatures, oversized bodies, and malformed events are rejected without detail.
 
+- **Connections page** (`/connections/`, in `pages.py`). It shows the catalog grouped by capability and the connect flow built from each manifest. The flow covers:
+  - the data-flow description, which superusers must acknowledge;
+  - credentials, either an API key or OAuth sign-in;
+  - the capabilities to turn on;
+  - an immediate connection test.
+
+  Each connection has its own management page: health, recent syncs, events and outbound actions, preview and admin-only settings (superusers), webhook issue and rotation, and disconnect.
+  - Staff can view firm-wide connections. Only superusers create or manage them. Staff create and manage their own personal ones.
+  - The `connect_prompt` template tag puts a "Connect your …" prompt beside a feature's manual path. The dashboard shows connections that need attention and a stopped worker.
+- **OAuth** (`oauth.py`). It uses the authorization-code flow with PKCE (S256) and a single-use state value that expires after 10 minutes.
+  - It runs through the firm's own app registration (`ConnectorApp`; the client secret is encrypted), which a superuser enters on the connector's page alongside the exact redirect URI to register.
+  - Sign-in starts from a link rather than a form, because `form-action 'self'` blocks a form submission that redirects to the provider.
+  - Token exchange uses the standard library over HTTPS only, with a size limit.
+
 Still planned:
-- OAuth sign-in
-- the Connections page
 - an MCP endpoint
 
 Operators can expose just `/hooks/` (and later the MCP path) through the reverse proxy without exposing the rest of the application.
