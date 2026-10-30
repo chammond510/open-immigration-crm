@@ -20,6 +20,7 @@ from crm.connect.records import (
     CallRecord,
     CaseStatusRecord,
     EmailRecord,
+    LeadRecord,
     PaymentRecord,
     TextRecord,
 )
@@ -275,13 +276,24 @@ class RecordTests(TestCase):
                 problem="not_found",
                 status_text="The source's own explanation.",
             ),
+            LeadRecord(external_id="l", occurred_at=NOW, name="Lena", phone="+12025550144"),
         ]
         for record in records:
             self.assertEqual(record.problems(), [], record.kind)
         self.assertEqual(
             set(RECORD_TYPES),
-            {"phone", "texting", "mailbox", "calendar", "scheduling", "payments", "case_status"},
+            {
+                "phone",
+                "texting",
+                "mailbox",
+                "calendar",
+                "scheduling",
+                "payments",
+                "case_status",
+                "lead_capture",
+            },
         )
+        self.assertEqual(len(LeadRecord(external_id="l", occurred_at=NOW).problems()), 2)
 
     def test_problems(self):
         naive = datetime(2026, 3, 2, 15, 0)

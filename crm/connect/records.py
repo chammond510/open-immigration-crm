@@ -2,9 +2,9 @@
 
 Connectors return these from ``sync()`` and ``handle_webhook()``. Core features
 store them: calls, texts, and emails become communications, calendar events and
-bookings become appointments, payments are recorded on invoices, and case status
-readings are recorded on matters. ``problems()`` lists what is wrong with a
-record; the contract tests require it to be empty.
+bookings become appointments, payments are recorded on invoices, case status
+readings are recorded on matters, and leads become contacts. ``problems()`` lists
+what is wrong with a record; the contract tests require it to be empty.
 """
 
 import re
@@ -199,6 +199,30 @@ class CaseStatusRecord(TypedRecord):
 
 
 # The record types each capability's connectors may produce.
+@dataclass(frozen=True, kw_only=True)
+class LeadRecord(TypedRecord):
+    """A new inquiry, such as a website form submission. ``occurred_at`` is when it was sent."""
+
+    kind: str = "lead"
+    name: str = ""
+    first_name: str = ""
+    last_name: str = ""
+    email: str = ""
+    phone: str = ""
+    message: str = ""
+    form: str = ""  # Which form it came from, such as "Contact page".
+    answers: dict = field(default_factory=dict)  # Other questions and their answers.
+    tracking: dict = field(default_factory=dict)  # For example source and utm_source.
+
+    def problems(self):
+        problems = super().problems()
+        if not (self.email or self.phone):
+            problems.append("email or phone is required")
+        if not (self.name or self.first_name or self.last_name):
+            problems.append("a name is required")
+        return problems
+
+
 RECORD_TYPES = {
     Capability.PHONE: (CallRecord,),
     Capability.TEXTING: (TextRecord,),
@@ -207,4 +231,5 @@ RECORD_TYPES = {
     Capability.SCHEDULING: (BookingRecord,),
     Capability.PAYMENTS: (PaymentRecord,),
     Capability.CASE_STATUS: (CaseStatusRecord,),
+    Capability.LEAD_CAPTURE: (LeadRecord,),
 }
