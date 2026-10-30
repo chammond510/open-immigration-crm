@@ -13,10 +13,11 @@ RESOURCES = {
     "time": "Time entries",
     "notices": "USCIS notices and status checks",
     "billing": "Invoices and payments",
+    "reports": "Operating dashboard figures",
 }
 
 # Billing is read-only through the API, and needs the billing permission too.
-READ_ONLY = {"billing"}
+READ_ONLY = {"billing", "reports"}
 
 
 def scope(resource, access):

@@ -27,6 +27,7 @@
           <a href="{% url 'communication_list' %}" {% if 'communication' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Communications</a>
           {% if perms.billing.access_billing %}<a href="{% url 'invoice_list' %}" {% if 'invoice' in request.resolver_match.url_name or 'billing' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Billing</a>{% endif %}
           <a href="{% url 'intake_workspace' %}" {% if 'intake' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Intake</a>
+          <a href="{% url 'operating_dashboard' %}" {% if request.resolver_match.url_name == 'operating_dashboard' %}aria-current="page"{% endif %}>Reports</a>
           <a href="{% url 'connections' %}" {% if 'connect' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Connections</a>
         </nav>
         <div class="sidebar-bottom">

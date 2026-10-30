@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load billing_tags %}
+{% block title %}Operating dashboard · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Reports</p><h1>Operating dashboard</h1><p>{{ report.period.label }}: {{ report.period }}. Compared with the {{ report.previous.days }} days before, {{ report.previous }}.</p></div></div>
+<form class="filter-bar report-filters" method="get">
+  <label class="sr-only" for="report-period">Period</label><select id="report-period" name="period">{% for key, label in period_choices %}<option value="{{ key }}" {% if report.period.key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <label for="report-start">From</label><input id="report-start" type="date" name="start" value="{% if report.period.key == 'custom' %}{{ report.period.start|date:'Y-m-d' }}{% endif %}">
+  <label for="report-end">To</label><input id="report-end" type="date" name="end" value="{% if report.period.key == 'custom' %}{{ report.period.end|date:'Y-m-d' }}{% endif %}">
+  {% if source_fields %}<label for="report-by">Leads by</label><select id="report-by" name="by">{% for field in source_fields %}<option value="{{ field.key }}" {% if report.source_field.pk == field.pk %}selected{% endif %}>{{ field.label }}</option>{% endfor %}</select>{% endif %}
+  <button class="button" type="submit">Show</button>
+</form>
+<p class="fine-print report-note">Dates set the period when Custom dates is chosen.</p>
+
+<div class="report-metrics">
+  {% for item in report.headline %}
+    <div class="report-metric"><span>{{ item.label }}</span><strong>{% if item.key == "invoiced" or item.key == "collected" %}{{ item.value|money:report.billing.currency }}{% else %}{{ item.value }}{% endif %}</strong><small class="{% if item.change > 0 %}up{% elif item.change < 0 %}down{% endif %}">{% if item.key == "invoiced" or item.key == "collected" %}{{ item.previous|money:report.billing.currency }}{% else %}{{ item.previous }}{% endif %} before</small></div>
+  {% endfor %}
+</div>
+
+<div class="report-grid">
+  <section class="panel"><div class="section-heading"><div><h2>Intake</h2><p>Contacts who reached each stage for the first time in this period.</p></div><a href="{% url 'pipeline' %}">Pipeline</a></div>
+    {% include "reports/includes/bars.html" with rows=report.funnel %}
+    <p class="muted report-footnote">{% if report.retained_per_consult is not None %}Retentions were {{ report.retained_per_consult }}% of consultations.{% else %}No consultations in this period.{% endif %} Retained includes contacts who went straight to an active matter.</p>
+  </section>
+
+  <section class="panel"><div class="section-heading"><div><h2>Lead sources</h2><p>{% if report.source_field %}New leads and retentions by {{ report.source_field.label|lower }}.{% else %}Group leads by where they came from.{% endif %}</p></div></div>
+    {% if report.source_field %}
+      {% if report.sources %}<div class="table-wrap"><table><thead><tr><th>{{ report.source_field.label }}</th><th class="numeric">Leads</th><th class="numeric">Retained</th></tr></thead><tbody>{% for row in report.sources %}<tr><td>{{ row.value }}</td><td class="numeric">{{ row.leads }}</td><td class="numeric">{{ row.retained }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">No leads or retentions in this period.</p>{% endif %}
+    {% else %}
+      <p class="muted">Add a contact custom field of the type "choice from a list", such as a referral source, to see leads and retentions by source.{% if user.is_superuser %} <a href="{% url 'custom_field_create' %}?for=contact">Add a field</a>.{% endif %}</p>
+    {% endif %}
+  </section>
+
+  <section class="panel"><div class="section-heading"><div><h2>Matters</h2><p>{{ report.matters.open }} open now · {{ report.matters.opened }} opened and {{ report.matters.closed }} closed in this period.</p></div><a href="{% url 'matter_list' %}">Matters</a></div>
+    <h3 class="report-subhead">Open matters by status</h3>
+    {% include "reports/includes/bars.html" with rows=report.matters.by_status %}
+    {% if report.matters.by_case_type %}<h3 class="report-subhead">Open matters by case type</h3>{% include "reports/includes/bars.html" with rows=report.matters.by_case_type %}{% endif %}
+    {% if report.matters.by_phase %}<h3 class="report-subhead">Open matters by workflow phase</h3><div class="table-wrap"><table><thead><tr><th>Workflow</th><th>Phase in progress</th><th class="numeric">Matters</th></tr></thead><tbody>{% for row in report.matters.by_phase %}<tr><td>{{ row.workflow }}</td><td>{{ row.phase }}</td><td class="numeric">{{ row.count }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+  </section>
+
+  <section class="panel"><div class="section-heading"><div><h2>Deadlines</h2><p><span class="{% if report.deadlines.overdue %}danger-text{% endif %}">{{ report.deadlines.overdue }} overdue</span> · {{ report.deadlines.due_this_week }} due in the next 7 days · {{ report.deadlines.completed }} work items completed in this period.</p></div><a href="{% url 'work_list' %}">Work</a></div>
+    {% for item in report.deadlines.due_soon %}<div class="mini-record"><div><strong>{{ item.title }}</strong><span>{% if item.matter %}{{ item.matter.matter_number }}{% elif item.contact %}{{ item.contact }}{% endif %}</span></div><span>{{ item.scheduled_for|date:"D, M j" }}</span></div>{% empty %}<p class="muted">No deadlines in the next 7 days.</p>{% endfor %}
+    <h3 class="report-subhead">Open RFE and NOID responses: {{ report.deadlines.open_responses }}</h3>
+    {% for notice in report.deadlines.responses %}<div class="mini-record"><div><a href="{% url 'matter_detail' notice.matter.pk %}#notices"><strong>{{ notice.matter.matter_number }}</strong></a><span>{{ notice.get_kind_display }}{% if notice.form_type %} · {{ notice.form_type }}{% endif %}</span></div><span class="{% if notice.response_due_date < today %}danger-text{% endif %}">Due {{ notice.response_due_date|date:"M j" }}</span></div>{% empty %}<p class="muted">None open.</p>{% endfor %}
+  </section>
+
+  <section class="panel"><div class="section-heading"><div><h2>USCIS</h2><p>Notices dated in this period · {{ report.uscis.status_changes }} receipt status change{{ report.uscis.status_changes|pluralize }} recorded.</p></div><a href="{% url 'notice_list' %}">Notices</a></div>
+    {% if report.uscis.notices %}<div class="table-wrap"><table><tbody>{% for row in report.uscis.notices %}<tr><td>{{ row.label }}</td><td class="numeric">{{ row.count }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">No notices dated in this period.</p>{% endif %}
+  </section>
+
+  <section class="panel"><div class="section-heading"><div><h2>Communications</h2><p>Logged in this period, by hand or by a connection.</p></div><a href="{% url 'communication_list' %}">Communications</a></div>
+    {% include "reports/includes/bars.html" with rows=report.communications %}
+  </section>
+
+  <section class="panel"><div class="section-heading"><div><h2>Time</h2><p>{{ report.time.hours }} hours logged in this period · {{ report.time.unbilled_hours }} hours not yet billed, from all periods.</p></div></div>
+    {% for row in report.time.by_user %}<div class="report-bar"><span>{{ row.name }}</span><meter min="0" max="100" value="{{ row.share }}" aria-label="{{ row.name }}: {{ row.hours }} hours"></meter><strong>{{ row.hours }}</strong></div>{% empty %}<p class="muted">No time logged in this period.</p>{% endfor %}
+  </section>
+
+  {% if report.billing %}
+  <section class="panel"><div class="section-heading"><div><h2>Billing</h2><p>{{ report.billing.invoice_count }} invoice{{ report.billing.invoice_count|pluralize }} issued and {{ report.billing.payment_count }} payment{{ report.billing.payment_count|pluralize }} received in this period.</p></div><a href="{% url 'invoice_list' %}">Billing</a></div>
+    <dl class="report-facts">
+      <dt>Invoiced</dt><dd>{{ report.billing.invoiced|money:report.billing.currency }}</dd>
+      <dt>Collected</dt><dd>{{ report.billing.collected|money:report.billing.currency }}</dd>
+      <dt>To operating</dt><dd>{{ report.billing.collected_operating|money:report.billing.currency }}</dd>
+      <dt>To trust</dt><dd>{{ report.billing.collected_trust|money:report.billing.currency }}</dd>
+      <dt>Outstanding now</dt><dd>{{ report.billing.outstanding|money:report.billing.currency }}</dd>
+      <dt>Overdue now</dt><dd class="{% if report.billing.overdue %}danger-text{% endif %}">{{ report.billing.overdue|money:report.billing.currency }}</dd>
+    </dl>
+    <h3 class="report-subhead">Outstanding by age</h3>
+    {% for row in report.billing.aging %}<div class="report-bar"><span>{{ row.label }}</span><meter min="0" max="100" value="{{ row.share }}" aria-label="{{ row.label }}"></meter><strong>{{ row.amount|money:report.billing.currency }}</strong></div>{% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

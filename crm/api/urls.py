@@ -27,5 +27,6 @@ urlpatterns = [
     path("v1/status-checks/", views.status_checks, name="api_status_checks"),
     path("v1/invoices/", views.invoices, name="api_invoices"),
     path("v1/invoices/<uuid:pk>/", views.invoice_detail, name="api_invoice"),
+    path("v1/reports/summary/", views.report_summary, name="api_report_summary"),
     path("<path:rest>", not_found),
 ]

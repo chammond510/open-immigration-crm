@@ -17,6 +17,9 @@ from crm.models import Activity, Contact, Matter, TimeEntry, WorkItem
 from crm.notices.forms import CaseNoticeForm, StatusCheckForm
 from crm.notices.models import CaseNotice, CaseStatusCheck, normalize_receipt_number
 from crm.notices.services import record_status, save_notice
+from crm.reports import periods
+from crm.reports.metrics import build_report
+from crm.reports.serializers import report_data
 from crm.services import add_activity, audit
 
 from . import serializers
@@ -56,6 +59,7 @@ ENDPOINTS = {
     "notices": "api_notices",
     "status_checks": "api_status_checks",
     "invoices": "api_invoices",
+    "reports": "api_report_summary",
 }
 
 
@@ -530,3 +534,21 @@ def invoices(request):
 def invoice_detail(request, pk):
     record = get_object_or_404(invoice_records(), pk=pk)
     return JsonResponse(serializers.invoice(record, request))
+
+
+# Reports (read-only)
+
+
+@endpoint("reports")
+def report_summary(request):
+    """The operating dashboard's figures; billing is included only with billing access."""
+    period = periods.resolve(
+        request.GET.get("period", ""), request.GET.get("start", ""), request.GET.get("end", "")
+    )
+    include_billing = request.api_token.has_scope("billing:read") and request.user.has_perm(
+        "billing.access_billing"
+    )
+    report = build_report(
+        period, include_billing=include_billing, source_key=request.GET.get("by", "")
+    )
+    return JsonResponse(report_data(report))
