@@ -29,6 +29,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `WorkItem` unifies a task, deadline, or appointment.
 - `TimeEntry` records tracked working time against a matter or contact; one timer runs per user, and no rates or amounts are stored.
 - `ChecklistItem` is firm-authored and scoped to a single matter.
+- `Invoice`, `InvoiceLine`, and `Payment` (in `crm/billing/`) hold invoices numbered when issued, lines marked earned fee or advance (trust), and payments recording the account they were deposited to. Each time entry can be billed once (`InvoiceLine.time_entry`), and voiding an invoice frees its time. `BillingSettings` and `StaffRate` hold rates and defaults. Billing pages require the `billing.access_billing` permission. Core keeps no trust ledger.
 - `Communication` (in `crm/comms/`) is a call, text, email, or meeting linked to a contact and optionally a matter, logged by staff or recorded by a connector (stored once per connection and provider ID). `Contact.texting_opted_out_at` records a texting opt-out, which the outbound policy enforces.
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.

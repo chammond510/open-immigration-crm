@@ -433,8 +433,8 @@ prompt, and stores a source connection and provider ID so Phase 3 connectors nee
 
 | PR | Scope | Unblocks in Phase 3 |
 |---|---|---|
-| 2.1 Communications log (`crm/comms`) | Calls, texts, emails and meetings on contact and matter pages and a list page; per-contact texting opt-out enforced by the outbound policy; existing call and meeting activities moved into the log | Phone, texting, mailbox and calendar connectors |
-| 2.2 Billing (`crm/billing`) | Rates on time entries, numbered invoices, line items flagged earned fee or advance, manual payments recording operating or trust deposit, printable invoice page | Payment connectors |
+| 2.1 Communications log (`crm/comms`, done) | Calls, texts, emails and meetings on contact and matter pages and a list page; per-contact texting opt-out enforced by the outbound policy; existing call and meeting activities moved into the log | Phone, texting, mailbox and calendar connectors |
+| 2.2 Billing (`crm/billing`) | Staff and firm hourly rates; invoices numbered at issue; line items flagged earned fee or advance; unbilled time added as lines, rounded up to the firm's increment, each entry billed once; manual payments recording operating or trust deposit; printable invoice page; Billing permission | Payment connectors |
 | 2.3 Payment plans | Installments, with reminders as work items | Automated reminders |
 | 2.4 USCIS notices (`crm/notices`) | Notice records (receipt, biometrics, interview, RFE, NOID, approval, denial, transfer, card) linked to documents; due dates and appointments create work items; manual status history | USCIS Case Status connector |
 | 2.5 REST API (`crm/api`) | Versioned JSON API with scoped, hashed, expiring tokens and an API audit log | MCP server |

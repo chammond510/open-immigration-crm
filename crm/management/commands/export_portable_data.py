@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers import serialize
 from django.db.models import Model
 
+from crm.billing.models import BillingSettings, Invoice, InvoiceLine, Payment, StaffRate
 from crm.comms.models import Communication
 from crm.models import (
     Activity,
@@ -39,6 +40,11 @@ MODELS: tuple[type[Model], ...] = (
     IntakeForm,
     IntakeInvite,
     IntakeSubmission,
+    BillingSettings,
+    StaffRate,
+    Invoice,
+    InvoiceLine,
+    Payment,
     AuditLog,
 )
 

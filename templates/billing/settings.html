@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Billing settings · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'invoice_list' %}">Billing</a></p><h1>Billing settings</h1><p>Defaults for new invoices and the hourly rate used when time is billed.</p></div></div>
+  <form method="post" class="panel stacked-form">
+    {% csrf_token %}
+    <div class="form-grid">{% for field in form %}<div class="field {% if field.name == 'payment_instructions' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}</div>
+    <div><h2>Staff hourly rates</h2><p class="muted">Leave blank to use the firm default. Who can see billing is set per user in administration with the "Can view and manage billing" permission.</p></div>
+    <div class="form-grid">{% for person, rate in staff %}<div class="field"><label for="rate-{{ person.pk }}">{{ person.get_full_name|default:person.username }}</label><input id="rate-{{ person.pk }}" name="rate_{{ person.pk }}" type="number" min="0" step="0.01" value="{{ rate|default_if_none:'' }}"></div>{% endfor %}</div>
+    <div class="form-actions"><button class="button primary" type="submit">Save settings</button><a class="button" href="{% url 'invoice_list' %}">Cancel</a></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+/* Printable invoice. Plain, ink-friendly, and readable at letter or A4 size. */
+* { box-sizing: border-box; }
+body.invoice-print { max-width: 760px; margin: 32px auto; padding: 0 24px; color: #111; font: 13px/1.5 Georgia, "Times New Roman", serif; background: #fff; }
+.invoice-print h1 { margin: 0 0 4px; font-size: 24px; }
+.invoice-print h2 { margin: 22px 0 4px; font: 700 11px/1.4 ui-sans-serif, -apple-system, "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #444; }
+.invoice-print p { margin: 0; }
+.letterhead { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 2px solid #111; }
+.letterhead dl, .totals { display: grid; grid-template-columns: auto auto; gap: 2px 16px; margin: 0; }
+.letterhead dt, .totals dt { color: #555; }
+.letterhead dd, .totals dd { margin: 0; text-align: right; }
+.invoice-print table { width: 100%; margin-top: 22px; border-collapse: collapse; }
+.invoice-print th { padding: 6px 4px; border-bottom: 1px solid #111; font: 700 11px ui-sans-serif, -apple-system, sans-serif; text-align: left; text-transform: uppercase; }
+.invoice-print td { padding: 7px 4px; border-bottom: 1px solid #ddd; vertical-align: top; }
+.invoice-print td small { display: block; color: #555; }
+.numeric { text-align: right !important; white-space: nowrap; }
+.totals { width: 300px; margin: 16px 0 0 auto; }
+.strong { font-weight: 700; color: #111 !important; }
+.draft-mark { margin-bottom: 16px !important; padding: 6px 10px; border: 2px solid #b33131; color: #b33131; font: 700 12px ui-sans-serif, sans-serif; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.no-print { display: flex; justify-content: space-between; margin-bottom: 20px; font: 13px ui-sans-serif, -apple-system, sans-serif; }
+.no-print button { padding: 6px 12px; border: 1px solid #255bc7; border-radius: 6px; background: #255bc7; color: #fff; font: inherit; cursor: pointer; }
+@media print { body.invoice-print { margin: 0; } .no-print { display: none; } }

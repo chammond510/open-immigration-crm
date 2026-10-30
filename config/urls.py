@@ -33,6 +33,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("connections/", include("crm.connect.urls")),
     path("communications/", include("crm.comms.urls")),
+    path("billing/", include("crm.billing.urls")),
     path("accounts/login/", FirstRunAwareLoginView.as_view(), name="login"),
     path("accounts/login/verify/", two_factor_verify, name="two_factor_verify"),
     path("accounts/two-factor/", two_factor_settings, name="two_factor_settings"),

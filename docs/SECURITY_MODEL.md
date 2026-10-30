@@ -15,6 +15,7 @@ The system can hold names, contact information, birth dates, addresses, national
 - A firm setting that requires two-factor sign-in for all staff; sessions that skip the second step are signed out
 - Encryption of stored secrets, such as two-factor keys, with keys kept outside the database and support for key rotation
 - Superuser restriction for exports, firm settings, and destructive record/file actions
+- Billing visible only to superusers and staff granted the "Can view and manage billing" permission; voiding invoices or payments and changing rates are superuser-only, and every billing change is audited
 - CSRF protection on state-changing browser requests
 - Secure/HTTP-only/SameSite cookies and HTTPS redirect/HSTS when production settings are enabled
 - A restrictive content security policy and related browser headers
@@ -35,6 +36,7 @@ The system can hold names, contact information, birth dates, addresses, national
 - **No immutable audit store.** A server/database administrator can alter audit rows. Export logs to protected external monitoring if you require tamper resistance.
 - **No automated retention or legal hold.** The firm must define and execute its own retention, preservation, and deletion policy.
 - **No communication delivery.** Staff manually copy intake links into a separately approved communication channel.
+- **No trust ledger.** Billing records which account each payment was deposited to and which invoice lines are advances, but it does not reconcile a trust account. Keep trust accounting in a system built for it.
 - **No legal correctness controls.** Checklists and intake questions are firm-authored; the software does not validate legal content.
 
 ## Required deployment controls
