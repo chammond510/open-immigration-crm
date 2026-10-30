@@ -124,6 +124,7 @@ class OpenAITests(FakeOpenAIMixin, TestCase):
         reply = self.ask([Message("user", "Find it.")], tools=tools)
         self.assertEqual(reply.tool_calls[0].arguments, {"q": "x"})
         self.assertEqual(self.openai.body()["tools"][0]["type"], "function")
+        self.assertFalse(self.openai.body()["tools"][0]["strict"])
         self.openai.output = None
         self.ask(
             [

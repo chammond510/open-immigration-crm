@@ -46,7 +46,7 @@ class Command(BaseCommand):
             try:
                 queued = tick(worker_id)
                 if queued:
-                    logger.info("Queued %s connector sync(s).", queued)
+                    logger.info("Queued %s background task(s).", queued)
             except Exception:
                 logger.exception("Connector scheduler tick failed.")
             finally:

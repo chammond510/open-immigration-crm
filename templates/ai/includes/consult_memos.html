@@ -1,0 +1,35 @@
+{% load connect_tags %}
+{% if show %}
+<section class="panel" id="consult-memos">
+  <div class="section-heading"><div><h2>Consult prep</h2><p>Internal memos for upcoming consults, drafted by AI from this contact's records.</p></div></div>
+  {% for consult in consults %}
+    <article class="ai-memo">
+      <div class="ai-memo-heading"><strong>{{ consult.appointment.title }}</strong><span class="muted">{{ consult.appointment.scheduled_for|date:"D, M j · g:i a" }}{% if consult.appointment.assigned_to %} · {{ consult.appointment.assigned_to }}{% endif %}</span></div>
+      {% with memo=consult.memo %}
+        {% if consult.preparing %}
+          <p class="muted" data-poll-url="{% url 'ai_consult_memo_status' consult.appointment.pk %}">Preparing the memo…{% if not worker_running %} The background worker isn't running, so this starts when it does.{% endif %}</p>
+        {% elif memo and memo.body %}
+          <p class="ai-label">AI draft for attorney review · not for the client</p>
+          <h3>{{ memo.headline }}</h3>
+          <div class="prose">{{ memo.body|linebreaks }}</div>
+          <small class="muted">Prepared {{ memo.prepared_at|date:"M j, g:i a" }}{% if memo.model %} with {{ memo.model }}{% endif %}{% if memo.requested_by %} for {{ memo.requested_by }}{% else %} in the background{% endif %}.</small>
+          {% if memo.error %}<p class="danger-text">Preparing it again did not finish: {{ memo.error }}</p>{% endif %}
+        {% elif memo.error %}
+          <p class="danger-text">The memo could not be prepared: {{ memo.error }}</p>
+        {% else %}
+          <p class="muted">No memo yet.{% if on %} One is prepared in the background in the two days before the consult, once the firm chooses a connection for background work.{% endif %}</p>
+        {% endif %}
+      {% endwith %}
+      {% if on and connections and not consult.preparing %}
+        <form method="post" action="{% url 'ai_consult_memo_prepare' consult.appointment.pk %}" class="inline-actions">
+          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}#consult-memos">
+          {% if connections|length > 1 %}<label class="sr-only" for="memo-connection-{{ consult.appointment.pk }}">Prepare through</label><select id="memo-connection-{{ consult.appointment.pk }}" name="connection">{% for connection in connections %}<option value="{{ connection.pk }}">{{ connection.label }}{% if connection.owner_id %} (yours){% endif %}{% if connection.preview_mode %} · preview mode{% endif %}</option>{% endfor %}</select>{% else %}<input type="hidden" name="connection" value="{{ connections.0.pk }}">{% endif %}
+          <button class="button" type="submit">{% if consult.memo.body %}Prepare again{% else %}Prepare a memo now{% endif %}</button>
+        </form>
+      {% elif on and not connections %}
+        <div class="prompt-stack">{% connect_prompt "ai_models" "to prepare consult memos" %}</div>
+      {% endif %}
+    </article>
+  {% endfor %}
+</section>
+{% endif %}

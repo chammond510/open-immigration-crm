@@ -50,7 +50,13 @@ class Context:
     client_name: str = ""
 
     def audit(self, action, target):
-        audit(self.request, action, target, f"Through MCP client {self.client_name}"[:500])
+        audit(self.request, action, target, self.via()[:500])
+
+    def via(self):
+        return f"Through MCP client {self.client_name}"
+
+    def origin(self):
+        return {"via": "mcp", "client": self.client_name}
 
 
 @dataclass(frozen=True)
@@ -436,7 +442,7 @@ def form_values(form_class, data, writable, **kwargs):
 
 
 def writing(ctx):
-    return event_origin(via="mcp", client=ctx.client_name)
+    return event_origin(**ctx.origin())
 
 
 def create_task(ctx, args):

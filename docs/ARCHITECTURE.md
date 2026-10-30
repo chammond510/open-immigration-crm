@@ -18,7 +18,7 @@ Django + Gunicorn
         └── private media volume (uploaded document bytes)
 ```
 
-There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment processor, email provider, or cloud-drive API. An optional `worker` process (`python manage.py run_worker`) runs connector syncs and webhook processing from a queue kept in the application database; installations with nothing connected do not need it.
+There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment processor, email provider, or cloud-drive API. An optional `worker` process (`python manage.py run_worker`) runs connector syncs, webhook processing, and AI features from a queue kept in the application database; installations with nothing connected do not need it.
 
 ## Domain model
 
@@ -102,7 +102,7 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
   Lookup connectors, such as case status, ask core what to check with `crm.connect.lookups.due()`. Core registers the answer: `crm/notices/tracking.py` lists receipt numbers on exactly one open matter that have not been checked in 20 hours, never-checked first. A sync that stops early returns what it has with a warning, which is shown on the connection.
 
   A record that fails to store is logged by kind and connection only, and the rest of the batch continues.
-- **AI** (`crm/ai/`). `generate()` is the one way to ask a model, through any connection with the `generate` action, via the outbound policy. AI settings (off by default) turn AI and each registered feature on, and name the firm-wide connection for background work. `AIRequest` logs each request with the feature, the person, the connection, the model, and token counts, but no prompts or answers.
+- **AI** (`crm/ai/`). `generate()` is the one way to ask a model, through any connection with the `generate` action, via the outbound policy. AI settings (off by default) turn AI and each registered feature on, and name the firm-wide connection for background work. `AIRequest` logs each request with the feature, the person, the connection, the model, and token counts, but no prompts or answers. The features are consult prep memos (`memos.py`), task suggestions (`suggestions.py`), and the assistant (`assistant.py`). `records.py` builds the CRM records they send. `jobs.py` holds their worker tasks, and queues the background features on each worker tick through the `worker_ticked` signal.
 - **Matching** (`crm/matching.py`). Phone numbers are kept in E.164 form (`Contact.phone_e164`, `Communication.counterpart_key`), parsed with `PHONE_DEFAULT_REGION`. Emails are compared case-insensitively. A match must be exact and unique; there is no partial-number matching. Unmatched communications wait in the Needs matching list.
 - **Provider calls** (`crm/connect/http.py`).
   - `ProviderClient` wraps `httpx` with timeouts, retries on 429 and 5xx that honour `Retry-After`, a response size limit, pagination, and staff-safe errors.

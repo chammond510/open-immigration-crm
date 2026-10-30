@@ -61,3 +61,28 @@ document.querySelectorAll("[data-copy-for]").forEach((button) => {
 document.querySelectorAll("[data-print]").forEach((button) => {
   button.addEventListener("click", () => window.print());
 });
+
+// While AI work runs in the background, check on it and reload when it is done.
+const pending = document.querySelector("[data-poll-url]");
+
+if (pending) {
+  const startedAt = Date.now();
+  const check = async () => {
+    try {
+      const response = await fetch(pending.dataset.pollUrl, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      if (response.ok && (await response.json()).done) {
+        window.location.reload();
+        return;
+      }
+    } catch {
+      // Try again on the next tick.
+    }
+    if (Date.now() - startedAt < 10 * 60 * 1000) {
+      setTimeout(check, 3000);
+    }
+  };
+  setTimeout(check, 3000);
+}

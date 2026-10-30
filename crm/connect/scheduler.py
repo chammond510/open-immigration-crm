@@ -1,5 +1,6 @@
-"""Queues due syncs and records that a worker is alive."""
+"""Queues due syncs and other periodic work, and records that a worker is alive."""
 
+import logging
 from datetime import timedelta
 
 from django.conf import settings
@@ -7,7 +8,10 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Connection, SyncRun, WorkerHeartbeat
+from .signals import worker_ticked
 from .tasks import run_sync
+
+logger = logging.getLogger(__name__)
 
 # A queued or running sync older than this is treated as abandoned.
 STALE_RUN_AFTER = timedelta(hours=1)
@@ -43,7 +47,13 @@ def queue_due_syncs(now=None):
 def tick(worker_id, now=None):
     now = now or timezone.now()
     WorkerHeartbeat.objects.update_or_create(worker_id=worker_id, defaults={"last_seen_at": now})
-    return queue_due_syncs(now)
+    queued = queue_due_syncs(now)
+    for receiver, result in worker_ticked.send_robust(sender=None, now=now):
+        if isinstance(result, Exception):
+            logger.error("Periodic work in %s failed: %r", receiver.__qualname__, result)
+        elif isinstance(result, int):
+            queued += result
+    return queued
 
 
 def worker_is_running(now=None):
