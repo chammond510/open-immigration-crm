@@ -3,7 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 
-from crm.fields import EncryptedJSONField
+from crm.fields import EncryptedJSONField, EncryptedTextField
 
 from .registry import registry
 
@@ -58,6 +58,9 @@ class Connection(models.Model):
     last_success_at = models.DateTimeField(null=True, blank=True)
     last_error_at = models.DateTimeField(null=True, blank=True)
     last_error = models.CharField(max_length=500, blank=True)
+    # The /hooks/ URL token is shown once; only its SHA-256 hash is kept.
+    webhook_token_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    webhook_secret = EncryptedTextField(null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -133,3 +136,75 @@ class OutboundRequest(models.Model):
 
     def __str__(self):
         return f"{self.connector_key} {self.action} ({self.status})"
+
+
+class SyncRun(models.Model):
+    """One scheduled pull of records for one capability of a connection."""
+
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        RUNNING = "running", "Running"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+
+    connection = models.ForeignKey(Connection, on_delete=models.CASCADE, related_name="sync_runs")
+    capability = models.CharField(max_length=40)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED)
+    cursor_before = models.JSONField(default=dict, blank=True)
+    cursor_after = models.JSONField(default=dict, blank=True)
+    records_received = models.PositiveIntegerField(default=0)
+    error = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.connection} {self.capability} sync ({self.status})"
+
+
+class WebhookEvent(models.Model):
+    """A verified provider event, stored minimized and encrypted until the worker processes it."""
+
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        PROCESSED = "processed", "Processed"
+        FAILED = "failed", "Failed"
+
+    connection = models.ForeignKey(
+        Connection, on_delete=models.CASCADE, related_name="webhook_events"
+    )
+    event_id = models.CharField(max_length=255)
+    capability = models.CharField(max_length=40)
+    payload = EncryptedJSONField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.QUEUED)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    records_received = models.PositiveIntegerField(default=0)
+    error = models.CharField(max_length=500, blank=True)
+    received_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-received_at"]
+        constraints = [
+            # Providers retry deliveries; each event is accepted once.
+            models.UniqueConstraint(
+                fields=["connection", "event_id"], name="connect_webhook_event_once"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.connection} event {self.event_id} ({self.status})"
+
+
+class WorkerHeartbeat(models.Model):
+    """Last time each worker process checked in, so the CRM can warn when syncs stop."""
+
+    worker_id = models.CharField(max_length=120, unique=True)
+    last_seen_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.worker_id} at {self.last_seen_at:%Y-%m-%d %H:%M}"

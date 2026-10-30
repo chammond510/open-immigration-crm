@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from crm.connect.views import receive_webhook
 from crm.views import (
     AuditedPasswordChangeView,
     FirstRunAwareLoginView,
@@ -20,6 +21,8 @@ def health(request):
 
 urlpatterns = [
     path("health/", health, name="health"),
+    # Provider webhooks; the token is a per-connection secret. See docs/DEPLOYMENT.md.
+    path("hooks/<str:token>/", receive_webhook, name="connector_webhook"),
     path(
         "favicon.ico",
         RedirectView.as_view(url="/static/favicon.svg", permanent=True),

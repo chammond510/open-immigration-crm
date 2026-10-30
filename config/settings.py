@@ -88,6 +88,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "axes",
+    "django_tasks",
+    "django_tasks_db",
     "crm.apps.CrmConfig",
     "crm.connect.apps.ConnectConfig",
 ]
@@ -194,6 +196,12 @@ CONNECTOR_CATALOG = BASE_DIR / "connectors" / "catalog.toml"
 # Turning this off blocks every outbound connector action without a deploy.
 CONNECTORS_OUTBOUND_ENABLED = env_bool("CONNECTORS_OUTBOUND_ENABLED", True)
 CONNECTORS_OUTBOUND_HOURLY_LIMIT = int(os.environ.get("CONNECTORS_OUTBOUND_HOURLY_LIMIT", "200"))
+CONNECTOR_WEBHOOK_MAX_BYTES = int(os.environ.get("CONNECTOR_WEBHOOK_MAX_BYTES", str(1024 * 1024)))
+
+# Background work runs in `python manage.py run_worker`, which keeps its queue in
+# the application database. No Redis or message broker is involved.
+TASKS = {"default": {"BACKEND": "django_tasks_db.DatabaseBackend"}}
+WORKER_TICK_SECONDS = int(os.environ.get("WORKER_TICK_SECONDS", "60"))
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = os.environ.get("TIME_ZONE", "America/Chicago")

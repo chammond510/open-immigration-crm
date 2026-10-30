@@ -59,7 +59,7 @@ No connector has shipped. Two-factor sign-in and encryption of stored secrets, w
 - **Some features need public reachability.** Provider webhooks and the MCP endpoint must be reachable from the provider's network. Expose only those paths through the reverse proxy, use polling where a provider supports it, or leave those connectors off.
 - **More credentials to protect.** Connection credentials will be stored encrypted, scoped to the capabilities the firm turns on, and deleted on disconnect. They use the same `FIELD_ENCRYPTION_KEYS` encryption as two-factor keys.
 - **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models will pass an outbound policy and start in preview mode.
-- **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings.
+- **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings. Each connection has its own unguessable URL token, stored only as a hash. A verified event's payload is stored minimized and encrypted, and deleted once the worker has processed it.
 
 ## Intake link handling
 

@@ -7,10 +7,14 @@ Key runtime projects:
 - cryptography — Apache-2.0 OR BSD-3-Clause
 - Django — BSD-3-Clause
 - django-axes — MIT
+- django-stubs-ext — MIT
+- django-tasks — BSD-3-Clause
+- django-tasks-db — BSD-3-Clause
 - dj-database-url — BSD-3-Clause
 - Gunicorn — MIT
 - psycopg — LGPL-3.0-only (library exception applies to linked applications; consult upstream terms)
 - segno — BSD-3-Clause
+- typing_extensions — PSF-2.0
 - WhiteNoise — MIT
 
 Container examples also use official Python and PostgreSQL images under their respective upstream terms. This notice is informational and does not replace the license files distributed by those projects.

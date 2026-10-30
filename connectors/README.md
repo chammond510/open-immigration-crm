@@ -15,10 +15,15 @@ connectors/
 ## Writing a connector
 
 1. Subclass `crm.connect.base.Connector` and declare the manifest as class attributes: `key`, `name`, `description`, `maturity`, `capabilities`, `auth`, `connection_scope`, `data_flows`, `maintainers`, and `outbound_actions`. Register the class with `@register` from `crm.connect.registry`. A manifest that is incomplete is rejected at startup.
-2. Implement `test_connection()`, plus `sync()` for capabilities that pull records and `perform()` for outbound actions. Raise `ConnectorError` for provider failures. Its message is stored and shown to staff, so never include client data in it.
+2. Implement `test_connection()`, plus:
+   - `sync()` for the capabilities listed in `sync_capabilities` (the worker runs it every `sync_interval`);
+   - `perform()` for outbound actions;
+   - for providers that push events, a `webhooks` spec plus `verify_webhook()` (constant-time signature check; never accept unsigned requests), `parse_webhook()` (keep only what processing needs), and `handle_webhook()`.
+
+   Raise `ConnectorError` for provider failures. Its message is stored and shown to staff, so never include client data in it. Synced and webhook records reach features through the `crm.connect.signals.records_received` signal.
 3. Describe in `data_flows` exactly what the connector sends and receives, in plain language. Raise its `version` whenever that changes, so firms review it again.
 4. Never call `perform()` from feature code. Use `crm.connect.policy.send()`, which applies the outbound policy (kill switch, preview mode, data-flow acknowledgment, personal-connection rules, admin-only setting, and hourly limit) and records every attempt.
-5. Add a test case that mixes in `crm.connect.testing.ConnectorContract`. The contract tests block network access, so use recorded fixtures with fictional `.test` data.
+5. Add a test case that mixes in `crm.connect.testing.ConnectorContract`, with `sync_examples`, `outbound_examples`, and `make_webhook()` as needed. The contract tests block network access, so use recorded fixtures with fictional `.test` data.
 6. Remove the provider's entry from `catalog.toml` once its connector exists.
 
-Ready connectors need a named maintainer. Connector contributions open fully once the rest of connector Phase 1 lands: the worker, webhooks, and the Connections page.
+Ready connectors need a named maintainer. Connector contributions open fully once the Connections page and OAuth sign-in land, which completes connector Phase 1.

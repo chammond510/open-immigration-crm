@@ -176,7 +176,7 @@ Google's verification for restricted Gmail scopes.
 
 ### Webhooks
 
-- One endpoint: `/hooks/<connection token>/<capability>/`.
+- One endpoint per connection: `/hooks/<connection token>/`. The connector names the capability of each event when it parses it.
 - Each connector verifies its own signatures (HMAC, JWT, or Microsoft Graph `clientState` with
   the subscription ID).
 - Invalid or unsigned requests are rejected in every environment.

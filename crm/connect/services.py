@@ -1,3 +1,6 @@
+import hashlib
+import secrets
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -103,7 +106,38 @@ def disconnect(connection, actor):
             revoke_note = f"Provider revocation failed: {str(exc)[:200]}"
     connection.credentials = None
     connection.granted_scopes = []
+    connection.webhook_token_hash = None
+    connection.webhook_secret = None
     connection.status = Connection.Status.DISCONNECTED
-    connection.save(update_fields=["credentials", "granted_scopes", "status", "updated_at"])
+    connection.save(
+        update_fields=[
+            "credentials",
+            "granted_scopes",
+            "webhook_token_hash",
+            "webhook_secret",
+            "status",
+            "updated_at",
+        ]
+    )
     record_audit(actor, "connection.disconnected", connection, revoke_note)
     return connection
+
+
+def enable_webhooks(connection, actor, provider_secret=""):
+    """Issue a new private /hooks/ URL token and signing secret; return both to show once.
+
+    For connectors whose provider issues the signing secret, pass it as
+    ``provider_secret``. Calling this again rotates the token and secret.
+    """
+    cls = connection.connector_class
+    if cls is None or cls.webhooks is None:
+        raise ValidationError("This connection does not receive webhooks.")
+    if cls.webhooks.secret_source == "provider" and not provider_secret:
+        raise ValidationError(f"Paste the signing secret {cls.name} shows for this webhook.")
+    token = secrets.token_urlsafe(32)
+    secret = provider_secret or secrets.token_urlsafe(32)
+    connection.webhook_token_hash = hashlib.sha256(token.encode()).hexdigest()
+    connection.webhook_secret = secret
+    connection.save(update_fields=["webhook_token_hash", "webhook_secret", "updated_at"])
+    record_audit(actor, "connection.webhooks_enabled", connection)
+    return token, secret
