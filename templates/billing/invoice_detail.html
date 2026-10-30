@@ -49,6 +49,22 @@
           <div class="prompt-stack">{% connect_prompt "payments" "to send a payment link instead" %}</div>
         {% endif %}
       </section>
+      {% if invoice.status != "void" and invoice.status != "draft" %}
+      <section class="panel" id="payment-plan">
+        <div class="section-heading"><div><h2>Payment plan</h2><p>{% if plan %}{{ plan.get_frequency_display }} installments · {{ plan.get_status_display }}. Payments apply to the earliest installment first.{% else %}Split the balance into scheduled installments. Each one gets a staff reminder in Work.{% endif %}</p></div></div>
+        {% if plan %}
+          <div class="table-wrap"><table><thead><tr><th>#</th><th>Due</th><th class="numeric">Amount</th><th class="numeric">Paid</th><th>Status</th><th>Reminder</th></tr></thead><tbody>
+            {% for row in schedule %}<tr><td>{{ row.installment.sequence }}</td><td>{{ row.installment.due_date|date:"M j, Y" }}</td><td class="numeric">{{ row.installment.amount|money:currency }}</td><td class="numeric">{{ row.applied|money:currency }}</td><td><span class="badge {% if row.state == 'paid' %}paid{% elif row.state == 'overdue' %}failed{% elif row.state == 'partially_paid' %}partially_paid{% endif %}">{% if row.state == 'paid' %}Paid{% elif row.state == 'overdue' %}Overdue{% elif row.state == 'partially_paid' %}Partly paid{% else %}Due{% endif %}</span></td><td>{% if row.installment.reminder %}{{ row.installment.reminder.scheduled_for|date:"M j" }}{% if row.installment.reminder.is_completed %} · done{% endif %}{% else %}—{% endif %}</td></tr>{% endfor %}
+          </tbody></table></div>
+          {% if plan.status == "active" %}<form method="post" action="{% url 'plan_cancel' invoice.pk %}" data-confirm="Cancel this payment plan? Its open reminders will be removed." class="form-actions">{% csrf_token %}<button class="button danger" type="submit">Cancel plan</button></form>{% endif %}
+        {% elif can_take_payment %}
+          <form method="post" action="{% url 'plan_create' invoice.pk %}" class="compact-form stacked-form">{% csrf_token %}
+            <div class="form-grid">{% for field in plan_form %}<div class="field {% if field.name == 'reminder_days_before' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}</div>
+            <div class="form-actions"><button class="button" type="submit">Create payment plan</button></div>
+          </form>
+        {% endif %}
+      </section>
+      {% endif %}
     {% endif %}
   </div>
   <aside class="detail-aside">

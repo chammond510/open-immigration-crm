@@ -1,5 +1,6 @@
+import calendar
 import math
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -7,9 +8,19 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
 
-from crm.models import AuditLog, TimeEntry
+from crm.models import AuditLog, TimeEntry, WorkItem
 
-from .models import BillingSettings, Invoice, InvoiceLine, Payment, StaffRate, money
+from .models import (
+    BillingSettings,
+    Invoice,
+    InvoiceLine,
+    Payment,
+    PaymentPlan,
+    PaymentPlanInstallment,
+    StaffRate,
+    format_money,
+    money,
+)
 
 OPEN_STATUSES = (Invoice.Status.ISSUED, Invoice.Status.PARTIALLY_PAID)
 
@@ -140,6 +151,7 @@ def record_payment(invoice, actor, *, amount, **fields):
         raise ValidationError(f"The balance due is {invoice.balance}; record no more than that.")
     payment = Payment.objects.create(invoice=invoice, amount=amount, recorded_by=actor, **fields)
     refresh_status(invoice)
+    sync_plan(invoice)
     record(
         actor,
         "payment.recorded",
@@ -159,6 +171,7 @@ def void_payment(payment, actor, reason):
     payment.void_reason = reason.strip()[:255]
     payment.save(update_fields=["voided_at", "void_reason"])
     refresh_status(payment.invoice)
+    sync_plan(payment.invoice)
     record(actor, "payment.voided", payment, payment.void_reason)
     return payment
 
@@ -172,6 +185,9 @@ def void_invoice(invoice, actor, reason):
         raise ValidationError("Void the invoice's payments first.")
     if not reason.strip():
         raise ValidationError("Give a reason for voiding the invoice.")
+    plan = invoice.plan
+    if plan is not None:
+        cancel_plan(plan, actor)
     invoice.lines.update(time_entry=None)
     invoice.status = Invoice.Status.VOID
     invoice.void_reason = reason.strip()[:255]
@@ -184,3 +200,118 @@ def delete_draft(invoice, actor):
     require_draft(invoice)
     record(actor, "invoice.draft_deleted", invoice, str(invoice.contact))
     invoice.delete()
+
+
+MAX_INSTALLMENTS = 60
+
+
+def add_months(day, months):
+    """The same day of the month ``months`` later, clamped to the month's last day."""
+    month_index = day.month - 1 + months
+    year, month = day.year + month_index // 12, month_index % 12 + 1
+    return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
+
+
+def installment_dates(first_due, count, frequency):
+    if frequency == PaymentPlan.Frequency.MONTHLY:
+        return [add_months(first_due, n) for n in range(count)]
+    step = 14 if frequency == PaymentPlan.Frequency.BIWEEKLY else 7
+    return [first_due + timedelta(days=step * n) for n in range(count)]
+
+
+def split_amount(total, count):
+    """Equal installments, with any leftover cents on the last one."""
+    each = money(total / count)
+    return [each] * (count - 1) + [money(total - each * (count - 1))]
+
+
+def reminder_time(due_date, days_before):
+    moment = timezone.make_aware(datetime.combine(due_date - timedelta(days=days_before), time(9)))
+    return max(moment, timezone.now())
+
+
+@transaction.atomic
+def create_plan(invoice, actor, *, count, first_due_date, frequency, reminder_days_before=3):
+    """Split the invoice's balance into installments, each with a staff reminder work item."""
+    invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
+    if invoice.status not in OPEN_STATUSES or invoice.balance <= 0:
+        raise ValidationError("Payment plans are for issued invoices with a balance due.")
+    if invoice.plan is not None:
+        raise ValidationError("This invoice already has a payment plan.")
+    if not 2 <= count <= MAX_INSTALLMENTS:
+        raise ValidationError(f"Choose between 2 and {MAX_INSTALLMENTS} installments.")
+    if first_due_date < timezone.localdate():
+        raise ValidationError("The first installment cannot be due in the past.")
+    plan = PaymentPlan.objects.create(
+        invoice=invoice,
+        frequency=frequency,
+        reminder_days_before=reminder_days_before,
+        created_by=actor,
+    )
+    currency = BillingSettings.load().currency
+    dates = installment_dates(first_due_date, count, frequency)
+    for sequence, (due, amount) in enumerate(
+        zip(dates, split_amount(invoice.balance, count), strict=True), 1
+    ):
+        reminder = WorkItem.objects.create(
+            title=(
+                f"Payment reminder: {invoice.number} installment {sequence} of {count}, "
+                f"{format_money(amount, currency)} due {due:%b} {due.day}"
+            ),
+            description=(
+                "Remind the client of this payment plan installment. "
+                "This reminder completes itself when the installment is paid."
+            ),
+            kind=WorkItem.Kind.TASK,
+            contact=invoice.contact,
+            matter=invoice.matter,
+            assigned_to=actor,
+            scheduled_for=reminder_time(due, reminder_days_before),
+        )
+        PaymentPlanInstallment.objects.create(
+            plan=plan, sequence=sequence, due_date=due, amount=amount, reminder=reminder
+        )
+    record(
+        actor,
+        "payment_plan.created",
+        invoice,
+        f"{count} {plan.get_frequency_display().lower()} installments",
+    )
+    return plan
+
+
+def sync_plan(invoice):
+    """Match reminders and plan status to what has been paid."""
+    plan = invoice.plan
+    if plan is None:
+        return None
+    now = timezone.now()
+    for row in plan.schedule():
+        reminder = row["installment"].reminder
+        if reminder is None:
+            continue
+        paid = row["state"] == "paid"
+        if reminder.is_completed != paid:
+            reminder.is_completed = paid
+            reminder.completed_at = now if paid else None
+            reminder.save(update_fields=["is_completed", "completed_at", "updated_at"])
+    plan.status = (
+        PaymentPlan.Status.COMPLETED
+        if invoice.status == Invoice.Status.PAID
+        else PaymentPlan.Status.ACTIVE
+    )
+    plan.save(update_fields=["status"])
+    return plan
+
+
+@transaction.atomic
+def cancel_plan(plan, actor):
+    """End a plan; its open reminders are removed, and its history is kept."""
+    if plan.status == PaymentPlan.Status.CANCELED:
+        raise ValidationError("This payment plan is already canceled.")
+    WorkItem.objects.filter(payment_plan_installment__plan=plan, is_completed=False).delete()
+    plan.status = PaymentPlan.Status.CANCELED
+    plan.canceled_at = timezone.now()
+    plan.save(update_fields=["status", "canceled_at"])
+    record(actor, "payment_plan.canceled", plan.invoice)
+    return plan

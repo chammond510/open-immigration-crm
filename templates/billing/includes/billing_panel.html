@@ -1,6 +1,7 @@
 {% load billing_tags %}{% if visible %}
 <section class="panel" id="billing">
   <div class="section-heading"><div><h2>Billing</h2><p>{{ balance|money:currency }} outstanding{% if unbilled_count %} · {{ unbilled_count }} unbilled time entr{{ unbilled_count|pluralize:"y,ies" }} ({{ unbilled_minutes }} min){% endif %}</p></div><a href="{% url 'invoice_create' %}?{% if matter %}matter={{ matter.pk }}{% else %}contact={{ contact.pk }}{% endif %}">New invoice</a></div>
+  {% for invoice, row in next_installments %}<p class="muted">Payment plan: next installment {{ row.installment.amount|money:currency }} due {{ row.installment.due_date|date:"M j" }}{% if row.state == "overdue" %} · <span class="danger-text">overdue</span>{% endif %} ({% if invoice.number %}{{ invoice.number }}{% endif %})</p>{% endfor %}
   {% for invoice in invoices %}<div class="mini-record"><div><a href="{% url 'invoice_detail' invoice.pk %}"><strong>{{ invoice.number|default:"Draft" }}</strong></a><span>{{ invoice.subtotal|money:currency }} · balance {{ invoice.balance|money:currency }}{% if invoice.due_date %} · due {{ invoice.due_date|date:"M j" }}{% endif %}</span></div><span class="badge {{ invoice.status }}">{{ invoice.get_status_display }}</span></div>{% empty %}<p class="muted">No invoices yet.</p>{% endfor %}
 </section>
 {% endif %}

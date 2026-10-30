@@ -2,7 +2,7 @@ from django import forms
 
 from crm.models import Contact, Matter
 
-from .models import BillingSettings, Invoice, InvoiceLine, Payment
+from .models import BillingSettings, Invoice, InvoiceLine, Payment, PaymentPlan
 
 
 class InvoiceCreateForm(forms.ModelForm):
@@ -74,3 +74,17 @@ class BillingSettingsForm(forms.ModelForm):
         ]
         labels = {"default_hourly_rate": "Firm default hourly rate"}
         widgets = {"payment_instructions": forms.Textarea(attrs={"rows": 3})}
+
+
+class PaymentPlanForm(forms.Form):
+    count = forms.IntegerField(label="Number of installments", min_value=2, max_value=60)
+    frequency = forms.ChoiceField(label="How often", choices=PaymentPlan.Frequency.choices)
+    first_due_date = forms.DateField(
+        label="First installment due", widget=forms.DateInput(attrs={"type": "date"})
+    )
+    reminder_days_before = forms.IntegerField(
+        label="Remind staff this many days before each due date",
+        min_value=0,
+        max_value=30,
+        initial=3,
+    )

@@ -25,6 +25,7 @@
     {% for payment in payments %}<dt>Payment received {{ payment.received_on|date:"M j, Y" }}</dt><dd>−{{ payment.amount|money:currency }}</dd>{% endfor %}
     <dt class="strong">Balance due</dt><dd class="strong">{{ invoice.balance|money:currency }}</dd>
   </dl>
+  {% if schedule %}<section><h2>Payment schedule</h2><table class="schedule"><thead><tr><th>Due</th><th class="numeric">Amount</th><th>Status</th></tr></thead><tbody>{% for row in schedule %}<tr><td>{{ row.installment.due_date|date:"F j, Y" }}</td><td class="numeric">{{ row.installment.amount|money:currency }}</td><td>{% if row.state == "paid" %}Paid{% elif row.state == "partially_paid" %}{{ row.applied|money:currency }} paid{% elif row.state == "overdue" %}Past due{% else %}Due{% endif %}</td></tr>{% endfor %}</tbody></table></section>{% endif %}
   {% if invoice.memo %}<section><h2>Note</h2><p>{{ invoice.memo|linebreaksbr }}</p></section>{% endif %}
   {% if billing.payment_instructions %}<section><h2>How to pay</h2><p>{{ billing.payment_instructions|linebreaksbr }}</p></section>{% endif %}
 </body>

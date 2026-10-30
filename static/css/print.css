@@ -19,3 +19,4 @@ body.invoice-print { max-width: 760px; margin: 32px auto; padding: 0 24px; color
 .no-print { display: flex; justify-content: space-between; margin-bottom: 20px; font: 13px ui-sans-serif, -apple-system, sans-serif; }
 .no-print button { padding: 6px 12px; border: 1px solid #255bc7; border-radius: 6px; background: #255bc7; color: #fff; font: inherit; cursor: pointer; }
 @media print { body.invoice-print { margin: 0; } .no-print { display: none; } }
+.invoice-print table.schedule { width: 60%; margin-top: 6px; }
