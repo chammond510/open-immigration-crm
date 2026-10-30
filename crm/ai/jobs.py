@@ -113,7 +113,8 @@ def prepare_memo(appointment_pk, user_pk, connection_pk):
     except AIUnavailable:
         pass  # The memo records why.
     except Exception as exc:
-        logger.exception("Preparing the memo for appointment %s failed.", appointment_pk)
+        # The memo records the failure; the log keeps no record identifiers.
+        logger.exception("Preparing a consult memo failed.")
         ConsultMemo.objects.filter(appointment=appointment).update(
             status=ConsultMemo.Status.FAILED, error=f"Unexpected {exc.__class__.__name__}"
         )
