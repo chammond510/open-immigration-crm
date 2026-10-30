@@ -5,16 +5,6 @@
 
 # Phone and texting
 [[connector]]
-key = "dialpad"
-name = "Dialpad"
-capabilities = ["phone", "texting"]
-
-[[connector]]
-key = "twilio"
-name = "Twilio"
-capabilities = ["phone", "texting"]
-
-[[connector]]
 key = "ringcentral"
 name = "RingCentral"
 capabilities = ["phone", "texting"]

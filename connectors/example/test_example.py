@@ -17,7 +17,7 @@ class ExampleConnectorContractTests(ConnectorContract, TestCase):
     valid_credentials = {"api_key": "example-fictional-key"}
     invalid_credentials = {"api_key": "wrong-key"}
     sync_examples = {"texting": {"after": 0}}
-    outbound_examples = {"send_message": {"body": "Fictional reminder"}}
+    outbound_examples = {"send_text": {"body": "Fictional reminder"}}
 
     def make_webhook(self, secret):
         body = example_event()

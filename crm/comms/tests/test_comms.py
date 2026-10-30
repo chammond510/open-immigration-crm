@@ -248,11 +248,11 @@ class RecordCommunicationTests(TestCase):
         Connection.objects.filter(pk=self.connection.pk).update(preview_mode=False)
         self.connection.refresh_from_db()
         matter = make_matter(self.contact)
-        sent = send(self.connection, "send_message", {"body": "Hi"}, target=self.contact)
+        sent = send(self.connection, "send_text", {"body": "Hi"}, target=self.contact)
         self.assertEqual(sent.status, OutboundRequest.Status.SENT)
         set_texting_opt_out(self.contact, True, actor=self.user, reason="Replied STOP")
         for target in (self.contact, matter):
-            blocked = send(self.connection, "send_message", {"body": "Hi"}, target=target)
+            blocked = send(self.connection, "send_text", {"body": "Hi"}, target=target)
             self.assertEqual(blocked.decision_code, Codes.RECIPIENT_OPTED_OUT)
         entry = AuditLog.objects.get(action="contact.texting_opted_out")
         self.assertEqual(entry.detail, "Replied STOP")

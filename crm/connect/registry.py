@@ -13,6 +13,7 @@ from django.core.exceptions import ImproperlyConfigured
 from .base import (
     AUTH_TYPES,
     WEBHOOK_SECRET_SOURCES,
+    ApiKeyAuth,
     Capability,
     ConnectionScope,
     Connector,
@@ -73,7 +74,17 @@ def manifest_problems(cls):
         or not set(cls.webhooks.capabilities) <= set(cls.capabilities)
         or cls.webhooks.secret_source not in WEBHOOK_SECRET_SOURCES
     ):
-        problems.append("webhooks must use declared capabilities and a crm or provider secret")
+        problems.append("webhooks must use declared capabilities and a known secret source")
+    if cls.webhooks is not None and cls.webhooks.secret_source == "credential":
+        names = {f.name for f in cls.auth.fields} if isinstance(cls.auth, ApiKeyAuth) else set()
+        if cls.webhooks.secret_credential not in names:
+            problems.append("a credential webhook secret must name one of the credential fields")
+    if (
+        cls.webhooks is not None
+        and cls.webhooks.register_label
+        and cls.register_webhook is Connector.register_webhook
+    ):
+        problems.append("webhooks that offer registration must implement register_webhook()")
     stray = set(cls.outbound_actions.values()) - set(cls.capabilities)
     if stray:
         problems.append(f"outbound actions use undeclared capabilities: {', '.join(sorted(stray))}")

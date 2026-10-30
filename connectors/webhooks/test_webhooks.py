@@ -114,7 +114,7 @@ class WebhooksContractTests(ConnectorContract, TestCase):
             with self.assertRaisesMessage(ConnectorError, message):
                 connector.perform("deliver_event", payload)
         with self.assertRaises(ConnectorError):
-            connector.perform("send_message", payload)
+            connector.perform("send_text", payload)
 
     def test_addresses(self):
         for url in (

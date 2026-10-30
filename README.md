@@ -49,6 +49,9 @@ The connector framework, background worker, webhooks, and Connections page are i
 
 - **Webhooks**, built in and vendor-neutral, sends signed CRM events to n8n, Zapier, Make, or any address the firm chooses.
 - **USCIS Case Status API** (Beta) checks the receipt numbers of open matters once a day through the firm's own developer.uscis.gov app, and creates a review task when a status changes.
+- **Dialpad** (Beta) files calls, with recording links and Dialpad's AI recap, and texts on the right contact.
+- **Twilio** (Beta) files incoming texts and STOP replies.
+- With Dialpad or Twilio connected, staff can send texts from contact and matter pages. Each text passes the outbound policy, and its delivery status is shown.
 
 The catalog lists the other providers people have asked for as Wanted.
 

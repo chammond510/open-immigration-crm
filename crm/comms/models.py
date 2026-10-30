@@ -33,6 +33,9 @@ class Communication(models.Model):
     counterpart_key = models.CharField(max_length=255, blank=True, db_index=True, editable=False)
     subject = models.CharField(max_length=255, blank=True)
     summary = models.TextField(blank=True)
+    # For texts sent or received through a connector: the provider's latest status,
+    # such as sent, delivered, or failed.
+    delivery_status = models.CharField(max_length=20, blank=True)
     contact = models.ForeignKey(
         Contact,
         null=True,

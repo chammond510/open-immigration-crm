@@ -45,7 +45,7 @@ class ConnectForm(forms.Form):
             if setting.choices:
                 self.fields[name] = forms.ChoiceField(choices=setting.choices)
             else:
-                self.fields[name] = forms.CharField(max_length=500)
+                self.fields[name] = forms.CharField(max_length=500, required=setting.required)
             self.fields[name].label = setting.label
             self.fields[name].help_text = setting.help_text
             self.fields[name].initial = setting.default

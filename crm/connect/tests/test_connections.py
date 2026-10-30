@@ -173,12 +173,12 @@ class OutboundPolicyTests(TestCase):
 
     @override_settings(CONNECTORS_OUTBOUND_HOURLY_LIMIT=1)
     def test_hourly_limit_counts_only_recent_sends(self):
-        old = send(self.connection, "send_message", {"body": "First"}, actor=self.user)
+        old = send(self.connection, "send_text", {"body": "First"}, actor=self.user)
         OutboundRequest.objects.filter(pk=old.pk).update(
             created_at=timezone.now() - timedelta(hours=2)
         )
         self.assertEqual(self.decide(), Codes.OK)
-        send(self.connection, "send_message", {"body": "Second"}, actor=self.user)
+        send(self.connection, "send_text", {"body": "Second"}, actor=self.user)
         self.assertEqual(self.decide(), Codes.RATE_LIMITED)
 
     def test_preview_mode_is_checked_last(self):
@@ -195,43 +195,43 @@ class SendTests(TestCase):
         contact = make_contact(self.user)
         request = send(
             self.connection,
-            "send_message",
+            "send_text",
             {"body": "Reminder"},
             actor=self.user,
             summary="Appointment reminder",
             target=contact,
         )
         self.assertEqual(request.status, OutboundRequest.Status.SENT)
-        self.assertEqual(request.provider_ref, "example-sent-8")
+        self.assertTrue(request.provider_ref.startswith("example-sent-8-"))
         self.assertEqual(request.capability, "texting")
         self.assertEqual(request.target_type, "Contact")
         self.assertEqual(request.target_id, str(contact.pk))
-        self.assertEqual(str(request), "example send_message (sent)")
+        self.assertEqual(str(request), "example send_text (sent)")
 
     def test_preview_mode_records_without_performing(self):
         self.connection.preview_mode = True
         self.connection.save()
         with mock.patch.object(ExampleConnector, "perform") as perform:
-            request = send(self.connection, "send_message", {"body": "Hi"}, actor=self.user)
+            request = send(self.connection, "send_text", {"body": "Hi"}, actor=self.user)
         perform.assert_not_called()
         self.assertEqual(request.status, OutboundRequest.Status.PREVIEWED)
 
     def test_blocked_send_records_the_reason(self):
         self.connection.status = Connection.Status.PAUSED
         self.connection.save()
-        request = send(self.connection, "send_message", {"body": "Hi"}, actor=self.user)
+        request = send(self.connection, "send_text", {"body": "Hi"}, actor=self.user)
         self.assertEqual(request.status, OutboundRequest.Status.BLOCKED)
         self.assertEqual(request.decision_code, Codes.INACTIVE)
         self.assertIn("not active", request.error)
 
     def test_provider_failures_are_recorded_safely(self):
-        request = send(self.connection, "send_message", {"body": ""}, actor=self.user)
+        request = send(self.connection, "send_text", {"body": ""}, actor=self.user)
         self.assertEqual(request.status, OutboundRequest.Status.FAILED)
         self.assertIn("needs a message body", request.error)
         with mock.patch.object(
             ExampleConnector, "perform", side_effect=ValueError("client name in message")
         ):
-            request = send(self.connection, "send_message", {"body": "Hi"}, actor=self.user)
+            request = send(self.connection, "send_text", {"body": "Hi"}, actor=self.user)
         self.assertEqual(request.error, "Unexpected ValueError")
 
     def test_unknown_action_is_a_programming_error(self):
@@ -240,7 +240,7 @@ class SendTests(TestCase):
 
     def test_send_through_uninstalled_connector_is_blocked(self):
         missing = Connection.objects.create(connector_key="uninstalled", label="Old")
-        request = send(missing, "send_message", {}, actor=self.user)
+        request = send(missing, "send_text", {}, actor=self.user)
         self.assertEqual(request.decision_code, Codes.NOT_INSTALLED)
 
 
@@ -248,7 +248,7 @@ class AdminTests(TestCase):
     def test_operators_can_view_connections_and_outbound_log(self):
         user = make_user()
         connection = ready_connection(user)
-        send(connection, "send_message", {"body": "Hi"}, actor=user)
+        send(connection, "send_text", {"body": "Hi"}, actor=user)
         self.client.force_login(user)
         for name in (
             "admin:connect_connection_changelist",

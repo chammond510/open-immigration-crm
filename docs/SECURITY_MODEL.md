@@ -67,7 +67,7 @@ Connectors change the risk picture in these ways:
 - **Some features need public reachability.** Provider webhooks and the MCP endpoint must be reachable from the provider's network. Expose only those paths through the reverse proxy, use polling where a provider supports it, or leave those connectors off.
 - **More credentials to protect.** Connection credentials will be stored encrypted, scoped to the capabilities the firm turns on, and deleted on disconnect. They use the same `FIELD_ENCRYPTION_KEYS` encryption as two-factor keys.
 - **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models will pass an outbound policy and start in preview mode.
-- **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings. Each connection has its own unguessable URL token, stored only as a hash. A verified event's payload is stored minimized and encrypted, and deleted once the worker has processed it.
+- **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings. Each connection has its own unguessable URL token, stored only as a hash. Twilio's connector, which needs the address to ask for delivery updates, keeps it encrypted with its other credentials. Dialpad's events are signed tokens (JWT, HS256 only), read only after their signature checks out. Twilio's are checked against the exact address and every parameter. A verified event's payload is stored minimized and encrypted, and deleted once the worker has processed it.
 
 ## AI assistants (MCP)
 

@@ -6,6 +6,7 @@ It is hidden from the catalog. Real connectors follow the same shape.
 import hashlib
 import hmac
 import json
+import secrets
 from datetime import UTC, datetime, timedelta
 
 from crm.connect.base import (
@@ -49,7 +50,7 @@ class ExampleConnector(Connector):
         sends=("Fictional messages staff approve",),
         receives=("Fictional message events",),
     )
-    outbound_actions = {"send_message": Capability.TEXTING}
+    outbound_actions = {"send_text": Capability.TEXTING}
     sync_capabilities = frozenset({Capability.TEXTING})
     webhooks = WebhookSpec(
         capabilities=(Capability.TEXTING,),
@@ -76,11 +77,12 @@ class ExampleConnector(Connector):
         return SyncBatch(records=records, cursor={"after": start + 3})
 
     def perform(self, action, payload):
-        if action != "send_message" or not payload.get("body"):
+        if action != "send_text" or not payload.get("body"):
             raise ConnectorError("The example service needs a message body.")
-        return f"example-sent-{len(payload['body'])}"
+        # A fictional message ID, unique per message like a real provider's.
+        return f"example-sent-{len(payload['body'])}-{secrets.token_hex(4)}"
 
-    def verify_webhook(self, body, headers, secret):
+    def verify_webhook(self, body, headers, secret, *, url=""):
         signature = headers.get(SIGNATURE_HEADER, "")
         return bool(signature) and hmac.compare_digest(signature, sign(body, secret))
 
