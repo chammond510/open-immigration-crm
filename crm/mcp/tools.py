@@ -13,7 +13,7 @@ from django.utils.dateparse import parse_datetime
 
 from crm.api import serializers
 from crm.api.forms import NoteForm
-from crm.api.http import ApiError, bind
+from crm.api.http import check_form
 from crm.billing.models import Invoice
 from crm.comms.forms import CommunicationForm
 from crm.comms.models import Communication
@@ -32,7 +32,15 @@ MAX_LIMIT = 50
 
 
 class ToolError(Exception):
-    """A problem the assistant can act on; its message is returned as the tool result."""
+    """A problem the assistant can act on.
+
+    ``message`` is written by this module for the assistant to read, and is the only
+    part of the exception returned to it.
+    """
+
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
 
 
 @dataclass
@@ -420,12 +428,11 @@ def list_invoices(ctx, args):
 
 
 def form_values(form_class, data, writable, **kwargs):
-    try:
-        return bind(form_class, data, writable=writable, **kwargs)
-    except ApiError as exc:
-        fields = exc.extra.get("fields")
-        detail = f" {fields}" if fields else ""
-        raise ToolError(f"{exc.message}{detail}") from None
+    form, problem = check_form(form_class, data, writable=writable, **kwargs)
+    if problem:
+        detail = f" {problem['fields']}" if problem.get("fields") else ""
+        raise ToolError(f"{problem['message']}{detail}")
+    return form
 
 
 def writing(ctx):
