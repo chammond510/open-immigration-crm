@@ -315,6 +315,18 @@ def get_matter(ctx, args):
         ],
         "recent_notes": [note_brief(n) for n in matter.activities.all()[:5]],
         "recent_communications": [communication_brief(c) for c in matter.communications.all()[:5]],
+        "saved_authorities": [
+            {
+                "citation": authority.citation,
+                "title": authority.title,
+                "court": authority.court,
+                "decided": serializers.iso(authority.decided),
+                "standing": authority.standing,
+                "url": authority.url,
+                "note": authority.note[:1000],
+            }
+            for authority in matter.authorities.all()[:20]
+        ],
     }
 
 
@@ -564,7 +576,8 @@ TOOLS = [
         "get_matter",
         "Matter summary",
         "A matter's details, parties, workflow phase, checklist progress, open work, USCIS "
-        "notices, latest case status, and recent notes and communications.",
+        "notices, latest case status, recent notes and communications, and saved legal "
+        "authorities.",
         get_matter,
         {"matter_id": ID},
         ("matter_id",),
