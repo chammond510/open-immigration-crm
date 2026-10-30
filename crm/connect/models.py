@@ -216,6 +216,8 @@ class ConnectorApp(models.Model):
     connector_key = models.CharField(max_length=41, unique=True)
     client_id = models.CharField(max_length=255)
     client_secret = EncryptedTextField()
+    # Values for the connector's OAuthAuth.app_fields, such as a directory (tenant) ID.
+    config = models.JSONField(default=dict, blank=True)
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

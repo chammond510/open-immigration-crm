@@ -36,8 +36,11 @@ def receive_webhook(request, token):
     body = request.body
     if len(body) > settings.CONNECTOR_WEBHOOK_MAX_BYTES:
         return plain(413, "too large")
-    secret = connection.webhook_secret or ""
     url = request.build_absolute_uri()
+    challenge = connector.webhook_challenge(url, body, request.headers)
+    if challenge is not None:
+        return plain(*challenge)
+    secret = connection.webhook_secret or ""
     if not secret or not connector.verify_webhook(body, request.headers, secret, url=url):
         return plain(401, "invalid signature")
     try:
@@ -59,4 +62,4 @@ def receive_webhook(request, token):
         # A repeat delivery; it gets the same answer as the first.
         pass
     spec = connector.webhooks
-    return HttpResponse(spec.ack_body, status=200, content_type=spec.ack_content_type)
+    return HttpResponse(spec.ack_body, status=spec.ack_status, content_type=spec.ack_content_type)

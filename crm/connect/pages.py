@@ -194,7 +194,10 @@ def connector_detail(request, key):
             "may_connect": may_connect,
             "is_oauth": is_oauth,
             "app": app,
-            "app_form": ConnectorAppForm(initial={"client_id": app.client_id} if app else None),
+            "app_form": ConnectorAppForm(
+                initial={"client_id": app.client_id, **app.config} if app else None,
+                connector=cls,
+            ),
             "callback_url": oauth.callback_url(request) if is_oauth else "",
             "capability_labels": [Capability(c).label for c in sorted(cls.capabilities)],
             "auth_label": auth_label(cls),
@@ -210,13 +213,14 @@ def connector_app(request, key):
     _, cls = connector_or_404(key)
     if not isinstance(cls.auth, OAuthAuth):
         raise Http404
-    form = ConnectorAppForm(request.POST)
+    form = ConnectorAppForm(request.POST, connector=cls)
     if form.is_valid():
         ConnectorApp.objects.update_or_create(
             connector_key=key,
             defaults={
                 "client_id": form.cleaned_data["client_id"].strip(),
                 "client_secret": form.cleaned_data["client_secret"].strip(),
+                "config": form.app_config(),
                 "updated_by": request.user,
             },
         )
@@ -228,7 +232,8 @@ def connector_app(request, key):
         )
         messages.success(request, f"Saved the firm's {cls.name} app details.")
     else:
-        messages.error(request, "Enter both the client ID and the client secret.")
+        problems = [e for errors in form.errors.values() for e in errors]
+        messages.error(request, " ".join(problems) or "Enter the app's details.")
     return redirect("connector_detail", key=key)
 
 

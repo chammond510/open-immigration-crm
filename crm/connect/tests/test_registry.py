@@ -13,6 +13,7 @@ from crm.connect.base import (
     CredentialField,
     DataFlows,
     Maturity,
+    OAuthAuth,
     SettingField,
     WebhookSpec,
 )
@@ -106,6 +107,20 @@ class ManifestTests(SimpleTestCase):
             secret_credential="api_key",
         )
         self.assertEqual(manifest_problems(make_connector(webhooks=spec)), [])
+
+    def test_oauth_urls_name_only_app_fields(self):
+        def oauth(app_fields=()):
+            return OAuthAuth(
+                authorize_url="https://login.example.test/{tenant}/authorize",
+                token_url="https://login.example.test/{tenant}/token",
+                scopes={Capability.PHONE: ("calls",)},
+                app_fields=app_fields,
+            )
+
+        problems = " ".join(manifest_problems(make_connector(auth=oauth())))
+        self.assertIn("OAuth URLs may name only", problems)
+        tenant = (SettingField("tenant", "Tenant"),)
+        self.assertEqual(manifest_problems(make_connector(auth=oauth(tenant))), [])
 
     def test_settings_fields_are_checked(self):
         good = (

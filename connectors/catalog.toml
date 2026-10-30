@@ -56,9 +56,9 @@ name = "Google Drive"
 capabilities = ["storage"]
 
 [[connector]]
-key = "microsoft_365"
-name = "Microsoft 365"
-capabilities = ["mailbox", "calendar", "storage"]
+key = "onedrive_sharepoint"
+name = "OneDrive and SharePoint"
+capabilities = ["storage"]
 
 [[connector]]
 key = "imap_smtp"

@@ -113,7 +113,12 @@ class ApiKeyAuth:
 
 @dataclass(frozen=True)
 class OAuthAuth:
-    """Staff sign in at the provider; scopes are requested per enabled capability."""
+    """Staff sign in at the provider; scopes are requested per enabled capability.
+
+    ``app_fields`` are non-secret values a superuser enters with the firm's app
+    registration, such as a directory (tenant) ID. The URLs may name them in braces,
+    such as ``https://login.example.test/{tenant}/authorize``.
+    """
 
     authorize_url: str
     token_url: str
@@ -121,6 +126,7 @@ class OAuthAuth:
     docs_url: str = ""
     # Provider-specific authorize parameters, such as a request for offline access.
     extra_authorize_params: dict[str, str] = field(default_factory=dict)
+    app_fields: tuple["SettingField", ...] = ()
 
 
 @dataclass(frozen=True)
@@ -176,8 +182,9 @@ class WebhookSpec:
 
     ``register_label`` offers to set the address at the provider when webhooks are
     turned on, through ``Connector.register_webhook()``; it says what that changes.
-    ``ack_body`` and ``ack_content_type`` are the answer to an accepted event, for
-    providers that read it, such as one that would text a plain-text answer back.
+    ``ack_status``, ``ack_body``, and ``ack_content_type`` are the answer to an
+    accepted event, for providers that read it, such as one that would text a
+    plain-text answer back.
     """
 
     capabilities: tuple[str, ...]
@@ -185,6 +192,7 @@ class WebhookSpec:
     secret_credential: str = ""
     instructions: str = ""
     register_label: str = ""
+    ack_status: int = 200
     ack_body: str = "ok"
     ack_content_type: str = "text/plain"
 
@@ -282,6 +290,14 @@ class Connector:
         Use a constant-time comparison. Never accept an unsigned request.
         """
         raise NotImplementedError
+
+    def webhook_challenge(self, url, body, headers):
+        """Answer a provider's check that the address is ours, before any verification.
+
+        Return ``(status, text)`` to answer with plain text, or None for a normal
+        event. Echo only what the provider sent, and never act on it.
+        """
+        return None
 
     def register_webhook(self, url, secret):
         """Set ``url`` as the provider's delivery address for this connection.

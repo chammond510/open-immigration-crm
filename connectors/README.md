@@ -9,6 +9,7 @@ connectors/
   catalog.toml          wanted providers shown in the catalog before a connector exists
   dialpad/              Dialpad calls and texts, by signed webhook, with a call backfill
   google_workspace/     each staff member's Gmail and Google Calendar
+  microsoft_365/        each staff member's Outlook mail and calendar, through Microsoft Graph
   example/              a fictional connector that tests the framework (hidden from the catalog)
     __init__.py         the connector class, registered with @register
     test_example.py     the shared contract tests plus connector-specific tests
@@ -29,7 +30,8 @@ connectors/
    - `secret_source`: `"crm"` (the CRM generates the signing secret), `"provider"` (staff paste the provider's), or `"credential"` (the provider signs with a credential already entered, named by `secret_credential`, such as Twilio's Auth Token).
    - `verify_webhook()` also receives `url`, the address the request came to, for providers that sign it.
    - `register_label` offers, when staff turn webhooks on, to set the address at the provider through `register_webhook(url, secret)`. Say plainly what it changes there.
-   - `ack_body` and `ack_content_type` are the answer to an accepted event, for providers that act on it. Twilio, for one, would text a plain-text answer back to the sender.
+   - `ack_status`, `ack_body`, and `ack_content_type` are the answer to an accepted event, for providers that act on it. Twilio, for one, would text a plain-text answer back to the sender, and Microsoft Graph expects 202.
+   - `webhook_challenge(url, body, headers)` answers a provider's check that the address is ours, such as Microsoft Graph's `validationToken`, before any verification. Echo only what the provider sent, and act on nothing in it.
 
    Texting connectors declare a `send_text` outbound action. Its payload is `{"to": E.164 number, "body": text, "staff_email": the sender's email}`, and it returns the provider's message ID. Core's "Send a text" form uses it through the outbound policy and logs the sent text under that ID, so the provider's own copy and later delivery updates (`TextRecord.status`) land on the same communication. A `TextRecord` can carry `opt_out` (`stop` or `start`) when the provider recognized an opt-out reply itself.
 
@@ -40,6 +42,8 @@ connectors/
    A connector can declare a setting named `unmatched` with the choices `keep` and `skip`. With `skip`, core stores only records whose other party is a known contact, instead of sending the rest to Needs matching. Email between staff members is never stored.
 
    Automation connectors (the `automation` capability) must declare a `deliver_event` outbound action. Its payload is `{"id": ..., "event": {...}}`; the ID stays the same across retries. Core builds events in `crm/events/` and sends them through the outbound policy from the worker.
+
+   An `OAuthAuth` can declare `app_fields`: non-secret values a superuser enters with the firm's app registration, such as Microsoft's directory (tenant) ID. The authorize and token URLs may name them in braces, such as `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize`; each value is validated and URL-encoded.
 
    A credential field can set `generate` to a function that proposes a value, such as a signing secret, which the connect form shows once for staff to copy to the provider.
 
@@ -71,6 +75,7 @@ connectors/
    - The contract tests check that each record is the typed record for its capability and that `record.problems()` is empty.
    - They block network access. Serve recorded, fictional `.test` fixtures through `crm.connect.http.use_transport(httpx.MockTransport(handler))`.
    - For a provider that signs inside the body, such as with a JWT, set `signature_in_headers = False` and test that an unsigned body is refused.
+   - For a provider that proves an event with a shared value inside it rather than a signature, such as Microsoft Graph's `clientState`, also set `body_is_signed = False`. Such a connector must fetch what the event points to from the provider and never trust the body.
    - Use phone numbers in the 555-0100 to 555-0199 range with a real area code, such as +1 202 555 0143.
 6. Remove the provider's entry from `catalog.toml` once its connector exists.
 
