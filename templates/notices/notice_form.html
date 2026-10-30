@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{% if notice %}Edit notice{% else %}Log a notice{% endif %} · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'matter_detail' matter.pk %}">{{ matter.matter_number }}</a></p><h1>{% if notice %}Edit {{ notice.get_kind_display|lower }}{% else %}Log a USCIS notice{% endif %}</h1><p>A response due date becomes a deadline and an appointment becomes a calendar item in Work. A receipt notice fills in the matter's receipt number, filing date, and priority date if they are blank.</p></div></div>
+  <form method="post" class="panel stacked-form">
+    {% csrf_token %}<input type="hidden" name="matter" value="{{ matter.pk }}">
+    {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="form-grid">
+      {% for field in form %}<div class="field {% if field.name == 'notes' or field.name == 'appointment_location' or field.name == 'document' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+    </div>
+    <div class="form-actions"><button class="button primary" type="submit">{% if notice %}Save notice{% else %}Log notice{% endif %}</button><a class="button" href="{% url 'matter_detail' matter.pk %}#notices">Cancel</a></div>
+  </form>
+  {% if notice and user.is_superuser %}
+    <form method="post" action="{% url 'notice_delete' notice.pk %}" class="panel stacked-form" data-confirm="Delete this notice? Its open deadline and appointment will be removed too.">{% csrf_token %}
+      <div><h2>Delete notice</h2><p class="muted">Completed work items are kept.</p></div>
+      <div class="form-actions"><button class="button danger" type="submit">Delete notice</button></div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

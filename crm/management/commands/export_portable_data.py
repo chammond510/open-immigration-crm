@@ -33,6 +33,7 @@ from crm.models import (
     TimeEntry,
     WorkItem,
 )
+from crm.notices.models import CaseNotice, CaseStatusCheck
 
 MODELS: tuple[type[Model], ...] = (
     FirmProfile,
@@ -55,6 +56,8 @@ MODELS: tuple[type[Model], ...] = (
     Payment,
     PaymentPlan,
     PaymentPlanInstallment,
+    CaseNotice,
+    CaseStatusCheck,
     AuditLog,
 )
 

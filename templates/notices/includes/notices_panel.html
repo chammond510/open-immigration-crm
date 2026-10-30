@@ -1,0 +1,23 @@
+{% load connect_tags %}
+<section class="panel" id="notices">
+  <div class="section-heading"><div><h2>USCIS notices</h2><p>Receipts, appointments, and requests. Due dates and appointments go to Work automatically.</p></div><a href="{% url 'notice_create' %}?matter={{ matter.pk }}">Log a notice</a></div>
+  {% for notice in notices %}
+    <div class="mini-record notice-item"><div><strong><span class="badge notice-{{ notice.kind }}">{{ notice.get_kind_display }}</span> {{ notice.form_type }}{% if notice.receipt_number %} · <span class="mono">{{ notice.receipt_number }}</span>{% endif %}</strong><span>Notice {{ notice.notice_date|date:"M j, Y" }}{% if notice.response_due_date %} · response due {{ notice.response_due_date|date:"M j, Y" }}{% if notice.deadline.is_completed %} (done){% endif %}{% endif %}{% if notice.appointment_at %} · appointment {{ notice.appointment_at|date:"M j, Y g:i a" }}{% if notice.appointment_location %}, {{ notice.appointment_location }}{% endif %}{% endif %}{% if notice.document %} · <a href="{% url 'document_download' notice.document.pk %}">scanned notice</a>{% endif %}</span></div><a class="text-button" href="{% url 'notice_update' notice.pk %}">Edit</a></div>
+  {% empty %}<p class="muted">No notices logged yet.</p>{% endfor %}
+  <div class="status-block">
+    <h3>Case status</h3>
+    {% for check in statuses %}<div class="mini-record"><div><strong><span class="mono">{{ check.receipt_number }}</span> · {{ check.status_title }}</strong><span>Checked {{ check.checked_at|date:"M j, Y g:i a" }} · {% if check.source_connection %}via {{ check.source_connection }}{% else %}{{ check.recorded_by|default:"—" }}{% endif %}{% if check.changed %} · changed{% endif %}</span></div></div>{% empty %}<p class="muted">No status recorded yet.</p>{% endfor %}
+    <details class="inline-add"><summary>Record a status check</summary>
+      <form method="post" action="{% url 'status_record' matter.pk %}" class="compact-form stacked-form">{% csrf_token %}
+        <div class="form-grid">
+          <div class="field"><label for="status-receipt-{{ matter.pk }}">Receipt number</label><input id="status-receipt-{{ matter.pk }}" name="receipt_number" list="receipts-{{ matter.pk }}" value="{{ status_form.receipt_number.value|default:'' }}" required><datalist id="receipts-{{ matter.pk }}">{% for receipt in receipts %}<option value="{{ receipt }}">{% endfor %}</datalist></div>
+          <div class="field"><label for="{{ status_form.checked_at.id_for_label }}">{{ status_form.checked_at.label }}</label>{{ status_form.checked_at }}</div>
+          <div class="field full-field"><label for="{{ status_form.status_title.id_for_label }}">Status shown by USCIS</label>{{ status_form.status_title }}</div>
+          <div class="field full-field"><label for="{{ status_form.status_text.id_for_label }}">{{ status_form.status_text.label }}</label>{{ status_form.status_text }}</div>
+        </div>
+        <div class="form-actions"><button class="button" type="submit">Record status</button></div>
+      </form>
+    </details>
+    <div class="prompt-stack">{% connect_prompt "case_status" "to check receipt numbers automatically" %}</div>
+  </div>
+</section>

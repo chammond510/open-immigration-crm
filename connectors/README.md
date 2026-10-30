@@ -20,7 +20,7 @@ connectors/
    - `perform()` for outbound actions;
    - for providers that push events, a `webhooks` spec plus `verify_webhook()` (constant-time signature check; never accept unsigned requests), `parse_webhook()` (keep only what processing needs), and `handle_webhook()`.
 
-   Raise `ConnectorError` for provider failures. Its message is stored and shown to staff, so never include client data in it. Synced and webhook records reach features through the `crm.connect.signals.records_received` signal; calls, texts, and emails are stored with `crm.comms.services.record_communication`, which keeps one copy per provider ID.
+   Raise `ConnectorError` for provider failures. Its message is stored and shown to staff, so never include client data in it. Synced and webhook records reach features through the `crm.connect.signals.records_received` signal; calls, texts, and emails are stored with `crm.comms.services.record_communication`, which keeps one copy per provider ID, and case status connectors record readings with `crm.notices.services.record_status`.
 3. Describe in `data_flows` exactly what the connector sends and receives, in plain language. Raise its `version` whenever that changes, so firms review it again.
 4. Never call `perform()` from feature code. Use `crm.connect.policy.send()`, which applies the outbound policy (kill switch, preview mode, data-flow acknowledgment, personal-connection rules, admin-only setting, texting opt-outs, and hourly limit) and records every attempt.
 5. Add a test case that mixes in `crm.connect.testing.ConnectorContract`, with `sync_examples`, `outbound_examples`, and `make_webhook()` as needed. The contract tests block network access, so use recorded fixtures with fictional `.test` data.
