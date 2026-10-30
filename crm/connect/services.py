@@ -1,0 +1,109 @@
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.utils import timezone
+
+from crm.models import AuditLog
+
+from .base import ApiKeyAuth, ConnectionScope, ConnectorError
+from .models import Connection
+from .registry import registry
+
+
+def record_audit(actor, action, connection, detail=""):
+    AuditLog.objects.create(
+        user=actor,
+        action=action,
+        target_type="Connection",
+        target_id=str(connection.pk),
+        detail=detail[:500],
+    )
+
+
+def create_connection(
+    connector_key, *, label, created_by, capabilities, credentials=None, owner=None, config=None
+):
+    """Create a connection after checking it against the connector's manifest."""
+    cls = registry.get(connector_key)
+    if cls is None:
+        raise ValidationError(f"No connector named {connector_key!r} is installed.")
+    capabilities = sorted(set(capabilities))
+    if not capabilities or not set(capabilities) <= set(cls.capabilities):
+        raise ValidationError("Choose capabilities this connector provides.")
+    if cls.connection_scope == ConnectionScope.USER and owner is None:
+        raise ValidationError(f"{cls.name} connects one staff member at a time; set an owner.")
+    if cls.connection_scope == ConnectionScope.FIRM and owner is not None:
+        raise ValidationError(f"{cls.name} connects for the whole firm; leave the owner empty.")
+    if isinstance(cls.auth, ApiKeyAuth):
+        missing = [f.label for f in cls.auth.fields if not (credentials or {}).get(f.name)]
+        if missing:
+            raise ValidationError(f"Missing: {', '.join(missing)}.")
+    connection = Connection.objects.create(
+        connector_key=connector_key,
+        label=label,
+        owner=owner,
+        enabled_capabilities=capabilities,
+        credentials=credentials,
+        config=config or {},
+        created_by=created_by,
+    )
+    record_audit(created_by, "connection.created", connection, cls.name)
+    return connection
+
+
+def acknowledge_data_flows(connection, user):
+    """Record that ``user`` reviewed what this connection sends and receives."""
+    cls = connection.connector_class
+    if cls is None:
+        raise ValidationError("This connection's connector is not installed.")
+    connection.data_flows_version = cls.data_flows.version
+    connection.data_flows_acknowledged_by = user
+    connection.data_flows_acknowledged_at = timezone.now()
+    connection.save(
+        update_fields=[
+            "data_flows_version",
+            "data_flows_acknowledged_by",
+            "data_flows_acknowledged_at",
+            "updated_at",
+        ]
+    )
+    record_audit(
+        user, "connection.data_flows_acknowledged", connection, f"v{cls.data_flows.version}"
+    )
+
+
+def check_connection(connection):
+    """Run the connector's credential test and record the result on the connection."""
+    connector = connection.connector()
+    if connector is None:
+        raise ValidationError("This connection's connector is not installed.")
+    try:
+        connector.test_connection()
+    except ConnectorError as exc:
+        connection.status = Connection.Status.NEEDS_ATTENTION
+        connection.last_error_at = timezone.now()
+        connection.last_error = str(exc)[:500]
+        connection.save(update_fields=["status", "last_error_at", "last_error", "updated_at"])
+        return False
+    connection.status = Connection.Status.ACTIVE
+    connection.last_success_at = timezone.now()
+    connection.last_error = ""
+    connection.save(update_fields=["status", "last_success_at", "last_error", "updated_at"])
+    return True
+
+
+@transaction.atomic
+def disconnect(connection, actor):
+    """Revoke where possible, then delete stored credentials. Synced records are kept."""
+    connector = connection.connector()
+    revoke_note = ""
+    if connector is not None:
+        try:
+            connector.revoke()
+        except ConnectorError as exc:
+            revoke_note = f"Provider revocation failed: {str(exc)[:200]}"
+    connection.credentials = None
+    connection.granted_scopes = []
+    connection.status = Connection.Status.DISCONNECTED
+    connection.save(update_fields=["credentials", "granted_scopes", "status", "updated_at"])
+    record_audit(actor, "connection.disconnected", connection, revoke_note)
+    return connection

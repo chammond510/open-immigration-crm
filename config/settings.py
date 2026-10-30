@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "axes",
     "crm.apps.CrmConfig",
+    "crm.connect.apps.ConnectConfig",
 ]
 
 MIDDLEWARE = [
@@ -184,6 +185,15 @@ AXES_CLIENT_IP_CALLABLE = "crm.services.client_ip"
 # same cool-off period as a password lockout.
 TWO_FACTOR_FAILURE_LIMIT = int(os.environ.get("TWO_FACTOR_FAILURE_LIMIT", "5"))
 TWO_FACTOR_LOGIN_TIMEOUT = timedelta(minutes=5)
+
+# Optional connectors. Every module in these packages is imported at startup so
+# its connectors can register; installed packages can add more through the
+# "open_immigration_crm.connectors" entry point. See connectors/README.md.
+CONNECTOR_PACKAGES = ["connectors"]
+CONNECTOR_CATALOG = BASE_DIR / "connectors" / "catalog.toml"
+# Turning this off blocks every outbound connector action without a deploy.
+CONNECTORS_OUTBOUND_ENABLED = env_bool("CONNECTORS_OUTBOUND_ENABLED", True)
+CONNECTORS_OUTBOUND_HOURLY_LIMIT = int(os.environ.get("CONNECTORS_OUTBOUND_HOURLY_LIMIT", "200"))
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = os.environ.get("TIME_ZONE", "America/Chicago")

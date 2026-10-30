@@ -1,0 +1,167 @@
+"""Discovers connectors and merges them with the catalog of wanted providers."""
+
+import importlib
+import pkgutil
+import re
+import tomllib
+from dataclasses import dataclass
+from importlib.metadata import entry_points
+
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
+
+from .base import AUTH_TYPES, Capability, ConnectionScope, Connector, Maturity
+
+ENTRY_POINT_GROUP = "open_immigration_crm.connectors"
+KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
+
+
+@dataclass(frozen=True)
+class CatalogEntry:
+    key: str
+    name: str
+    capabilities: tuple[str, ...]
+    maturity: str
+    description: str = ""
+    connector: type[Connector] | None = None
+
+
+def manifest_problems(cls):
+    """List what is missing or invalid in a connector's declared manifest."""
+    problems = []
+    if not KEY_PATTERN.match(cls.key or ""):
+        problems.append("key must be 2-41 lowercase letters, digits, or underscores")
+    if not cls.name:
+        problems.append("name is required")
+    if not cls.description:
+        problems.append("description is required")
+    if cls.maturity not in (Maturity.READY, Maturity.BETA):
+        problems.append("maturity must be ready or beta; wanted entries belong in the catalog")
+    if cls.maturity == Maturity.READY and not cls.maintainers:
+        problems.append("ready connectors need at least one named maintainer")
+    if not cls.capabilities:
+        problems.append("at least one capability is required")
+    unknown = set(cls.capabilities) - set(Capability.values)
+    if unknown:
+        problems.append(f"unknown capabilities: {', '.join(sorted(unknown))}")
+    if not isinstance(cls.auth, AUTH_TYPES):
+        problems.append("auth must be ApiKeyAuth, OAuthAuth, or PublicDataAuth")
+    if cls.connection_scope not in ConnectionScope.values:
+        problems.append("connection_scope must be firm or user")
+    flows = cls.data_flows
+    if flows is None or flows.version < 1 or not (flows.sends or flows.receives):
+        problems.append("data_flows must have a version of at least 1 and list what moves")
+    stray = set(cls.outbound_actions.values()) - set(cls.capabilities)
+    if stray:
+        problems.append(f"outbound actions use undeclared capabilities: {', '.join(sorted(stray))}")
+    return problems
+
+
+class ConnectorRegistry:
+    def __init__(self):
+        self._connectors = {}
+        self.load_errors = []
+        self._loaded = False
+
+    def register(self, cls):
+        """Class decorator that validates and records a connector."""
+        if not (isinstance(cls, type) and issubclass(cls, Connector)):
+            raise ImproperlyConfigured(f"{cls!r} is not a Connector subclass.")
+        problems = manifest_problems(cls)
+        if problems:
+            raise ImproperlyConfigured(f"Connector {cls.__name__}: {'; '.join(problems)}.")
+        existing = self._connectors.get(cls.key)
+        if existing is not None and existing is not cls:
+            raise ImproperlyConfigured(f"Two connectors use the key {cls.key!r}.")
+        self._connectors[cls.key] = cls
+        return cls
+
+    def get(self, key):
+        return self._connectors.get(key)
+
+    def connectors(self, *, include_hidden=False):
+        return sorted(
+            (cls for cls in self._connectors.values() if include_hidden or not cls.hidden),
+            key=lambda cls: cls.name.lower(),
+        )
+
+    def load(self):
+        """Import first-party connector packages and installed entry points once."""
+        if self._loaded:
+            return
+        self._loaded = True
+        for package_name in getattr(settings, "CONNECTOR_PACKAGES", []):
+            try:
+                package = importlib.import_module(package_name)
+            except Exception as exc:
+                self.load_errors.append(f"{package_name}: {exc.__class__.__name__}: {exc}")
+                continue
+            for module in pkgutil.iter_modules(package.__path__):
+                self._import(f"{package_name}.{module.name}")
+        for entry_point in entry_points(group=ENTRY_POINT_GROUP):
+            try:
+                loaded = entry_point.load()
+                if isinstance(loaded, type) and issubclass(loaded, Connector):
+                    self.register(loaded)
+            except Exception as exc:
+                self.load_errors.append(f"{entry_point.name}: {exc.__class__.__name__}: {exc}")
+
+    def _import(self, module_name):
+        try:
+            importlib.import_module(module_name)
+        except Exception as exc:
+            self.load_errors.append(f"{module_name}: {exc.__class__.__name__}: {exc}")
+
+    def catalog(self, *, include_hidden=False):
+        """Installed connectors plus wanted providers from the catalog file, by name."""
+        entries = {
+            cls.key: CatalogEntry(
+                key=cls.key,
+                name=cls.name,
+                capabilities=tuple(sorted(cls.capabilities)),
+                maturity=cls.maturity,
+                description=cls.description,
+                connector=cls,
+            )
+            for cls in self.connectors(include_hidden=include_hidden)
+        }
+        for wanted in read_catalog_file(getattr(settings, "CONNECTOR_CATALOG", None)):
+            if wanted.key not in entries and wanted.key not in self._connectors:
+                entries[wanted.key] = wanted
+        return sorted(entries.values(), key=lambda entry: entry.name.lower())
+
+
+def read_catalog_file(path):
+    """Read wanted providers from a TOML file of [[connector]] tables."""
+    if not path:
+        return []
+    try:
+        with open(path, "rb") as handle:
+            data = tomllib.load(handle)
+    except FileNotFoundError:
+        return []
+    entries = []
+    for item in data.get("connector", []):
+        key = item.get("key", "")
+        capabilities = tuple(item.get("capabilities", ()))
+        if not KEY_PATTERN.match(key) or not item.get("name"):
+            raise ImproperlyConfigured(f"Catalog entry {item!r} needs a valid key and a name.")
+        unknown = set(capabilities) - set(Capability.values)
+        if not capabilities or unknown:
+            raise ImproperlyConfigured(
+                f"Catalog entry {key!r} has missing or unknown capabilities."
+            )
+        entries.append(
+            CatalogEntry(
+                key=key,
+                name=item["name"],
+                capabilities=tuple(sorted(capabilities)),
+                maturity=Maturity.WANTED,
+                description=item.get("description", ""),
+            )
+        )
+    return entries
+
+
+registry = ConnectorRegistry()
+register = registry.register
