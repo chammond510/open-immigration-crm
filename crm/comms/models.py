@@ -29,6 +29,8 @@ class Communication(models.Model):
     duration = models.DurationField(null=True, blank=True)
     # The other party's phone number, email address, or name, as recorded.
     counterpart = models.CharField(max_length=255, blank=True)
+    # The counterpart as an E.164 number or lowercased email, for matching to a contact.
+    counterpart_key = models.CharField(max_length=255, blank=True, db_index=True, editable=False)
     subject = models.CharField(max_length=255, blank=True)
     summary = models.TextField(blank=True)
     contact = models.ForeignKey(
@@ -74,6 +76,15 @@ class Communication(models.Model):
                 name="comms_one_record_per_provider_id",
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        from crm.matching import counterpart_key
+
+        self.counterpart_key = counterpart_key(self.counterpart)
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and "counterpart" in update_fields:
+            kwargs["update_fields"] = {*update_fields, "counterpart_key"}
+        super().save(*args, **kwargs)
 
     def clean(self):
         if not self.contact_id and not self.matter_id and not self.source_connection_id:

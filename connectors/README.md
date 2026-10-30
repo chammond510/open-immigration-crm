@@ -25,10 +25,30 @@ connectors/
 
    A credential field can set `generate` to a function that proposes a value, such as a signing secret, which the connect form shows once for staff to copy to the provider.
 
+   Return typed records from `crm.connect.records` for your capability:
+   - `CallRecord` (phone)
+   - `TextRecord` (texting)
+   - `EmailRecord` (mailbox)
+   - `CalendarEventRecord` (calendar)
+   - `BookingRecord` (scheduling)
+   - `PaymentRecord` (payments)
+   - `CaseStatusRecord` (case status)
+
+   Core stores them:
+   - calls, texts, and emails become communications, matched to a contact by E.164 phone number or email, or left for staff in Needs matching;
+   - calendar events with a known contact, and bookings, become appointments linked through `ExternalRef`;
+   - payments are recorded on the invoice they reference;
+   - case status readings are recorded on the matter with that receipt number.
+
+   Call providers through `crm.connect.http.ProviderClient`. It provides timeouts, retries that honour `Retry-After`, size limits, `paginate()`, and safe error messages. OAuth connectors call `self.access_token()`, which refreshes tokens under a lock and marks the connection for sign-in again when the provider refuses.
+
    Raise `ConnectorError` for provider failures. Its message is stored and shown to staff, so never include client data in it. Synced and webhook records reach features through the `crm.connect.signals.records_received` signal; calls, texts, and emails are stored with `crm.comms.services.record_communication`, which keeps one copy per provider ID, and case status connectors record readings with `crm.notices.services.record_status`.
 3. Describe in `data_flows` exactly what the connector sends and receives, in plain language. Raise its `version` whenever that changes, so firms review it again.
 4. Never call `perform()` from feature code. Use `crm.connect.policy.send()`, which applies the outbound policy (kill switch, preview mode, data-flow acknowledgment, personal-connection rules, admin-only setting, texting opt-outs, and hourly limit) and records every attempt.
-5. Add a test case that mixes in `crm.connect.testing.ConnectorContract`, with `sync_examples`, `outbound_examples`, and `make_webhook()` as needed. The contract tests block network access, so use recorded fixtures with fictional `.test` data.
+5. Add a test case that mixes in `crm.connect.testing.ConnectorContract`, with `sync_examples`, `outbound_examples`, and `make_webhook()` as needed.
+   - The contract tests check that each record is the typed record for its capability and that `record.problems()` is empty.
+   - They block network access. Serve recorded, fictional `.test` fixtures through `crm.connect.http.use_transport(httpx.MockTransport(handler))`.
+   - Use phone numbers in the 555-0100 to 555-0199 range with a real area code, such as +1 202 555 0143.
 6. Remove the provider's entry from `catalog.toml` once its connector exists.
 
 Ready connectors need a named maintainer. `connectors/example_oauth/` shows an OAuth connector; its sign-in flow runs through the firm's own app registration, entered by a superuser on the connector's page.

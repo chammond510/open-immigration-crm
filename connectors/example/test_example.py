@@ -40,6 +40,6 @@ class ExampleConnectorContractTests(ConnectorContract, TestCase):
         connector = ExampleConnector(self.make_connection())
         body = json.dumps({"id": "evt-2", "body": "Hi", "sender_phone": "555-0100"}).encode()
         envelope = connector.parse_webhook(body, {})
-        self.assertEqual(set(envelope.payload), {"id", "body", "sent_at"})
+        self.assertEqual(set(envelope.payload), {"id", "from", "body", "sent_at"})
         record = connector.handle_webhook(envelope.capability, envelope.payload)[0]
         self.assertEqual(record.external_id, "evt-2")

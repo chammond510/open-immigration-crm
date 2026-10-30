@@ -1,17 +1,16 @@
 import base64
 import hashlib
-import io
-import urllib.error
 from dataclasses import replace
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 from django.template import Context, Template
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from crm.connect import oauth
+from crm.connect import http, oauth
 from crm.connect.base import ConnectorError
 from crm.connect.models import Connection, ConnectorApp, WorkerHeartbeat
 from crm.connect.registry import registry
@@ -307,33 +306,37 @@ class OAuthConnectTests(TestCase):
 
 
 class TokenRequestTests(TestCase):
+    def post(self, handler):
+        with http.use_transport(httpx.MockTransport(handler)), mock.patch.object(http, "sleep"):
+            return oauth.post_form("https://auth.example.test/token", {"grant_type": "x"})
+
     def test_post_form_rules(self):
         with self.assertRaisesMessage(ConnectorError, "HTTPS"):
             oauth.post_form("http://auth.example.test/token", {})
+        sent = []
 
-        class FakeResponse(io.BytesIO):
-            def __enter__(self):
-                return self
+        def ok(request):
+            sent.append(request)
+            return httpx.Response(200, json={"a": 1})
 
-            def __exit__(self, *args):
-                return False
+        self.assertEqual(self.post(ok), {"a": 1})
+        self.assertEqual(sent[0].content, b"grant_type=x")
+        self.assertEqual(sent[0].headers["Accept"], "application/json")
+        with self.assertRaisesMessage(ConnectorError, "not understood"):
+            self.post(lambda request: httpx.Response(200, content=b"not json"))
+        with self.assertRaisesMessage(ConnectorError, "not understood"):
+            self.post(lambda request: httpx.Response(200, json=["a list"]))
+        big = b"x" * (oauth.TOKEN_RESPONSE_MAX_BYTES + 2)
+        with self.assertRaisesMessage(ConnectorError, "too large"):
+            self.post(lambda request: httpx.Response(200, content=big))
+        with self.assertRaises(oauth.TokenRefused):
+            self.post(lambda request: httpx.Response(401, json={"error": "invalid_grant"}))
 
-        with mock.patch("urllib.request.urlopen", return_value=FakeResponse(b'{"a": 1}')):
-            self.assertEqual(oauth.post_form("https://auth.example.test/token", {}), {"a": 1})
-        with mock.patch("urllib.request.urlopen", return_value=FakeResponse(b"not json")):
-            with self.assertRaisesMessage(ConnectorError, "not understood"):
-                oauth.post_form("https://auth.example.test/token", {})
-        big = FakeResponse(b"x" * (oauth.TOKEN_RESPONSE_MAX_BYTES + 2))
-        with mock.patch("urllib.request.urlopen", return_value=big):
-            with self.assertRaisesMessage(ConnectorError, "too large"):
-                oauth.post_form("https://auth.example.test/token", {})
-        refused = urllib.error.HTTPError("https://auth.example.test", 401, "no", {}, None)
-        with mock.patch("urllib.request.urlopen", side_effect=refused):
-            with self.assertRaisesMessage(ConnectorError, "HTTP 401"):
-                oauth.post_form("https://auth.example.test/token", {})
-        with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down")):
-            with self.assertRaisesMessage(ConnectorError, "could not be reached"):
-                oauth.post_form("https://auth.example.test/token", {})
+        def down(request):
+            raise httpx.ConnectError("down")
+
+        with self.assertRaisesMessage(ConnectorError, "could not be reached"):
+            self.post(down)
 
 
 @override_settings(CONNECTORS_SHOW_HIDDEN=True)

@@ -6,3 +6,8 @@ class BillingConfig(AppConfig):
     name = "crm.billing"
     label = "billing"
     verbose_name = "Billing"
+
+    def ready(self):
+        from . import records
+
+        records.connect()

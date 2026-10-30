@@ -6,4 +6,9 @@ class CrmConfig(AppConfig):
     name = "crm"
 
     def ready(self):
-        from . import checks  # noqa: F401
+        from . import (
+            appointments,
+            checks,  # noqa: F401
+        )
+
+        appointments.connect()

@@ -74,6 +74,8 @@ class Contact(models.Model):
     last_name = models.CharField(max_length=100)
     email = models.EmailField(blank=True, db_index=True)
     phone = models.CharField(max_length=40, blank=True, db_index=True)
+    # The phone number in E.164 form, kept in step on save, for matching calls and texts.
+    phone_e164 = models.CharField(max_length=20, blank=True, db_index=True, editable=False)
     date_of_birth = models.DateField(null=True, blank=True)
     address_line1 = models.CharField(max_length=255, blank=True)
     address_line2 = models.CharField(max_length=255, blank=True)
@@ -120,6 +122,15 @@ class Contact(models.Model):
             models.Index(fields=["stage", "updated_at"]),
             models.Index(fields=["last_name", "first_name"]),
         ]
+
+    def save(self, *args, **kwargs):
+        from .matching import normalize_phone
+
+        self.phone_e164 = normalize_phone(self.phone)
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and "phone" in update_fields:
+            kwargs["update_fields"] = {*update_fields, "phone_e164"}
+        super().save(*args, **kwargs)
 
     @property
     def full_name(self):

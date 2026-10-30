@@ -228,3 +228,31 @@ class ConnectorApp(models.Model):
 
     def __str__(self):
         return f"OAuth app for {self.connector_key}"
+
+
+class ExternalRef(models.Model):
+    """Links a CRM record to the provider item it came from, for records that have no
+    provider-ID field of their own (such as appointments). Re-syncs then update the
+    record instead of creating a copy."""
+
+    connection = models.ForeignKey(
+        Connection, on_delete=models.CASCADE, related_name="external_refs"
+    )
+    content_type = models.ForeignKey("contenttypes.ContentType", on_delete=models.CASCADE)
+    object_id = models.CharField(max_length=64)
+    external_id = models.CharField(max_length=255)
+    etag = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["connection", "content_type", "external_id"],
+                name="connect_one_ref_per_provider_item",
+            )
+        ]
+        indexes = [models.Index(fields=["content_type", "object_id"])]
+
+    def __str__(self):
+        return f"{self.content_type.model} {self.object_id} = {self.external_id}"

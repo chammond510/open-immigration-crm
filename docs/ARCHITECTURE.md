@@ -42,6 +42,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
+- `ExternalRef` (in `crm/connect/`) links a CRM record to the provider item it came from, for records with no provider-ID field of their own, such as appointments.
 - `Connection`, `OutboundRequest`, `SyncRun`, `WebhookEvent`, `WorkerHeartbeat`, and `ConnectorApp` (in `crm/connect/`) hold connected provider accounts, the outbound log, sync history, received provider events, and worker check-ins; see Connectors below.
 - `ApiSettings`, `ApiToken`, and `ApiRequestLog` (in `crm/api/`) hold the firm's API switches, scoped bearer tokens that act as one staff member (only a SHA-256 hash is stored), and a log row for every API request. See [API](API.md).
 - `EventDelivery` (in `crm/events/`) is one CRM event queued for one automation connection. Model signals emit events after a change commits, whichever path made it. The worker sends each delivery through the outbound policy and retries failures with backoff. The payload is encrypted and deleted once the delivery settles. See [Outbound webhooks](WEBHOOKS.md).
@@ -89,7 +90,19 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
   - a scheduler thread that records a `WorkerHeartbeat` and queues a `SyncRun` for each due capability of each active connection;
   - the `django-tasks-db` worker, which runs syncs, webhook processing, and event deliveries from a queue table in the application database.
 
-  Each sync resumes from the previous successful run's cursor. Synced and webhook records are delivered through the `records_received` signal; features subscribe to it, and the framework keeps only the run or event record.
+  Each sync resumes from the previous successful run's cursor. Synced and webhook records are typed records (`crm/connect/records.py`), delivered through the `records_received` signal.
+  - `crm/comms/records.py` stores calls, texts, and emails, handles STOP and START replies, and links unmatched records when a contact gains that number or address.
+  - `crm/appointments.py` stores calendar events (only those with a known contact) and bookings.
+  - `crm/billing/records.py` records payments. It never guesses the operating or trust account for an invoice with advance lines.
+  - `crm/notices/records.py` records case status readings.
+
+  A record that fails to store is logged by kind and connection only, and the rest of the batch continues.
+- **Matching** (`crm/matching.py`). Phone numbers are kept in E.164 form (`Contact.phone_e164`, `Communication.counterpart_key`), parsed with `PHONE_DEFAULT_REGION`. Emails are compared case-insensitively. A match must be exact and unique; there is no partial-number matching. Unmatched communications wait in the Needs matching list.
+- **Provider calls** (`crm/connect/http.py`).
+  - `ProviderClient` wraps `httpx` with timeouts, retries on 429 and 5xx that honour `Retry-After`, a response size limit, pagination, and staff-safe errors.
+  - It requires HTTPS, except local addresses for connectors that opt in.
+  - Tests swap in `httpx.MockTransport`.
+  - OAuth token exchange and refresh use it too. `access_token()` refreshes under a row lock, saves rotated refresh tokens once, and marks the connection "Needs to reconnect" when the provider refuses.
 - **Webhooks.** `/hooks/<token>/` accepts provider events.
   - The token is unique to each connection and stored only as a SHA-256 hash. The signing secret is stored encrypted.
   - An event is stored only after its signature verifies, and it is stored minimized and encrypted. It is answered quickly, deduplicated by provider event ID, and processed by the worker, which then deletes the payload.
