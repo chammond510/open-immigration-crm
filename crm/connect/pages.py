@@ -92,12 +92,19 @@ def setting_values(connection, form=None):
 def catalog_entry(entry, connected_keys):
     return {
         "entry": entry,
+        "works_through": works_through(entry),
         "monogram": monogram(entry.name),
         "connected": entry.key in connected_keys,
         "auth": auth_label(entry.connector) if entry.connector else "",
         "test_only": bool(entry.connector and entry.connector.hidden),
         "maturity_label": Maturity(entry.maturity).label,
     }
+
+
+def works_through(entry):
+    """The installed connector a wanted provider already works through, or None."""
+    cls = registry.get(entry.works_through) if entry.works_through else None
+    return cls if cls is not None and not cls.hidden else None
 
 
 def connector_or_404(key, *, include_wanted=False):
@@ -174,6 +181,7 @@ def connector_detail(request, key):
         "connector": cls,
         "monogram": monogram(entry.name),
         "maturity_label": Maturity(entry.maturity).label,
+        "works_through": works_through(entry),
     }
     if cls is None:
         return render(request, "connect/connector_detail.html", context)

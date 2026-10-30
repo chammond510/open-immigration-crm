@@ -69,6 +69,7 @@ capabilities = ["mailbox"]
 key = "zoho_mail"
 name = "Zoho Mail"
 capabilities = ["mailbox"]
+works_through = "imap_smtp"
 
 [[connector]]
 key = "caldav"
@@ -77,29 +78,28 @@ capabilities = ["calendar"]
 
 # System email
 [[connector]]
-key = "smtp"
-name = "SMTP server"
-capabilities = ["system_email"]
-
-[[connector]]
 key = "postmark"
 name = "Postmark"
 capabilities = ["system_email"]
+works_through = "smtp"
 
 [[connector]]
 key = "amazon_ses"
 name = "Amazon SES"
 capabilities = ["system_email"]
+works_through = "smtp"
 
 [[connector]]
 key = "sendgrid"
 name = "SendGrid"
 capabilities = ["system_email"]
+works_through = "smtp"
 
 [[connector]]
 key = "mailgun"
 name = "Mailgun"
 capabilities = ["system_email"]
+works_through = "smtp"
 
 # Scheduling and video
 [[connector]]

@@ -24,6 +24,11 @@ urlpatterns = [
     path("invoices/<uuid:pk>/plan/", views.plan_create, name="plan_create"),
     path("invoices/<uuid:pk>/plan/cancel/", views.plan_cancel, name="plan_cancel"),
     path(
+        "invoices/<uuid:pk>/plan/email-reminders/",
+        views.plan_email_reminders,
+        name="plan_email_reminders",
+    ),
+    path(
         "invoices/<uuid:pk>/payments/<uuid:payment_pk>/void/",
         views.payment_void,
         name="payment_void",

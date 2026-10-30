@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from crm.comms import system_email
 from crm.connect.models import OutboundRequest
 from crm.models import Contact, FirmProfile, Matter
 
@@ -35,6 +36,7 @@ from .services import (
     issue_invoice,
     record,
     record_payment,
+    set_email_reminders,
     unbilled_time,
     void_invoice,
     void_payment,
@@ -117,6 +119,7 @@ def invoice_create(request):
 def invoice_detail(request, pk):
     invoice = get_object_or_404(Invoice.objects.select_related("contact", "matter"), pk=pk)
     plan = invoice.plan
+    can_email = system_email.sender() is not None
     return render(
         request,
         "billing/invoice_detail.html",
@@ -137,8 +140,10 @@ def invoice_detail(request, pk):
             "plan": plan,
             "schedule": plan.schedule() if plan else [],
             "plan_form": PaymentPlanForm(
-                initial={"first_due_date": timezone.localdate() + timedelta(days=30)}
+                initial={"first_due_date": timezone.localdate() + timedelta(days=30)},
+                can_email=can_email,
             ),
+            "can_email": can_email,
             "currency": BillingSettings.load().currency,
         },
     )
@@ -386,7 +391,7 @@ def billing_settings(request):
 @require_POST
 def plan_create(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk)
-    form = PaymentPlanForm(request.POST)
+    form = PaymentPlanForm(request.POST, can_email=system_email.sender() is not None)
     if not form.is_valid():
         messages.error(request, "Review the payment plan fields and try again.")
         return redirect("invoice_detail", pk=pk)
@@ -396,9 +401,32 @@ def plan_create(request, pk):
         report_errors(request, exc)
     else:
         count = plan.installments.count()
+        reminders = "staff and email reminders" if plan.email_reminders else "staff reminders"
         messages.success(
-            request, f"Payment plan created with {count} installments and staff reminders."
+            request, f"Payment plan created with {count} installments and {reminders}."
         )
+    return redirect("invoice_detail", pk=pk)
+
+
+@billing_required
+@require_POST
+def plan_email_reminders(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    plan = invoice.plan
+    on = request.POST.get("on") == "1"
+    if plan is None:
+        messages.error(request, "This invoice has no payment plan.")
+    elif on and system_email.sender() is None:
+        messages.error(request, "Connect an email delivery service first.")
+    else:
+        try:
+            set_email_reminders(plan, request.user, on)
+        except ValidationError as exc:
+            report_errors(request, exc)
+        else:
+            messages.success(
+                request, "Email reminders turned on." if on else "Email reminders turned off."
+            )
     return redirect("invoice_detail", pk=pk)
 
 

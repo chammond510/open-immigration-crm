@@ -206,6 +206,13 @@ description = "A fictional mail service."
         self.addCleanup(bad_capability.unlink)
         with self.assertRaises(ImproperlyConfigured):
             read_catalog_file(bad_capability)
+        bad_through = write_catalog(
+            '[[connector]]\nkey = "x_y"\nname = "X"\ncapabilities = ["phone"]\n'
+            'works_through = "Not A Key"\n'
+        )
+        self.addCleanup(bad_through.unlink)
+        with self.assertRaises(ImproperlyConfigured):
+            read_catalog_file(bad_through)
 
     def test_shipped_catalog_is_valid_and_hides_the_example(self):
         entries = read_catalog_file(settings.CONNECTOR_CATALOG)

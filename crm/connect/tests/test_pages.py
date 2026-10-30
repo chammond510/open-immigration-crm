@@ -52,6 +52,18 @@ class CatalogTests(TestCase):
         self.assertContains(response, "Test only")
         self.assertContains(response, "not affiliated with or endorsed by")
 
+    def test_a_wanted_service_that_works_through_another_connector(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("connections"), {"capability": "system_email"})
+        self.assertContains(response, "Postmark")
+        self.assertContains(response, "Works through SMTP server")
+        wanted = next(entry for entry in registry.catalog() if entry.name == "Postmark")
+        page = self.client.get(reverse("connector_detail", args=[wanted.key]))
+        self.assertContains(page, "works with the SMTP server connector")
+        self.assertContains(page, reverse("connector_detail", args=["smtp"]))
+        page = self.client.get(reverse("connector_detail", args=["ringcentral"]))
+        self.assertContains(page, "Not built yet")
+
     def test_filters(self):
         self.client.force_login(self.staff)
         response = self.client.get(reverse("connections"), {"capability": "payments"})
