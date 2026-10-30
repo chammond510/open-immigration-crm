@@ -60,6 +60,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **BIA Edge** (Beta) searches immigration case law, unpublished decisions, statutes, and policy manuals from a matter, through the firm's own BIA Edge API key. Staff save the authorities that matter to the matter, with citations, source links, and a note. Without a research service, staff can add authorities by hand.
 - **CourtListener** (Beta) searches case law from the Free Law Project, including the federal courts of appeals, the Supreme Court, and the Board of Immigration Appeals. Each staff member connects their own CourtListener account, as its terms require.
 - **Google Workspace** and **Microsoft 365** (Beta) connect each staff member's Gmail and Google Calendar, or Outlook mail and calendar. Their email with clients is filed on the right contact, they can send email from contact pages, and their appointments are kept in step with their calendar.
+- **IMAP and SMTP email** (Beta) does the same for a mailbox at almost any other provider, with an app password (see [the setup guide](connectors/imap_smtp/README.md)).
 
 The catalog lists the other providers people have asked for as Wanted.
 
