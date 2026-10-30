@@ -17,6 +17,7 @@ from .base import (
     Capability,
     ConnectionScope,
     Connector,
+    KeyExchangeAuth,
     Maturity,
     OAuthAuth,
 )
@@ -54,7 +55,12 @@ def manifest_problems(cls):
     if unknown:
         problems.append(f"unknown capabilities: {', '.join(sorted(unknown))}")
     if not isinstance(cls.auth, AUTH_TYPES):
-        problems.append("auth must be ApiKeyAuth, OAuthAuth, or PublicDataAuth")
+        problems.append("auth must be ApiKeyAuth, OAuthAuth, KeyExchangeAuth, or PublicDataAuth")
+    if isinstance(cls.auth, KeyExchangeAuth) and (
+        cls.authorize_query is Connector.authorize_query
+        or cls.exchange_code is Connector.exchange_code
+    ):
+        problems.append("key-exchange sign-in needs authorize_query() and exchange_code()")
     if cls.connection_scope not in ConnectionScope.values:
         problems.append("connection_scope must be firm or user")
     names = [setting.name for setting in cls.settings_fields]

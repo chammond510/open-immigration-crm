@@ -12,7 +12,15 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from crm.models import AuditLog
 
 from . import oauth
-from .base import ApiKeyAuth, Capability, ConnectionScope, ConnectorError, Maturity, OAuthAuth
+from .base import (
+    SIGN_IN_TYPES,
+    ApiKeyAuth,
+    Capability,
+    ConnectionScope,
+    ConnectorError,
+    Maturity,
+    OAuthAuth,
+)
 from .forms import (
     ConnectForm,
     ConnectionConfigForm,
@@ -52,7 +60,7 @@ def monogram(name):
 
 
 def auth_label(cls):
-    if isinstance(cls.auth, OAuthAuth):
+    if isinstance(cls.auth, SIGN_IN_TYPES):
         return "Sign in"
     if isinstance(cls.auth, ApiKeyAuth):
         return cls.auth.label
@@ -170,11 +178,12 @@ def connector_detail(request, key):
     if cls is None:
         return render(request, "connect/connector_detail.html", context)
 
-    is_oauth = isinstance(cls.auth, OAuthAuth)
-    app = ConnectorApp.objects.filter(connector_key=key).first() if is_oauth else None
+    is_oauth = isinstance(cls.auth, SIGN_IN_TYPES)
+    needs_app = isinstance(cls.auth, OAuthAuth)
+    app = ConnectorApp.objects.filter(connector_key=key).first() if needs_app else None
     may_connect = request.user.is_superuser or cls.connection_scope == ConnectionScope.USER
     form = None
-    if may_connect and (app or not is_oauth):
+    if may_connect and (app or not needs_app):
         form = ConnectForm(request.POST or None, connector=cls, user=request.user)
     if request.method == "POST":
         if form is None:
@@ -210,6 +219,7 @@ def connector_detail(request, key):
             "form": form,
             "may_connect": may_connect,
             "is_oauth": is_oauth,
+            "needs_app": needs_app,
             "app": app,
             "app_form": ConnectorAppForm(
                 initial={"client_id": app.client_id, **app.config} if app else None,
@@ -259,7 +269,7 @@ def connector_app(request, key):
 def connection_detail(request, pk):
     connection = get_object_or_404(visible_connections(request.user), pk=pk)
     cls = connection.connector_class
-    is_oauth = cls is not None and isinstance(cls.auth, OAuthAuth)
+    is_oauth = cls is not None and isinstance(cls.auth, SIGN_IN_TYPES)
     webhooks = cls.webhooks if cls else None
     context = {
         "connection": connection,

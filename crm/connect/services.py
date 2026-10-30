@@ -58,7 +58,9 @@ def create_connection(
     if cls.connection_scope == ConnectionScope.FIRM and owner is not None:
         raise ValidationError(f"{cls.name} connects for the whole firm; leave the owner empty.")
     if isinstance(cls.auth, ApiKeyAuth):
-        missing = [f.label for f in cls.auth.fields if not (credentials or {}).get(f.name)]
+        missing = [
+            f.label for f in cls.auth.fields if f.required and not (credentials or {}).get(f.name)
+        ]
         if missing:
             raise ValidationError(f"Missing: {', '.join(missing)}.")
     connection = Connection.objects.create(
@@ -182,6 +184,21 @@ def visible_connections(user):
     if user.is_superuser:
         return connections
     return connections.filter(Q(owner__isnull=True) | Q(owner=user))
+
+
+def usable_connections(user, action, capability):
+    """Active connections with this outbound action that ``user`` may use: firm and own."""
+    found = []
+    for connection in visible_connections(user).filter(status=Connection.Status.ACTIVE):
+        cls = connection.connector_class
+        if (
+            cls is not None
+            and capability in connection.enabled_capabilities
+            and cls.outbound_actions.get(action) == capability
+            and connection.owner_id in (None, user.pk)
+        ):
+            found.append(connection)
+    return found
 
 
 def needs_worker(connection):

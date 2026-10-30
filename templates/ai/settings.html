@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load connect_tags %}
+{% block title %}AI features · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Account</p><h1>AI features</h1><p>AI features use an AI model the firm connects: its own account with a model provider, or a model running on the firm's own computer. Everything here is off until a superuser turns it on, and every request is logged below with the connection that paid for it.</p></div></div>
+{% if not ai_settings.enabled %}<div class="privacy-note">AI features are off, so nothing is sent to an AI model. {% if user.is_superuser %}Turn them on under AI settings.{% else %}A superuser can turn them on.{% endif %}</div>{% endif %}
+<div class="page-stack">
+  <div class="two-column">
+    {% if user.is_superuser %}
+      <form method="post" class="panel stacked-form">
+        {% csrf_token %}
+        <div><h2>AI settings</h2><p class="muted">Each feature is off until it is ticked here, and none runs while AI features are off.</p></div>
+        <label class="check-label wrap" for="{{ form.enabled.id_for_label }}">{{ form.enabled }}<span>{{ form.enabled.label }}<small class="muted">{{ form.enabled.help_text }}</small></span></label>
+        <div class="field"><label for="{{ form.background_connection.id_for_label }}">{{ form.background_connection.label }}</label>{{ form.background_connection }}<small>{{ form.background_connection.help_text }}</small></div>
+        <span class="field-label">Features</span>
+        {% for field in form %}{% if field.name|slice:":8" == "feature_" %}<label class="check-label wrap" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}<small class="muted">{{ field.help_text }}</small></span></label>{% endif %}{% empty %}{% endfor %}
+        {% if not features %}<p class="muted">No AI features are installed yet.</p>{% endif %}
+        <div class="form-actions"><button class="button" type="submit">Save settings</button></div>
+      </form>
+    {% else %}
+      <section class="panel facts"><h2>Features</h2><dl>
+        {% for feature, on in features %}<dt>{{ feature.label }}</dt><dd>{% if on %}On{% else %}Off{% endif %}</dd>{% empty %}<dt>Installed</dt><dd>None yet.</dd>{% endfor %}
+      </dl></section>
+    {% endif %}
+    <section class="panel stacked-form">
+      <div><h2>AI connections</h2><p class="muted">Connected on the Connections page. A staff member's own connection runs only their own requests, never background work.</p></div>
+      {% for connection in connections %}<div class="mini-record"><div><strong><a href="{% url 'connection_detail' connection.pk %}">{{ connection.label }}</a></strong><span>{% if connection.owner_id %}Yours{% else %}Whole firm{% endif %}{% if connection.preview_mode %} · preview mode: nothing is sent{% endif %}</span></div></div>{% empty %}<p class="muted">No AI model is connected.</p>{% endfor %}
+      <div class="prompt-stack">{% connect_prompt "ai_models" "for AI features" %}</div>
+      {% if user.is_superuser and connections %}
+        <form method="post" action="{% url 'ai_connection_test' %}" class="compact-form">
+          {% csrf_token %}
+          <div class="field"><label for="{{ test_form.connection.id_for_label }}">Check a connection</label>{{ test_form.connection }}<small>Sends a fixed message with no client information and shows the answer.</small></div>
+          <div class="form-actions"><button class="button" type="submit">Send a test</button></div>
+        </form>
+      {% endif %}
+    </section>
+  </div>
+  <section class="panel flush-panel"><div class="section-heading table-note"><div><h2>Recent AI requests</h2><p>{% if user.is_superuser %}The last 50 requests by anyone.{% else %}Your last 50 requests.{% endif %} What was asked and answered is not stored.</p></div></div>
+    {% if recent_requests %}
+      <div class="table-wrap"><table><thead><tr><th>When</th><th>Feature</th><th>Who</th><th>Connection</th><th>Model</th><th class="numeric">Tokens in / out</th><th>Result</th></tr></thead><tbody>
+        {% for item in recent_requests %}<tr><td>{{ item.created_at|date:"M j, g:i a" }}</td><td>{{ item.feature_label }}</td><td>{% if item.is_background %}Background{% else %}{{ item.actor|default:"—" }}{% endif %}</td><td>{{ item.connection|default:item.connector_key }}</td><td>{{ item.model|default:"—" }}</td><td class="numeric">{{ item.input_tokens|default:"—" }} / {{ item.output_tokens|default:"—" }}</td><td>{{ item.status|capfirst }}{% if item.error %}: {{ item.error }}{% endif %}</td></tr>{% endfor %}
+      </tbody></table></div>
+    {% else %}<p class="muted table-note">No AI requests yet.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

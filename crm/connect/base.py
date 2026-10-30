@@ -81,6 +81,8 @@ class CredentialField:
     secret: bool = True
     help_text: str = ""
     generate: Callable[[], str] | None = None
+    # False for a value some setups do without, such as a key a local server ignores.
+    required: bool = True
 
 
 @dataclass(frozen=True)
@@ -136,11 +138,27 @@ class OAuthAuth:
 
 
 @dataclass(frozen=True)
+class KeyExchangeAuth:
+    """Staff sign in at the provider, which hands back an API key; there is no app to register.
+
+    A PKCE sign-in, such as OpenRouter's. The connector builds the sign-in address
+    with ``authorize_query()`` and turns the returned code into credentials with
+    ``exchange_code()``.
+    """
+
+    authorize_url: str
+    docs_url: str = ""
+
+
+SIGN_IN_TYPES = (OAuthAuth, KeyExchangeAuth)
+
+
+@dataclass(frozen=True)
 class PublicDataAuth:
     """Public data that needs no credentials, only a decision to turn it on."""
 
 
-AUTH_TYPES = (ApiKeyAuth, OAuthAuth, PublicDataAuth)
+AUTH_TYPES = (ApiKeyAuth, OAuthAuth, KeyExchangeAuth, PublicDataAuth)
 
 
 @dataclass(frozen=True)
@@ -296,6 +314,14 @@ class Connector:
         ``url`` is the address the request came to, for providers that sign it.
         Use a constant-time comparison. Never accept an unsigned request.
         """
+        raise NotImplementedError
+
+    def authorize_query(self, callback_url, code_challenge, state):
+        """For KeyExchangeAuth: the sign-in address's query parameters."""
+        raise NotImplementedError
+
+    def exchange_code(self, code, code_verifier, callback_url):
+        """For KeyExchangeAuth: the credentials to store for a returned sign-in code."""
         raise NotImplementedError
 
     def webhook_challenge(self, url, body, headers):
