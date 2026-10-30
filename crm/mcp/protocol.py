@@ -186,7 +186,7 @@ def call_tool(request, token, tool, arguments):
             )
         data = tool.handler(Context(request, token.user, client_name), arguments)
     except ToolError as exc:
-        error = str(exc)
+        error = exc.message
     except Exception:
         logger.exception("MCP tool %s failed", tool.name)
         error = "The tool failed. Try again, or check the record in the CRM."

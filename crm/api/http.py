@@ -248,11 +248,13 @@ def with_custom_fields(data):
     return {**data, **{CUSTOM_PREFIX + str(key): value for key, value in custom.items()}}
 
 
-def bind(form_class, data, *, writable, instance=None, **form_kwargs):
+def check_form(form_class, data, *, writable, instance=None, **form_kwargs):
     """Validate JSON fields with the same form the web pages use.
 
     Fields the request leaves out keep the record's current values, or for a new
-    record the form's defaults, so a PATCH changes only what it names.
+    record the form's defaults, so a PATCH changes only what it names. Returns
+    ``(form, None)``, or ``(None, problem)`` where ``problem`` has a ``code``, a
+    ``message``, and sometimes ``fields``.
     """
     if issubclass(form_class, CustomFieldsMixin):
         writable = [
@@ -261,19 +263,19 @@ def bind(form_class, data, *, writable, instance=None, **form_kwargs):
         ]
     unknown = sorted(public_name(name) for name in set(data) - set(writable))
     if unknown:
-        raise ApiError(
-            400,
-            "unknown_fields",
-            "These fields are unknown or read-only: " + ", ".join(unknown) + ".",
-            fields=unknown,
-        )
+        return None, {
+            "code": "unknown_fields",
+            "message": "These fields are unknown or read-only: " + ", ".join(unknown) + ".",
+            "fields": unknown,
+        }
     nested = sorted(
         public_name(name) for name, value in data.items() if isinstance(value, (dict, list))
     )
     if nested:
-        raise ApiError(
-            400, "invalid", "These fields take a single value: " + ", ".join(nested) + "."
-        )
+        return None, {
+            "code": "invalid",
+            "message": "These fields take a single value: " + ", ".join(nested) + ".",
+        }
     if issubclass(form_class, forms.BaseModelForm):
         form_kwargs["instance"] = instance
     current = form_class(**form_kwargs)
@@ -281,7 +283,22 @@ def bind(form_class, data, *, writable, instance=None, **form_kwargs):
     values.update({name: "" if value is None else value for name, value in data.items()})
     form = form_class(data=values, **form_kwargs)
     if not form.is_valid():
-        raise ApiError(400, "invalid", "Some fields are not valid.", fields=form_errors(form))
+        return None, {
+            "code": "invalid",
+            "message": "Some fields are not valid.",
+            "fields": form_errors(form),
+        }
+    return form, None
+
+
+def bind(form_class, data, *, writable, instance=None, **form_kwargs):
+    """``check_form``, raising an ApiError for the response when the fields are not valid."""
+    form, problem = check_form(
+        form_class, data, writable=writable, instance=instance, **form_kwargs
+    )
+    if problem:
+        extra = {"fields": problem["fields"]} if "fields" in problem else {}
+        raise ApiError(400, problem["code"], problem["message"], **extra)
     return form
 
 
