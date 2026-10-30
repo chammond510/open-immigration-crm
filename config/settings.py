@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     "crm.billing.apps.BillingConfig",
     "crm.notices.apps.NoticesConfig",
     "crm.api.apps.ApiConfig",
+    "crm.events.apps.EventsConfig",
 ]
 
 MIDDLEWARE = [

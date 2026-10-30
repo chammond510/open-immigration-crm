@@ -32,6 +32,7 @@ urlpatterns = [
     path("admin/login/", RedirectView.as_view(pattern_name="login", query_string=True)),
     path("admin/", admin.site.urls),
     path("connections/", include("crm.connect.urls")),
+    path("events/", include("crm.events.urls")),
     path("communications/", include("crm.comms.urls")),
     path("billing/", include("crm.billing.urls")),
     path("notices/", include("crm.notices.urls")),

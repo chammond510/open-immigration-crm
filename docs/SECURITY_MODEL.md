@@ -69,6 +69,15 @@ Connectors change the risk picture in these ways:
 - **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models will pass an outbound policy and start in preview mode.
 - **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings. Each connection has its own unguessable URL token, stored only as a hash. A verified event's payload is stored minimized and encrypted, and deleted once the worker has processed it.
 
+## Outbound webhooks
+
+Automation events leave the installation, so the defaults are cautious:
+- **Nothing is sent until a superuser chooses events.** New connections start in preview mode, and every delivery passes the outbound policy.
+- **IDs and links by default.** Events carry IDs and links. Full records, which can include client details and intake answers, are sent only if a superuser chooses that.
+- **Signed.** Each delivery is signed with a per-connection secret, which is stored encrypted.
+- **Address rules.** Addresses must use HTTPS except for hosts on the firm's own network, and redirects are not followed.
+- **Payloads are deleted.** Queued payloads are encrypted and deleted once each delivery settles.
+
 ## API tokens
 
 An API token is a bearer credential that acts as one staff member without two-factor sign-in, so the API's defaults are cautious:

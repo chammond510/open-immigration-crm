@@ -56,7 +56,7 @@
       <dt>Capabilities</dt><dd>{{ capability_labels|join:", " }}</dd>
       <dt>Sign-in</dt><dd>{{ auth_label }}</dd>
       <dt>Connects</dt><dd>{% if connector.connection_scope == "user" %}Each staff member separately{% else %}The whole firm{% endif %}</dd>
-      <dt>Webhooks</dt><dd>{% if connector.webhooks %}Needs a public /hooks/ address{% else %}Not used{% endif %}</dd>
+      <dt>Receives webhooks</dt><dd>{% if connector.webhooks %}Yes; needs a public /hooks/ address{% else %}No{% endif %}</dd>
       <dt>Maintainers</dt><dd>{{ connector.maintainers|join:", "|default:"None named yet" }}</dd>
     </dl></section>
     {% if connector.hidden %}<p class="privacy-note">This is a fictional connector for testing. It is listed only because hidden connectors are shown on this installation.</p>{% endif %}

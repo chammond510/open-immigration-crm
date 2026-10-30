@@ -342,3 +342,8 @@ td.wrap { white-space: normal; min-width: 220px; }
 .check-label.wrap small { display: block; margin-top: 2px; }
 .api-page { display: grid; gap: 18px; min-width: 0; }
 .request-path { overflow-wrap: anywhere; }
+.event-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px 20px; }
+.event-group { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.event-group legend { margin-bottom: 6px; font-weight: 700; }
+.plain-list { margin: 0; padding-left: 18px; }
+.badge.retrying { background: var(--warning-soft); color: var(--warning); }

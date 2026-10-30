@@ -26,9 +26,10 @@ class ConnectForm(forms.Form):
         self.fields["capabilities"].initial = sorted(connector.capabilities)
         if isinstance(connector.auth, ApiKeyAuth):
             for credential in connector.auth.fields:
+                # A generated value is shown so staff can copy it to the provider.
                 widget = (
                     forms.PasswordInput(attrs={"autocomplete": "off"})
-                    if credential.secret
+                    if credential.secret and not credential.generate
                     else forms.TextInput(attrs={"autocomplete": "off"})
                 )
                 self.fields[f"{CREDENTIAL_PREFIX}{credential.name}"] = forms.CharField(
@@ -36,6 +37,7 @@ class ConnectForm(forms.Form):
                     help_text=credential.help_text,
                     widget=widget,
                     max_length=4000,
+                    initial=credential.generate() if credential.generate else None,
                 )
         # Only a superuser can accept a connection's data flows for the firm, and
         # the acknowledgment comes last, after everything being agreed to.

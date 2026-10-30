@@ -1,0 +1,24 @@
+{% if sends_events %}
+  {% if user.is_superuser and connection.status != "disconnected" %}
+    <form method="post" action="{% url 'connection_events' connection.pk %}" class="panel stacked-form">
+      <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+      <div><h2>Events to send</h2><p class="muted">Nothing is sent until you choose events here{% if connection.preview_mode %}, and while preview mode is on, events are recorded but not sent{% endif %}. Each event is signed with this connection's secret.</p></div>
+      <div class="event-groups">
+        {% for group in groups %}<fieldset class="event-group"><legend>{{ group.label }}</legend>
+          {% for event in group.events %}<label class="check-label wrap" for="event-{{ event.name }}"><input type="checkbox" id="event-{{ event.name }}" name="events" value="{{ event.name }}" {% if event.checked %}checked{% endif %}><span>{{ event.label }}<small class="mono muted">{{ event.name }}</small></span></label>{% endfor %}
+        </fieldset>{% endfor %}
+      </div>
+      <fieldset class="event-group"><legend>{{ detail_field.label }}</legend>
+        {% for choice in detail_field %}<label class="check-label wrap" for="{{ choice.id_for_label }}">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>{% endfor %}
+      </fieldset>
+      <div class="form-actions"><button class="button primary" type="submit">Save events</button></div>
+    </form>
+  {% else %}
+    <section class="panel"><div class="section-heading"><div><h2>Events to send</h2><p>Chosen by a superuser.</p></div></div>
+      {% if chosen_labels %}<ul class="plain-list">{% for label in chosen_labels %}<li>{{ label }}</li>{% endfor %}</ul>{% else %}<p class="muted">No events are selected.</p>{% endif %}
+    </section>
+  {% endif %}
+  <section class="panel"><div class="section-heading"><div><h2>Recent event deliveries</h2><p>Failed deliveries are retried for about a day and a half before they are given up.</p></div></div>
+    {% for delivery in deliveries %}<div class="mini-record"><div><strong class="mono">{{ delivery.event_type }}</strong><span>{{ delivery.created_at|date:"M j, g:i a" }}{% if delivery.attempts > 1 %} · {{ delivery.attempts }} attempts{% endif %}{% if delivery.next_attempt_at %} · next try {{ delivery.next_attempt_at|date:"M j, g:i a" }}{% endif %}{% if delivery.last_error %} · {{ delivery.last_error }}{% endif %}</span></div><span class="badge {{ delivery.status }}">{{ delivery.get_status_display }}</span></div>{% empty %}<p class="muted">No events yet.</p>{% endfor %}
+  </section>
+{% endif %}
