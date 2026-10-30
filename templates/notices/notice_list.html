@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load connect_tags %}
+{% block title %}USCIS notices · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Casework</p><h1>USCIS notices</h1><p>{% if open_responses %}Open RFE and NOID responses, soonest first · <a href="{% url 'notice_list' %}">Show all notices</a>{% else %}Every notice logged on a matter · <a href="{% url 'notice_list' %}?open=responses">Show open responses</a>{% endif %}</p></div></div>
+<div class="prompt-stack page-prompts">{% connect_prompt "case_status" "to check receipt numbers automatically" %}</div>
+<form class="filter-bar" method="get">
+  {% if open_responses %}<input type="hidden" name="open" value="responses">{% endif %}
+  <label class="sr-only" for="notice-q">Search notices</label><input id="notice-q" type="search" name="q" value="{{ query }}" placeholder="Receipt number, form, matter, or client">
+  <label class="sr-only" for="notice-kind">Notice type</label><select id="notice-kind" name="kind"><option value="">All notice types</option>{% for key, label in kinds %}<option value="{{ key }}" {% if selected_kind == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="button" type="submit">Filter</button>
+</form>
+<section class="panel flush-panel">{% if notices %}<div class="table-wrap"><table><thead><tr><th>Notice</th><th>Matter</th><th>Receipt</th><th>Notice date</th><th>Next date</th></tr></thead><tbody>
+  {% for notice in notices %}<tr><td><a class="primary-link" href="{% url 'notice_update' notice.pk %}">{{ notice.get_kind_display }}</a>{% if notice.form_type %}<small>{{ notice.form_type }}</small>{% endif %}</td><td><a href="{% url 'matter_detail' notice.matter.pk %}#notices">{{ notice.matter.matter_number }}</a></td><td><span class="mono">{{ notice.receipt_number|default:"—" }}</span></td><td>{{ notice.notice_date|date:"M j, Y" }}</td><td>{% if notice.response_due_date %}<span class="{% if notice.response_due_date < today and not notice.deadline.is_completed %}danger-text{% endif %}">Response due {{ notice.response_due_date|date:"M j, Y" }}</span>{% elif notice.appointment_at %}Appointment {{ notice.appointment_at|date:"M j, Y" }}{% else %}—{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="empty-state"><h3>No notices found</h3><p>Log notices from a matter's page.</p></div>{% endif %}</section>
+{% endblock %}

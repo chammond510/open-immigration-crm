@@ -247,6 +247,13 @@ td.wrap { white-space: normal; min-width: 220px; }
 .badge.issued { background: var(--accent-soft); color: var(--accent-dark); }
 .badge.partially_paid { background: var(--warning-soft); color: var(--warning); }
 .badge.paid { background: var(--success-soft); color: var(--success); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .94em; letter-spacing: .02em; }
+.status-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.notice-item .badge { margin-right: 4px; vertical-align: 1px; }
+.badge.notice-rfe, .badge.notice-noid { background: var(--warning-soft); color: var(--warning); }
+.badge.notice-approval, .badge.notice-card { background: var(--success-soft); color: var(--success); }
+.badge.notice-denial, .badge.notice-rejection { background: var(--danger-soft); color: var(--danger); }
+.badge.notice-receipt, .badge.notice-biometrics, .badge.notice-interview { background: var(--accent-soft); color: var(--accent-dark); }
 .connect-prompt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px dashed #b7c6e6; border-radius: var(--radius); background: var(--accent-soft); color: #1c448f; }
 .badge.maturity-ready, .badge.succeeded, .badge.sent, .badge.processed { background: var(--success-soft); color: var(--success); }
 .badge.maturity-beta, .badge.queued, .badge.running, .badge.previewed { background: var(--accent-soft); color: var(--accent-dark); }

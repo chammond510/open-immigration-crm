@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     "crm.connect.apps.ConnectConfig",
     "crm.comms.apps.CommsConfig",
     "crm.billing.apps.BillingConfig",
+    "crm.notices.apps.NoticesConfig",
 ]
 
 MIDDLEWARE = [
