@@ -29,7 +29,7 @@ The system can hold names, contact information, birth dates, addresses, national
 ## Important limitations
 
 - **No tenant isolation.** One deployment is one firm. All staff can access all ordinary CRM records.
-- **No SSO, and two-factor sign-in is off until enabled.** Require two-factor sign-in in Firm settings, or put the application behind an identity-aware proxy or VPN with MFA.
+- **Two-factor sign-in is off until enabled.** Require two-factor sign-in in Firm settings, or put the application behind an identity-aware proxy or VPN with MFA. Staff can also sign in through the firm's identity provider with the OpenID Connect connector; only existing staff accounts can, linked the first time by an email address the provider vouches for, and the CRM's own two-factor step still applies unless the connection is set to accept the provider's reported second factor. Keep a superuser with a password and the CRM's two-factor sign-in for when the provider cannot be reached.
 - **Client records are not encrypted at the field level.** Only stored secrets are. Use encrypted disks/volumes, encrypted database service storage, TLS to the database, and encrypted backups.
 - **The encryption key is only as safe as its storage.** Anyone with both the database and `FIELD_ENCRYPTION_KEYS` can read stored secrets. Keep the key in a secret manager, apart from database backups.
 - **No malware scanner.** File signature validation is not antivirus. Add a scanning/quarantine layer before enabling uploads in a higher-risk environment.

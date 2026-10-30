@@ -35,6 +35,12 @@
         <section class="panel"><p class="muted">A superuser must register the firm's {{ entry.name }} app before anyone can connect it.</p></section>
       {% endif %}
     {% endif %}
+    {% if sign_in_callback %}
+      <section class="panel">
+        <div class="section-heading"><div><h2>Return address for staff sign-in</h2><p>Add this exact address as a redirect URI in the identity provider's app before connecting.</p></div></div>
+        <div class="copy-field"><input id="sign-in-callback" type="text" readonly value="{{ sign_in_callback }}" aria-label="Redirect URI"><button class="button" type="button" data-copy-for="sign-in-callback">Copy</button></div>
+      </section>
+    {% endif %}
     {% if form %}
       <section class="panel">
         <div class="section-heading"><div><h2>Connect {{ entry.name }}</h2><p>{% if form.personal %}This connects your own account. Only you can send through it. On its own, the CRM only keeps your records in step there, such as putting your appointments on your calendar; the firm's automations never use it.{% else %}This connection is shared by the whole firm.{% endif %}</p></div></div>

@@ -236,6 +236,24 @@ class WebhookEnvelope:
     payload: dict
 
 
+@dataclass(frozen=True)
+class StaffIdentity:
+    """Who a sign-in provider says signed in, after the connector has checked its answer.
+
+    ``issuer`` and ``subject`` together name the person at the provider for good.
+    ``email_verified`` is True only when the provider vouches that the person controls
+    ``email``. ``two_factor`` is True only when the firm has said its provider always
+    requires a second factor, so the CRM's own second step can be skipped.
+    """
+
+    issuer: str
+    subject: str
+    email: str = ""
+    email_verified: bool = False
+    name: str = ""
+    two_factor: bool = False
+
+
 class ConnectorError(Exception):
     """A provider failure. The message is stored and shown, so it must not contain client data.
 
@@ -350,6 +368,23 @@ class Connector:
 
         ``returned`` holds everything the sign-in sent back, such as an issued client ID,
         and ``nonce`` the value sent with this attempt, for checking an ID token.
+        """
+        raise NotImplementedError
+
+    def sign_in_url(self, redirect_uri, state, nonce, code_challenge):
+        """For staff sign-in: the provider address to send someone signing in to.
+
+        Include ``state``, ``nonce``, and the S256 ``code_challenge``; the provider
+        sends the browser back to ``redirect_uri``.
+        """
+        raise NotImplementedError
+
+    def verify_sign_in(self, params, redirect_uri, code_verifier, nonce):
+        """For staff sign-in: the StaffIdentity the provider's answer proves.
+
+        ``params`` is what the provider sent back, after core has checked ``state``.
+        Check everything else, including ``nonce``, and raise ConnectorError for
+        an answer that does not prove who signed in.
         """
         raise NotImplementedError
 

@@ -63,6 +63,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **Google Workspace** and **Microsoft 365** (Beta) connect each staff member's Gmail and Google Calendar, or Outlook mail and calendar. Their email with clients is filed on the right contact, they can send email from contact pages, and their appointments are kept in step with their calendar.
 - **IMAP and SMTP email** (Beta) does the same for a mailbox at almost any other provider, with an app password (see [the setup guide](connectors/imap_smtp/README.md)).
 - **SMTP server** (Beta) lets the CRM email clients itself, through the firm's mail server or an email delivery service such as Postmark, Amazon SES, SendGrid, or Mailgun: secure intake links when staff create them, and payment plan reminders when a plan asks for them (see [the setup guide](connectors/smtp/README.md)).
+- **OpenID Connect sign-in** (Beta) lets staff sign in with the firm's identity provider, such as Google Workspace or Microsoft Entra ID. Only existing staff accounts can sign in this way, linked the first time by an email address the provider vouches for; passwords and the CRM's own two-factor sign-in keep working (see [the setup guide](connectors/oidc/README.md)).
 
 The catalog lists the other providers people have asked for as Wanted.
 
@@ -109,7 +110,7 @@ Run the complete local release gate with `./scripts/check_release.sh`.
 
 ## Security position
 
-This application stores highly sensitive information. It provides authenticated staff access, optional or firm-required two-factor sign-in, login rate limiting with temporary lockout, encryption of stored secrets, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** encrypt client records at the field level, and it does not provide tenant isolation, SSO, malware scanning, or a managed backup service. Use full-disk/database encryption, a trusted private network when possible, and encrypted offsite backups.
+This application stores highly sensitive information. It provides authenticated staff access, optional or firm-required two-factor sign-in, login rate limiting with temporary lockout, encryption of stored secrets, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** encrypt client records at the field level, and it does not provide tenant isolation, malware scanning, or a managed backup service. Sign-in through the firm's identity provider is available as an optional connector. Use full-disk/database encryption, a trusted private network when possible, and encrypted offsite backups.
 
 Read [Security model](docs/SECURITY_MODEL.md), [Privacy](docs/PRIVACY.md), and [Backup and restore](docs/BACKUP_RESTORE.md) before using real information. Report vulnerabilities privately under [SECURITY.md](SECURITY.md).
 

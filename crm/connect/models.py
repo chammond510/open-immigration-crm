@@ -261,3 +261,31 @@ class ExternalRef(models.Model):
 
     def __str__(self):
         return f"{self.content_type.model} {self.object_id} = {self.external_id}"
+
+
+class SignInLink(models.Model):
+    """A staff account's identity at a sign-in provider, linked the first time it is used.
+
+    The first sign-in links by a verified email address; later ones match only the
+    provider's own ``issuer`` and ``subject``, which do not change with the email.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sign_in_links"
+    )
+    connection = models.ForeignKey(
+        Connection, null=True, on_delete=models.SET_NULL, related_name="sign_in_links"
+    )
+    issuer = models.CharField(max_length=255)
+    subject = models.CharField(max_length=255)
+    linked_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "sign-in link"
+        constraints = [
+            models.UniqueConstraint(fields=["issuer", "subject"], name="connect_sign_in_once")
+        ]
+
+    def __str__(self):
+        return f"{self.user} at {self.issuer}"

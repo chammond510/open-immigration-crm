@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import Connection, OutboundRequest, SyncRun, WebhookEvent, WorkerHeartbeat
+from .models import (
+    Connection,
+    OutboundRequest,
+    SignInLink,
+    SyncRun,
+    WebhookEvent,
+    WorkerHeartbeat,
+)
 
 
 @admin.register(Connection)
@@ -93,3 +100,19 @@ class WebhookEventAdmin(ReadOnlyAdmin):
 class WorkerHeartbeatAdmin(ReadOnlyAdmin):
     list_display = ("worker_id", "last_seen_at")
     readonly_fields = ("worker_id", "last_seen_at")
+
+
+@admin.register(SignInLink)
+class SignInLinkAdmin(admin.ModelAdmin):
+    """Staff accounts linked to a sign-in provider. Delete a link to make it link again."""
+
+    list_display = ("user", "issuer", "connection", "linked_at", "last_used_at")
+    search_fields = ("user__username", "user__email", "issuer")
+    fields = ("user", "issuer", "subject", "connection", "linked_at", "last_used_at")
+    readonly_fields = fields
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

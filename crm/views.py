@@ -17,6 +17,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .comms import system_email
+from .connect.sign_in import sign_in_connections
 from .forms import (
     ActivityForm,
     ChecklistItemForm,
@@ -111,6 +112,9 @@ class FirstRunAwareLoginView(LoginView):
         if not installation_has_accounts():
             return redirect("first_run_setup")
         return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        return {**super().get_context_data(**kwargs), "sign_in_connections": sign_in_connections()}
 
     def form_valid(self, form):
         """Hold enrolled users at the second step instead of signing them in."""

@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from crm.connect import sign_in
 from crm.connect.views import receive_webhook
 from crm.mcp import views as mcp_views
 from crm.views import (
@@ -52,6 +53,8 @@ urlpatterns = [
     path("settings/api/", include("crm.api.page_urls")),
     path("accounts/login/", FirstRunAwareLoginView.as_view(), name="login"),
     path("accounts/login/verify/", two_factor_verify, name="two_factor_verify"),
+    path("accounts/sign-in/callback/", sign_in.callback, name="staff_sign_in_callback"),
+    path("accounts/sign-in/<uuid:pk>/", sign_in.start, name="staff_sign_in"),
     path("accounts/two-factor/", two_factor_settings, name="two_factor_settings"),
     path(
         "accounts/two-factor/recovery-codes/",

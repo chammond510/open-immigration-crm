@@ -11,7 +11,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from crm.models import AuditLog
 
-from . import oauth
+from . import oauth, sign_in
 from .base import (
     SIGN_IN_TYPES,
     ApiKeyAuth,
@@ -185,6 +185,8 @@ def connector_detail(request, key):
     }
     if cls is None:
         return render(request, "connect/connector_detail.html", context)
+    if Capability.SIGN_IN in cls.capabilities:
+        context["sign_in_callback"] = sign_in.callback_url(request)
 
     is_oauth = isinstance(cls.auth, SIGN_IN_TYPES)
     needs_app = isinstance(cls.auth, OAuthAuth)
