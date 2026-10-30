@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
@@ -6,6 +7,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from crm.models import Contact, FirmProfile, Matter
@@ -16,6 +18,7 @@ from .forms import (
     InvoiceLineForm,
     InvoiceNotesForm,
     PaymentForm,
+    PaymentPlanForm,
     ReasonForm,
 )
 from .models import BillingSettings, Invoice, InvoiceLine, Payment, StaffRate
@@ -23,6 +26,8 @@ from .services import (
     OPEN_STATUSES,
     add_line,
     add_time_to_invoice,
+    cancel_plan,
+    create_plan,
     delete_draft,
     issue_invoice,
     record,
@@ -108,6 +113,7 @@ def invoice_create(request):
 @require_GET
 def invoice_detail(request, pk):
     invoice = get_object_or_404(Invoice.objects.select_related("contact", "matter"), pk=pk)
+    plan = invoice.plan
     return render(
         request,
         "billing/invoice_detail.html",
@@ -122,6 +128,11 @@ def invoice_detail(request, pk):
             "earned_total": invoice.subtotal_for(InvoiceLine.Funds.EARNED),
             "advance_total": invoice.subtotal_for(InvoiceLine.Funds.ADVANCE),
             "can_take_payment": invoice.status in OPEN_STATUSES,
+            "plan": plan,
+            "schedule": plan.schedule() if plan else [],
+            "plan_form": PaymentPlanForm(
+                initial={"first_due_date": timezone.localdate() + timedelta(days=30)}
+            ),
             "currency": BillingSettings.load().currency,
         },
     )
@@ -252,6 +263,7 @@ def invoice_print(request, pk):
             "invoice": invoice,
             "lines": invoice.lines.all(),
             "payments": invoice.payments.filter(voided_at__isnull=True),
+            "schedule": invoice.plan.schedule() if invoice.plan else [],
             "firm": FirmProfile.objects.filter(pk=1).first(),
             "billing": billing,
             "currency": billing.currency,
@@ -326,3 +338,36 @@ def billing_settings(request):
         "billing/settings.html",
         {"form": form, "staff": [(person, rates.get(person.pk)) for person in staff]},
     )
+
+
+@billing_required
+@require_POST
+def plan_create(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    form = PaymentPlanForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Review the payment plan fields and try again.")
+        return redirect("invoice_detail", pk=pk)
+    try:
+        plan = create_plan(invoice, request.user, **form.cleaned_data)
+    except ValidationError as exc:
+        report_errors(request, exc)
+    else:
+        count = plan.installments.count()
+        messages.success(
+            request, f"Payment plan created with {count} installments and staff reminders."
+        )
+    return redirect("invoice_detail", pk=pk)
+
+
+@billing_required
+@require_POST
+def plan_cancel(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    plan = invoice.plan
+    if plan is None:
+        messages.error(request, "This invoice has no payment plan.")
+        return redirect("invoice_detail", pk=pk)
+    cancel_plan(plan, request.user)
+    messages.success(request, "Payment plan canceled; its open reminders were removed.")
+    return redirect("invoice_detail", pk=pk)

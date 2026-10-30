@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django import template
 
-from ..models import BillingSettings, Invoice
+from ..models import BillingSettings, Invoice, format_money
 from ..services import OPEN_STATUSES, unbilled_time
 
 register = template.Library()
@@ -10,10 +10,7 @@ register = template.Library()
 
 @register.filter
 def money(value, currency="USD"):
-    amount = Decimal(value or 0).quantize(Decimal("0.01"))
-    sign = "-" if amount < 0 else ""
-    text = f"{abs(amount):,.2f}"
-    return f"{sign}${text}" if currency == "USD" else f"{sign}{text} {currency}"
+    return format_money(value, currency)
 
 
 @register.inclusion_tag("billing/includes/billing_panel.html", takes_context=True)
@@ -35,5 +32,11 @@ def billing_panel(context, contact=None, matter=None):
         "balance": sum((invoice.balance for invoice in open_invoices), Decimal("0")),
         "unbilled_count": len(unbilled),
         "unbilled_minutes": sum(int(e.duration.total_seconds() // 60) for e in unbilled),
+        "next_installments": [
+            (invoice, row)
+            for invoice in open_invoices
+            for row in [invoice.plan.next_due() if invoice.plan else None]
+            if row
+        ],
         "currency": BillingSettings.load().currency,
     }

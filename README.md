@@ -11,7 +11,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Tasks, deadlines, and appointments in one work queue
 - A communications log of calls, texts, emails, and meetings, with a per-contact texting opt-out
 - One-click time tracking against a matter or contact, with per-record totals
-- Billing for staff granted access: hourly rates, invoices whose lines are marked earned fee or trust advance, manually recorded payments with the account they were deposited to, and a printable invoice
+- Billing for staff granted access: hourly rates, invoices whose lines are marked earned fee or trust advance, manually recorded payments with the account they were deposited to, payment plans with staff reminders, and a printable invoice
 - Firm-created per-matter checklists—zero legal templates ship with the project
 - Private PDF, DOCX, PNG, and JPEG document storage
 - Blank intake-form builder with expiring, revocable, single-use links

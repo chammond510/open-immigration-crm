@@ -17,6 +17,13 @@ def money(value):
     return (value or Decimal("0")).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+def format_money(value, currency="USD"):
+    amount = money(Decimal(value or 0))
+    sign = "-" if amount < 0 else ""
+    text = f"{abs(amount):,.2f}"
+    return f"{sign}${text}" if currency == "USD" else f"{sign}{text} {currency}"
+
+
 class BillingSettings(models.Model):
     """Firm-wide billing defaults; a single row."""
 
@@ -143,6 +150,11 @@ class Invoice(models.Model):
         return money(self.subtotal - self.amount_paid)
 
     @property
+    def plan(self):
+        """The payment plan in force (active or completed), if any."""
+        return self.payment_plans.exclude(status="canceled").first()
+
+    @property
     def is_overdue(self):
         return (
             self.status in (self.Status.ISSUED, self.Status.PARTIALLY_PAID)
@@ -253,3 +265,95 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.amount} on {self.received_on}"
+
+
+class PaymentPlan(models.Model):
+    """An issued invoice's balance split into scheduled installments.
+
+    Payments are applied to installments oldest first, so an installment's
+    status follows from how much of the invoice has been paid.
+    """
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        COMPLETED = "completed", "Completed"
+        CANCELED = "canceled", "Canceled"
+
+    class Frequency(models.TextChoices):
+        MONTHLY = "monthly", "Monthly"
+        BIWEEKLY = "biweekly", "Every two weeks"
+        WEEKLY = "weekly", "Weekly"
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="payment_plans")
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ACTIVE, db_index=True
+    )
+    frequency = models.CharField(max_length=20, choices=Frequency.choices)
+    reminder_days_before = models.PositiveSmallIntegerField(default=3)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    canceled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            # Canceled plans stay for the record; only one plan at a time is in force.
+            models.UniqueConstraint(
+                fields=["invoice"],
+                condition=~models.Q(status="canceled"),
+                name="billing_one_plan_in_force",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Payment plan for {self.invoice}"
+
+    def schedule(self):
+        """Installments with the amount applied to each and a display status."""
+        today = timezone.localdate()
+        remaining = self.invoice.amount_paid
+        rows = []
+        for installment in self.installments.all():
+            applied = min(remaining, installment.amount)
+            remaining -= applied
+            if applied >= installment.amount:
+                state = "paid"
+            elif installment.due_date < today:
+                state = "overdue"
+            elif applied > 0:
+                state = "partially_paid"
+            else:
+                state = "due"
+            rows.append({"installment": installment, "applied": money(applied), "state": state})
+        return rows
+
+    def next_due(self):
+        return next((row for row in self.schedule() if row["state"] != "paid"), None)
+
+
+class PaymentPlanInstallment(models.Model):
+    plan = models.ForeignKey(PaymentPlan, on_delete=models.CASCADE, related_name="installments")
+    sequence = models.PositiveSmallIntegerField()
+    due_date = models.DateField()
+    amount = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))]
+    )
+    # The staff reminder created for this installment; completed when it is paid.
+    reminder = models.OneToOneField(
+        "crm.WorkItem",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="payment_plan_installment",
+    )
+
+    class Meta:
+        ordering = ["sequence"]
+        constraints = [
+            models.UniqueConstraint(fields=["plan", "sequence"], name="billing_installment_once"),
+        ]
+
+    def __str__(self):
+        return f"Installment {self.sequence} of {self.plan}"
