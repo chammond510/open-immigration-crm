@@ -158,8 +158,11 @@ class ConnectionSettingsForm(forms.Form):
 
 
 class ProviderSecretForm(forms.Form):
+    # Checked when webhooks are turned on; it may be left out when the CRM registers
+    # the address and the provider hands the secret back.
     provider_secret = forms.CharField(
         label="Signing secret from the provider",
         max_length=4000,
+        required=False,
         widget=forms.PasswordInput(attrs={"autocomplete": "off"}),
     )

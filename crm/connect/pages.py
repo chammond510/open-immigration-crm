@@ -387,7 +387,12 @@ def connection_webhooks(request, pk):
         form = ProviderSecretForm(request.POST)
         provider_secret = form.data.get("provider_secret", "").strip()
     try:
-        token, secret = enable_webhooks(connection, request.user, provider_secret)
+        token, secret = enable_webhooks(
+            connection,
+            request.user,
+            provider_secret,
+            registering=request.POST.get("register") == "on",
+        )
     except ValidationError as exc:
         messages.error(request, " ".join(exc.messages))
         return redirect("connection_detail", pk=pk)

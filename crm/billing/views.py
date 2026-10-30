@@ -23,7 +23,7 @@ from .forms import (
     PaymentPlanForm,
     ReasonForm,
 )
-from .links import create_links, current_links, link_connections, links_needed
+from .links import create_links, current_links, link_connections, links_needed, unserved
 from .models import BillingSettings, Invoice, InvoiceLine, Payment, StaffRate
 from .services import (
     OPEN_STATUSES,
@@ -303,11 +303,19 @@ def payment_links_create(request, pk):
     connection = connections.get(request.POST.get("connection", ""))
     if connection is None:
         raise PermissionDenied
+    skipped = unserved(connection, invoice)
     try:
         requests = create_links(connection, invoice, request.user)
     except ValidationError as exc:
         report_errors(request, exc)
         return redirect("invoice_detail", pk=pk)
+    for account in skipped:
+        messages.warning(
+            request,
+            f"{connection.label} cannot take payments into the "
+            f"{Payment.Account(account).label.lower()}, so no link was made for that part. Use "
+            "another payment connection for it, or record the payment by hand.",
+        )
     for outbound in requests:
         if outbound.status == OutboundRequest.Status.SENT:
             messages.success(request, f"Created a payment link: {outbound.summary}.")
