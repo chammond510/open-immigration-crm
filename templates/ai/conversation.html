@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load connect_tags %}
+{% block title %}{{ conversation.title }} · Assistant · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow"><a href="{% url 'ai_assistant' %}">Assistant</a>{% if conversation.matter %} · <a href="{% url 'matter_detail' conversation.matter.pk %}">{{ conversation.matter.matter_number }}</a>{% endif %}</p><h1>{{ conversation.title }}</h1><p>Answers and drafts are AI drafts for attorney review. Changes wait for you to confirm them, and nothing is sent.</p></div><div class="actions"><form method="post" action="{% url 'ai_conversation_delete' conversation.pk %}" data-confirm="Delete this conversation?">{% csrf_token %}<button class="button" type="submit">Delete</button></form></div></div>
+<div class="chat">
+  {% for entry in entries %}
+    {% if entry.kind == "user" %}
+      <div class="chat-turn from-staff"><span class="chat-who">You</span><div class="prose">{{ entry.message.content|linebreaksbr }}</div></div>
+    {% elif entry.kind == "assistant" %}
+      <div class="chat-turn from-ai"><span class="chat-who">Assistant · <span class="ai-label">AI draft for attorney review</span></span><div class="prose">{{ entry.message.content|linebreaks }}</div></div>
+    {% elif entry.kind == "lookup" %}
+      <p class="chat-lookup">Looked up: {{ entry.title }}</p>
+    {% elif entry.kind == "change" %}
+      <div class="chat-card {{ entry.message.action }}">
+        <strong>Proposed change: {{ entry.title }}</strong>
+        <dl class="summary-list">{% for label, value in entry.rows %}<dt>{{ label }}</dt><dd>{{ value|linebreaksbr }}</dd>{% endfor %}</dl>
+        {% if entry.message.action == "waiting" %}
+          <form method="post" action="{% url 'ai_conversation_decide' entry.message.pk %}" class="inline-actions">{% csrf_token %}<button class="button primary" type="submit" name="decision" value="confirm">Confirm</button><button class="button" type="submit" name="decision" value="decline">Decline</button></form>
+        {% elif entry.message.action == "confirmed" %}
+          {% if entry.error %}<p class="danger-text">Confirmed, but not made: {{ entry.error }}</p>{% else %}<p class="success-text">Confirmed and made.</p>{% endif %}
+        {% else %}
+          <p class="muted">Declined. Nothing was changed.</p>
+        {% endif %}
+      </div>
+    {% elif entry.kind == "draft" %}
+      <div class="chat-card draft">
+        <strong>Draft {% if entry.arguments.channel == "text" %}text{% else %}email{% endif %}{% if entry.contact %} to {{ entry.contact }}{% endif %}</strong>
+        <p class="ai-label">AI draft for attorney review · not sent</p>
+        {% if entry.error or not entry.contact %}
+          <p class="muted">The draft could not be shown{% if entry.error %}: {{ entry.error }}{% endif %}.</p>
+        {% elif entry.arguments.channel == "text" %}
+          {% if entry.contact.texting_opted_out_at %}<p class="muted">{{ entry.contact }} opted out of texts, so none can be sent.</p>{% elif not entry.contact.phone_e164 %}<p class="muted">Add a valid mobile number for {{ entry.contact }} to send a text.</p>{% endif %}
+          <form method="post" action="{% url 'communication_send_text' %}" class="stacked-form">
+            {% csrf_token %}<input type="hidden" name="contact" value="{{ entry.contact.pk }}">{% if entry.matter %}<input type="hidden" name="matter" value="{{ entry.matter.pk }}">{% endif %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% if text_connections|length > 1 %}<div class="field"><label for="draft-connection-{{ entry.message.pk }}">Send through</label><select id="draft-connection-{{ entry.message.pk }}" name="connection">{% for connection in text_connections %}<option value="{{ connection.pk }}">{{ connection.label }}{% if connection.owner_id %} (yours){% endif %}{% if connection.preview_mode %} · preview mode{% endif %}</option>{% endfor %}</select></div>{% elif text_connections %}<input type="hidden" name="connection" value="{{ text_connections.0.pk }}">{% endif %}
+            <div class="field"><label for="draft-body-{{ entry.message.pk }}">Text{% if entry.contact.phone_e164 %} to {{ entry.contact.phone_e164 }}{% endif %}</label><textarea id="draft-body-{{ entry.message.pk }}" name="body" rows="4" maxlength="{{ text_max_length }}" required>{{ entry.arguments.body }}</textarea></div>
+            <div class="form-actions">{% if text_connections and entry.contact.phone_e164 and not entry.contact.texting_opted_out_at %}<button class="button primary" type="submit">Send text</button>{% endif %}<button class="button" type="button" data-copy-for="draft-body-{{ entry.message.pk }}">Copy</button></div>
+          </form>
+          {% if not text_connections %}<div class="prompt-stack">{% connect_prompt "texting" "to send texts from here" %}</div>{% endif %}
+        {% else %}
+          {% if not entry.contact.email %}<p class="muted">Add an email address for {{ entry.contact }} to send an email.</p>{% endif %}
+          <form method="post" action="{% url 'communication_send_email' %}" class="stacked-form">
+            {% csrf_token %}<input type="hidden" name="contact" value="{{ entry.contact.pk }}">{% if entry.matter %}<input type="hidden" name="matter" value="{{ entry.matter.pk }}">{% endif %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% if email_connections|length > 1 %}<div class="field"><label for="draft-connection-{{ entry.message.pk }}">Send from</label><select id="draft-connection-{{ entry.message.pk }}" name="connection">{% for connection in email_connections %}<option value="{{ connection.pk }}">{{ connection.label }}{% if connection.owner_id %} (yours){% endif %}{% if connection.preview_mode %} · preview mode{% endif %}</option>{% endfor %}</select></div>{% elif email_connections %}<input type="hidden" name="connection" value="{{ email_connections.0.pk }}">{% endif %}
+            <div class="field"><label for="draft-subject-{{ entry.message.pk }}">Subject</label><input id="draft-subject-{{ entry.message.pk }}" name="subject" maxlength="255" value="{{ entry.arguments.subject|default:'' }}" required></div>
+            <div class="field"><label for="draft-body-{{ entry.message.pk }}">Message{% if entry.contact.email %} to {{ entry.contact.email }}{% endif %}</label><textarea id="draft-body-{{ entry.message.pk }}" name="body" rows="8" required>{{ entry.arguments.body }}</textarea></div>
+            <div class="form-actions">{% if email_connections and entry.contact.email %}<button class="button primary" type="submit">Send email</button>{% endif %}<button class="button" type="button" data-copy-for="draft-body-{{ entry.message.pk }}">Copy</button></div>
+          </form>
+          {% if not email_connections %}<div class="prompt-stack">{% connect_prompt "mailbox" "to send emails from here" %}</div>{% endif %}
+        {% endif %}
+      </div>
+    {% endif %}
+  {% endfor %}
+  {% if working %}
+    <div class="chat-turn from-ai" data-poll-url="{% url 'ai_conversation_status' conversation.pk %}"><span class="chat-who">Assistant</span><p class="muted">Working on it…{% if not worker_running %} The background worker isn't running, so this starts when it does.{% endif %}</p></div>
+  {% elif conversation.error %}
+    <p class="message error">The last request did not finish: {{ conversation.error }}</p>
+  {% endif %}
+</div>
+{% if not working %}
+  {% if conversation.status == "waiting" %}
+    <p class="muted chat-footnote">Confirm or decline each proposed change above, and the assistant continues.</p>
+  {% elif too_long %}
+    <p class="muted chat-footnote">This conversation is full. <a href="{% if conversation.matter %}{% url 'matter_detail' conversation.matter.pk %}#assistant{% else %}{% url 'ai_assistant' %}{% endif %}">Start a new one</a>.</p>
+  {% elif on %}
+    <form method="post" action="{% url 'ai_conversation_send' conversation.pk %}" class="panel stacked-form chat-reply">
+      {% csrf_token %}
+      <div class="field"><label for="{{ form.message.id_for_label }}">Reply</label>{{ form.message }}</div>
+      {% if form.connection.field.queryset.count > 1 %}<div class="field"><label for="{{ form.connection.id_for_label }}">{{ form.connection.label }}</label>{{ form.connection }}</div>{% else %}{% for connection in form.connection.field.queryset %}<input type="hidden" name="connection" value="{{ connection.pk }}">{% empty %}<p class="muted">No AI connection you may use is available.</p>{% endfor %}{% endif %}
+      <div class="form-actions"><button class="button primary" type="submit">Send to the assistant</button></div>
+    </form>
+  {% else %}
+    <p class="muted chat-footnote">The assistant is off, so this conversation can be read but not continued.</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

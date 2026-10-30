@@ -56,3 +56,36 @@ class ConnectionTestForm(forms.Form):
         self.fields["connection"].queryset = Connection.objects.filter(
             pk__in=[c.pk for c in ai_connections(user)]
         )
+
+
+class AIConnectionField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        mine = " (yours)" if obj.owner_id else ""
+        preview = " · preview mode" if obj.preview_mode else ""
+        return f"{obj.label}{mine}{preview}"
+
+
+def connection_field(user, initial=None):
+    usable = ai_connections(user)
+    return AIConnectionField(
+        queryset=Connection.objects.filter(pk__in=[c.pk for c in usable]).order_by("label"),
+        label="Ask through",
+        empty_label=None,
+        initial=initial or (usable[0].pk if usable else None),
+    )
+
+
+class AskForm(forms.Form):
+    message = forms.CharField(
+        label="Message", max_length=8000, widget=forms.Textarea(attrs={"rows": 3})
+    )
+
+    def __init__(self, *args, user, initial_connection=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["connection"] = connection_field(user, initial_connection)
+
+
+class ChooseConnectionForm(forms.Form):
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["connection"] = connection_field(user)

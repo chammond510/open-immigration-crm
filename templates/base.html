@@ -29,6 +29,7 @@
           <a href="{% url 'intake_workspace' %}" {% if 'intake' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Intake</a>
           <a href="{% url 'operating_dashboard' %}" {% if request.resolver_match.url_name == 'operating_dashboard' %}aria-current="page"{% endif %}>Reports</a>
           <a href="{% url 'connections' %}" {% if 'connect' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Connections</a>
+          {% if ai_assistant_on %}<a href="{% url 'ai_assistant' %}" {% if 'ai_assistant' in request.resolver_match.url_name or 'ai_conversation' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Assistant</a>{% endif %}
         </nav>
         <div class="sidebar-bottom">
           {% if user.is_superuser %}

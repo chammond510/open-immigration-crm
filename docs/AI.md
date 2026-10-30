@@ -1,8 +1,27 @@
 # AI features
 
-The CRM's own AI features use a model the firm connects. Everything is off on a new installation, and core sends nothing to an AI model until a superuser turns AI on and picks the features. This page covers connecting a model and the controls. The features themselves arrive separately.
+The CRM's own AI features use a model the firm connects. Everything is off on a new installation, and core sends nothing to an AI model until a superuser turns AI on and picks the features. This page covers the features, connecting a model, and the controls.
 
 This is separate from [AI assistants (MCP)](MCP.md), which let staff use the CRM from their own Claude or ChatGPT.
+
+## Features
+
+Each feature is off until a superuser ticks it in **AI features**. Whatever a feature writes is labelled as an AI draft for attorney review. The CRM records each feature sends are built in [`crm/ai/records.py`](../crm/ai/records.py). They hold text written by clients and others, so the instructions sent with them say to treat that text as data, never as instructions. The background features and the assistant need the [worker](DEPLOYMENT.md#connector-worker) running.
+
+- **Consult prep memos.** A consult is an open appointment with a contact at the Inquiry or Consultation stage, or one with "consult" in its title.
+  - **What it does.** It drafts an internal memo for the attorney: who the person is and what they seem to want, the known facts that matter, questions to ask and documents to request, and what is missing.
+  - **What it sends.** The contact's details and internal notes, their intake answers, their matters, open work, and recent communications and notes.
+  - **When.** Every 15 minutes, the worker drafts memos for consults in the next two days, through the background connection. It drafts a memo again only when those records change.
+  - **Where it shows.** On the contact's page. A staff member can also ask for a memo there, through a connection they may use.
+- **Task suggestions.** Every hour, the worker reviews calls, texts, emails, and meetings logged since its last run, grouped by matter, or by contact when there is no matter.
+  - **What it sends.** For each group: the new communications, the contact's and matter's details, and their open work. It asks the background connection what the firm needs to do next.
+  - **Accepting.** Suggestions appear on the matter, the contact, and the overview of the person they would fall to. Nothing is created until a staff member accepts one. Accepting opens the new-task form with the suggestion filled in, to change before creating it. Staff can also dismiss a suggestion.
+  - **No repeats.** A suggestion much like open work, or like one made or dismissed in the last 30 days, is not made again. Suggestions nobody reviews expire after two weeks.
+- **Matter assistant.** Staff ask questions on a matter's page, or under **Assistant** in the sidebar. It answers by looking things up in the CRM as the person asking, with their permissions.
+  - **Lookups.** The assistant uses the same tools as the [MCP server](MCP.md): searching contacts and matters, matter and contact summaries, upcoming work, USCIS notices, communications, time, the operating summary, and invoices for staff with billing access.
+  - **Changes.** It can propose adding a task or note, logging a communication, or marking work done. Each proposal is shown to the staff member, and is made only if they confirm it. The audit log records it as confirmed by staff in the AI assistant.
+  - **Drafts.** It can draft an email or text, but it has no way to send one. The draft appears with the usual send form, filled in, and only the staff member can send it.
+  - **Conversations.** Each conversation is kept in the CRM, visible only to the person who started it, and they can delete it. Each request sends the conversation so far to the provider.
 
 ## Controls
 
@@ -14,7 +33,7 @@ This is separate from [AI assistants (MCP)](MCP.md), which let staff use the CRM
   - A new connection starts in preview mode, so nothing is sent until a superuser turns preview mode off on the connection's page.
   - A personal connection runs only its owner's own requests.
   - The hourly limit applies.
-- **The log.** The AI features page lists recent requests: when, the feature, who asked (or "Background"), the connection, the model, the tokens in and out, and the outcome. Prompts and answers are not stored.
+- **The log.** The AI features page lists recent requests: when, the feature, who asked (or "Background"), the connection, the model, the tokens in and out, and the outcome. The log does not store prompts or answers. What the features produce is kept with the records it belongs to: memos with the appointment, suggestions until they are handled, and assistant conversations until their owner deletes them.
 - **A check without client data.** A superuser can send a fixed test message through any AI connection to confirm it works.
 
 ## Connecting a model

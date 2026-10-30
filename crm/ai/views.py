@@ -9,7 +9,7 @@ from crm.services import audit
 from . import features
 from .client import AIUnavailable, Message, ai_connections, generate
 from .forms import AISettingsForm, ConnectionTestForm
-from .models import AIRequest, AISettings
+from .models import AIRequest, AISettings, BackgroundRun
 
 staff_required = user_passes_test(lambda user: user.is_active and user.is_staff, login_url="login")
 TEST_PROMPT = "This is a connection check. Reply with the single word: ready."
@@ -54,6 +54,11 @@ def settings_page(request):
             "features": [
                 (feature, ai_settings.feature_on(feature.key))
                 for feature in features.all_features()
+            ],
+            "background_runs": [
+                (feature, BackgroundRun.objects.filter(feature=feature.key).first())
+                for feature in features.all_features()
+                if feature.background
             ],
             "test_form": ConnectionTestForm(user=request.user),
             "connections": ai_connections(request.user),

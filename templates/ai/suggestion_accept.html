@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Review a suggested task · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow">Suggested task</p><h1>Review a suggested task</h1><p>{% if suggestion.matter %}<a href="{% url 'matter_detail' suggestion.matter.pk %}">{{ suggestion.matter.matter_number }}</a> · {% endif %}{% if suggestion.contact %}<a href="{% url 'contact_detail' suggestion.contact.pk %}">{{ suggestion.contact }}</a>{% endif %}</p></div></div>
+  <div class="privacy-note"><strong>AI suggestion for attorney review</strong><p>{{ suggestion.reason|default:"No reason was given." }}</p>{% if suggestion.source_communication %}<p class="muted">From the {{ suggestion.source_communication.get_channel_display|lower }} on {{ suggestion.source_communication.occurred_at|date:"M j, Y · g:i a" }}{% if suggestion.source_communication.subject %}: {{ suggestion.source_communication.subject }}{% endif %}.</p>{% endif %}</div>
+  <form method="post" class="panel stacked-form">
+    {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+    {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="form-grid">
+      {% for field in form %}<div class="field {% if field.field.widget.input_type == 'textarea' or field.name == 'description' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+    </div>
+    <div class="form-actions"><button class="button primary" type="submit">Create the task</button><a class="button" href="{{ next }}">Cancel</a></div>
+  </form>
+</div>
+{% endblock %}

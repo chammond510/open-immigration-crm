@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load connect_tags %}
+{% load ai_tags connect_tags %}
 {% block title %}Overview · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading">
@@ -29,6 +29,7 @@
       {% for stage in pipeline %}<a href="{% url 'contact_list' %}?stage={{ stage.key }}"><span>{{ stage.label }}</span><strong>{{ stage.count }}</strong></a>{% endfor %}
     </div>
   </section>
+  {% task_suggestions_panel mine=True %}
   <section class="panel span-three">
     <div class="section-heading"><div><h2>Recently updated matters</h2><p>The latest case activity.</p></div><a href="{% url 'matter_list' %}">All matters</a></div>
     {% if recent_matters %}

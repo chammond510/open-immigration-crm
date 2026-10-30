@@ -1,13 +1,13 @@
-from django.test import TestCase
 from django.urls import reverse
 
 from crm.ai import features
 from crm.ai.client import AIUnavailable, Message, Tool, ai_connections, generate
 from crm.ai.models import AIRequest, AISettings
 from crm.connect.models import Connection, OutboundRequest
-from crm.connect.services import acknowledge_data_flows, create_connection
 from crm.models import AuditLog
 from crm.tests.factories import make_user
+
+from .base import AITestCase
 
 DRAFTS = features.register(
     features.Feature("fictional_drafts", "Fictional drafts", "Drafts fictional text.")
@@ -15,34 +15,6 @@ DRAFTS = features.register(
 MEMOS = features.register(
     features.Feature("fictional_memos", "Fictional memos", "Prepares memos.", background=True)
 )
-
-
-class AITestCase(TestCase):
-    def setUp(self):
-        self.admin = make_user()
-        self.staff = make_user("paralegal", superuser=False)
-        self.firm = self.connect("Firm model")
-        self.mine = self.connect("Paralegal's model", owner=self.staff)
-
-    def connect(self, label, owner=None):
-        connection = create_connection(
-            "example_ai",
-            label=label,
-            created_by=self.admin,
-            capabilities=["ai_models"],
-            credentials={"api_key": "example-fictional"},
-        )
-        acknowledge_data_flows(connection, self.admin)
-        Connection.objects.filter(pk=connection.pk).update(preview_mode=False, owner=owner)
-        connection.refresh_from_db()
-        return connection
-
-    def turn_on(self, *keys, background=None):
-        ai_settings = AISettings.load()
-        ai_settings.enabled = True
-        ai_settings.features = {key: True for key in keys}
-        ai_settings.background_connection = background
-        ai_settings.save()
 
 
 class GenerateTests(AITestCase):

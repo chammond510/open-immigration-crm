@@ -103,7 +103,7 @@ They can then sign in with their password and set it up again. Both paths are re
 
 ## Connector worker
 
-Connectors sync and process provider events in a separate worker process:
+Connectors sync and process provider events, and AI features run, in a separate worker process:
 
 ```bash
 python manage.py run_worker

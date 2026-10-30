@@ -152,6 +152,8 @@ class OpenAIConnector(Connector):
                     "name": t["name"],
                     "description": t["description"],
                     "parameters": t["parameters"],
+                    # Tools have optional arguments, which strict validation refuses.
+                    "strict": False,
                 }
                 for t in payload["tools"]
             ]

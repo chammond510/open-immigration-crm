@@ -1,0 +1,17 @@
+{% load connect_tags %}
+{% if on %}
+<section class="panel" id="assistant">
+  <div class="section-heading"><div><h2>Assistant</h2><p>Ask about this matter. Answers are AI drafts for attorney review.</p></div><a href="{% url 'ai_assistant' %}">All conversations</a></div>
+  {% if connections %}
+    <form method="post" action="{% url 'ai_assistant_start' %}" class="stacked-form">
+      {% csrf_token %}<input type="hidden" name="matter" value="{{ matter.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}#assistant">
+      <div class="field"><label for="{{ form.message.id_for_label }}">Ask about {{ matter.matter_number }}</label>{{ form.message }}</div>
+      {% if connections|length > 1 %}<div class="field"><label for="{{ form.connection.id_for_label }}">{{ form.connection.label }}</label>{{ form.connection }}</div>{% else %}<input type="hidden" name="connection" value="{{ connections.0.pk }}">{% endif %}
+      <div class="form-actions"><button class="button primary" type="submit">Ask</button></div>
+    </form>
+  {% else %}
+    <div class="prompt-stack">{% connect_prompt "ai_models" "to use the assistant" %}</div>
+  {% endif %}
+  {% for conversation in conversations %}<div class="mini-record"><div><a href="{% url 'ai_conversation' conversation.pk %}"><strong>{{ conversation.title }}</strong></a><span>{{ conversation.updated_at|date:"M j, g:i a" }}</span></div></div>{% endfor %}
+</section>
+{% endif %}

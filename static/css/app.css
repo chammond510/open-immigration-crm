@@ -390,3 +390,31 @@ td.wrap { white-space: normal; min-width: 220px; }
 .consent-panel .stacked-form { margin-top: 16px; }
 .setup-steps { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
 .button.small { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+
+/* AI features */
+.ai-label { display: inline-block; margin: 0; color: var(--warning); font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; }
+.ai-memo { padding: 14px 0; border-top: 1px solid var(--line-soft); }
+.ai-memo:first-of-type { border-top: 0; }
+.ai-memo h3 { margin: 6px 0; font-size: 15px; }
+.ai-memo-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; margin-bottom: 8px; }
+.ai-suggestion { align-items: flex-start; }
+.ai-suggestion .prose { margin: 4px 0 0; font-size: 13px; }
+.inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.ai-suggestion .inline-actions { flex-shrink: 0; margin-top: 0; }
+.success-text { color: var(--success) !important; }
+.chat { display: grid; gap: 12px; max-width: 820px; }
+.chat-turn { padding: 12px 16px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--surface); }
+.chat-turn.from-staff { justify-self: end; max-width: 85%; background: var(--accent-soft); border-color: transparent; }
+.chat-turn .prose p:last-child { margin-bottom: 0; }
+.chat-who { display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.chat-lookup { margin: -4px 0; color: var(--faint); font-size: 12px; }
+.chat-card { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-strong); }
+.chat-card.waiting { border-color: var(--warning); background: var(--warning-soft); }
+.chat-card.draft textarea, .chat-reply textarea { width: 100%; }
+.chat-card .summary-list { margin-top: 10px; }
+.chat-card > .ai-label { display: block; margin: 4px 0 10px; }
+.chat-reply, .chat-footnote { max-width: 820px; margin-top: 16px; }
+@media (max-width: 720px) {
+  .chat-turn.from-staff { max-width: 100%; }
+  .ai-suggestion { flex-direction: column; }
+}

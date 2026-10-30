@@ -1,9 +1,13 @@
 """A fictional AI model for testing the AI interface without any network access.
 
 It is hidden from the catalog. It answers with the last user message reversed,
-calls the first tool it is offered when asked to, and fills a requested schema
-with fictional values.
+and fills a requested schema with fictional values. Asked to "use a tool", it calls
+the first tool it is offered; asked to "use tool NAME", optionally followed by JSON
+arguments, it calls that tool. After a tool answers, it says so and stops.
 """
+
+import json
+import re
 
 from crm.connect.base import (
     ApiKeyAuth,
@@ -47,13 +51,20 @@ class ExampleAIConnector(Connector):
         if action != "generate" or not payload.get("messages"):
             raise ConnectorError("The example AI model needs messages.")
         last = payload["messages"][-1]
+        tools = {tool["name"] for tool in payload.get("tools") or []}
+        call_id = f"call-{len(payload['messages'])}"
+        named = re.search(r"use tool (\w+)\s*(\{.*\})?", last["content"], re.DOTALL)
         calls = []
-        if payload.get("tools") and "use a tool" in last["content"]:
-            calls = [{"id": "call-1", "name": payload["tools"][0]["name"], "arguments": {}}]
+        if last["role"] == "user" and named and named.group(1) in tools:
+            arguments = json.loads(named.group(2)) if named.group(2) else {}
+            calls = [{"id": call_id, "name": named.group(1), "arguments": arguments}]
+        elif last["role"] == "user" and tools and "use a tool" in last["content"]:
+            calls = [{"id": call_id, "name": payload["tools"][0]["name"], "arguments": {}}]
+        text = "The tool answered." if last["role"] == "tool" else last["content"][::-1]
         return {
             "id": "example-reply",
             "model": "example-model-1",
-            "text": last["content"][::-1],
+            "text": text,
             "tool_calls": calls,
             "data": fill(payload["schema"]) if payload.get("schema") else None,
             "input_tokens": len(str(payload["messages"])),

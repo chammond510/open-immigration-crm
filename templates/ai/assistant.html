@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load connect_tags %}
+{% block title %}Assistant · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">AI features</p><h1>Assistant</h1><p>Ask about clients, matters, deadlines, and the practice. The assistant looks things up in the CRM as you. Each change it proposes waits for you to confirm it, and it drafts emails and texts but never sends them. Its answers are AI drafts for attorney review.</p></div></div>
+<div class="page-stack">
+  {% if not on %}
+    <div class="privacy-note">The assistant is off. {% if user.is_superuser %}Turn it on in <a href="{% url 'ai_settings' %}">AI features</a>.{% else %}A superuser can turn it on in AI features.{% endif %}</div>
+  {% elif connections %}
+    <form method="post" action="{% url 'ai_assistant_start' %}" class="panel stacked-form">
+      {% csrf_token %}
+      <h2>New conversation</h2>
+      <div class="field"><label for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>{{ form.message }}</div>
+      {% if connections|length > 1 %}<div class="field"><label for="{{ form.connection.id_for_label }}">{{ form.connection.label }}</label>{{ form.connection }}</div>{% else %}<input type="hidden" name="connection" value="{{ connections.0.pk }}">{% endif %}
+      <div class="form-actions"><button class="button primary" type="submit">Ask</button></div>
+    </form>
+  {% else %}
+    <section class="panel"><h2>Connect an AI model</h2><div class="prompt-stack">{% connect_prompt "ai_models" "to use the assistant" %}</div></section>
+  {% endif %}
+  <section class="panel"><div class="section-heading"><div><h2>Your conversations</h2><p>Kept in the CRM and visible only to you.</p></div></div>
+    {% for conversation in conversations %}<div class="mini-record"><div><a href="{% url 'ai_conversation' conversation.pk %}"><strong>{{ conversation.title }}</strong></a><span>{% if conversation.matter %}{{ conversation.matter.matter_number }} · {% endif %}{{ conversation.updated_at|date:"M j, g:i a" }}</span></div></div>{% empty %}<p class="muted">No conversations yet.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

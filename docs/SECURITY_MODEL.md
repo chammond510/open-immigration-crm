@@ -78,6 +78,9 @@ The CRM's own AI features send data to the AI model the firm connects, so they a
 - **Personal connections stay personal.** A staff member's own AI connection runs only their own requests. Background work runs only through the firm-wide connection a superuser chooses.
 - **No subscription credentials.** The Anthropic connector takes only Claude Console API keys and refuses anything else. Anthropic does not permit apps to use Claude.ai credentials.
 - **Less kept at providers.** OpenAI requests are sent with `store: false`. OpenRouter requests always deny data collection by the providers it routes to. A model the firm runs itself keeps everything local.
+- **Records are data.** Records hold text written by clients and other parties, which could try to instruct the model. Every feature's instructions say to treat records and tool results as data, and tool results are marked as untrusted.
+- **People confirm changes.** The assistant changes the CRM only after the staff member confirms each change, and it cannot send emails or texts: it drafts them for staff to send. Task suggestions create nothing until someone accepts them.
+- **Same permissions.** The assistant looks things up as the person asking, with their permissions. Each conversation is visible only to its owner.
 
 ## AI assistants (MCP)
 
