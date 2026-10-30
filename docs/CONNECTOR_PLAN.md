@@ -524,6 +524,38 @@ Decided 2026-10-30:
 - Live checks run by hand, on a non-production installation with the firm's own accounts. They
   never run in CI, and nothing recorded from a real account is committed.
 
+## Phase 4 plan
+
+Phase 4 adds a second provider for each capability that has one, and a first provider for the
+capabilities that work only by hand so far. It is done when no connector needed a
+vendor-specific escape hatch: any gap a second provider exposes is fixed in core, and the first
+connector is updated to match. Each provider is checked against its current documentation when
+its PR is built, and ships as Beta.
+
+Dialpad texting, listed for this phase, shipped in 3.4.
+
+| PR | Scope |
+|---|---|
+| 4.1 CourtListener legal research (`connectors/courtlistener`, done) | Second legal research connector, against the research interface from 3.11, checked against CourtListener's v4 documentation on 2026-10-30. The research interface needed no change. **Personal connections**: CourtListener's terms forbid sharing or pooling a token, so each staff member connects their own account and it searches only for them. **Search**: case law (`type=o`), highlighted, by relevance, with published and unpublished opinions both included. Scopes: the federal courts of appeals and the Supreme Court (the default), the Board of Immigration Appeals, the Supreme Court alone, or every court. Links go to CourtListener's opinion pages. **Limits**: the default account allows 5 searches a minute, 50 an hour, and 125 a day, so a limited search is not retried, and staff are told when to try again. The token is checked through the usage endpoint, which does not count against those limits. **Contract tests**: every research connector's results are now checked for core's shape. |
+| 4.2 Cal.com scheduling | Second scheduling connector, beside Calendly: bookings, reschedules, and cancellations from signed webhooks, for Cal.com's hosted service or a self-hosted instance. |
+| 4.3 Stripe payments | Second payments connector, beside LawPay: payment links for invoices and payments recorded from signed webhooks. Each Stripe account is mapped to operating or trust, and the connect screen warns that card fees taken from a trust account need the firm's own review. |
+| 4.4 IMAP/SMTP mailbox | Third mailbox connector, for any mail provider: each staff member's mail with clients filed by IMAP sync, and email sent from contact pages by SMTP, with app passwords. |
+| 4.5 Twilio voice | Second phone connector, beside Dialpad: calls placed or received through Twilio logged on the right contact, from signed status callbacks, with recording links where the firm records calls. |
+| 4.6 Website-form webhook | First lead-capture connector: a signed webhook that turns submissions from the firm's website form into new leads, with the lead source and the answers as an intake note. Unsigned or replayed submissions are refused. |
+| 4.7 SMTP system email | First system email connector: the CRM emails intake links and reminders itself, through the firm's SMTP server, with staff still able to copy links by hand. |
+| 4.8 OIDC sign-in | First sign-in connector: staff sign in with the firm's identity provider through generic OIDC, with Google and Microsoft Entra presets. Only existing staff accounts are linked, by verified email; local accounts and TOTP keep working. |
+| 4.9 Zoom video meetings | First video connector: a Zoom meeting is created for an appointment and its link is kept on the appointment, and moved or removed with it, for the staff member's own Zoom account. |
+| 4.10 Documenso e-signature | First e-signature connector: staff send a matter document for signature, see its status from signed webhooks, and the signed PDF is filed on the matter. Works with Documenso's hosted service or a self-hosted instance. |
+| 4.11 Google Drive storage | First document storage connector: matter documents mirrored to a folder per matter on the firm's drive, one way, from the CRM. |
+| 4.12 OneDrive and SharePoint storage | Second document storage connector, through Microsoft Graph, against the interface from 4.11. |
+
+Decided 2026-10-30:
+- Order: second providers for interfaces that already exist come first, smallest first, while
+  those interfaces are fresh. Capabilities with only a manual path follow, and storage comes last
+  because it is the largest.
+- Each PR adds a contract test for its capability's interface where one is missing, so the
+  next provider of that capability is held to the same rules.
+
 ## Testing
 
 - Every capability has a contract test suite, and every connector runs it against recorded

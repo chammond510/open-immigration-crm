@@ -114,7 +114,21 @@ class ConnectorContract:
         connector = self.connector_class(self.make_connection())
         self.assertEqual(set(self.outbound_examples), set(self.connector_class.outbound_actions))
         for action, payload in self.outbound_examples.items():
-            self.assertTrue(str(connector.perform(action, payload)))
+            answer = connector.perform(action, payload)
+            self.assertTrue(str(answer))
+            if action == "search_authorities":
+                self.assert_research_results(answer)
+
+    def assert_research_results(self, answer):
+        """A legal research answer in core's shape: results core can keep and link to."""
+        self.assertIsInstance(answer, dict)
+        self.assertTrue(answer.get("results"), "Give an example search that finds something.")
+        for result in answer["results"]:
+            self.assertTrue(str(result.get("id") or ""), result)
+            self.assertTrue(result.get("title") or result.get("citation"), result)
+            url = str(result.get("url") or "")
+            self.assertTrue(not url or url.startswith("https://"), url)
+            json.dumps(result)
 
     def test_contract_webhooks_verify_parse_and_handle(self):
         cls = self.connector_class
