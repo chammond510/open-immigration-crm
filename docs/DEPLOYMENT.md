@@ -111,6 +111,10 @@ python manage.py run_worker
 
 The Compose file runs it as the `worker` service, using the same image and environment as `web`. The worker keeps its queue in the application database, so it needs no Redis or message broker. Installations with nothing connected can stop it (`docker compose stop worker`). Run one worker per installation unless you have measured a need for more; each one records a heartbeat (default every `WORKER_TICK_SECONDS=60`) so the CRM can tell when syncs have stopped.
 
+## Billing access
+
+Billing is visible to superusers and to staff given the **Can view and manage billing** permission (Administration → Users → the user → Permissions, or a group). Superusers set the firm default rate, staff rates, payment terms, and payment instructions under **Billing → Billing settings**.
+
 ## Connecting services
 
 Superusers connect firm-wide services on the **Connections** page; staff can connect services that are personal to them, such as their own calendar. For providers that use OAuth sign-in, a superuser first registers the firm's own app in the provider's developer console. The connector's page shows the exact redirect URI to enter there (`https://<your-host>/connections/oauth/callback/`); that URI must be reachable by staff browsers, not by the provider. The fictional example connectors appear in the catalog only when `CONNECTORS_SHOW_HIDDEN=true`, which defaults to on only with `DEBUG=true`.

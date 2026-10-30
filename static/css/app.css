@@ -235,6 +235,18 @@ code { padding: 1px 5px; border-radius: 4px; background: rgb(23 32 51 / 6%); fon
 .badge.channel-text { background: #efe9f8; color: #5b3f8f; }
 .badge.channel-email { background: #e6f2f2; color: #23656a; }
 .badge.channel-meeting { background: var(--warning-soft); color: var(--warning); }
+th.numeric, td.numeric { text-align: right; }
+td.wrap { white-space: normal; min-width: 220px; }
+.invoice-totals { display: grid; grid-template-columns: 1fr auto; gap: 6px 24px; width: min(360px, 100%); margin: 0 0 0 auto; padding: 14px 16px; }
+.invoice-totals dt { color: var(--muted); }
+.invoice-totals dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.invoice-totals .strong { color: var(--ink); font-weight: 750; }
+.inline-reason { display: flex; align-items: center; gap: 6px; }
+.inline-reason input { width: 140px; min-height: 30px; padding: 4px 8px; }
+.badge.funds-advance { background: var(--warning-soft); color: var(--warning); }
+.badge.issued { background: var(--accent-soft); color: var(--accent-dark); }
+.badge.partially_paid { background: var(--warning-soft); color: var(--warning); }
+.badge.paid { background: var(--success-soft); color: var(--success); }
 .connect-prompt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px dashed #b7c6e6; border-radius: var(--radius); background: var(--accent-soft); color: #1c448f; }
 .badge.maturity-ready, .badge.succeeded, .badge.sent, .badge.processed { background: var(--success-soft); color: var(--success); }
 .badge.maturity-beta, .badge.queued, .badge.running, .badge.previewed { background: var(--accent-soft); color: var(--accent-dark); }

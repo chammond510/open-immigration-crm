@@ -57,3 +57,7 @@ document.querySelectorAll("[data-copy-for]").forEach((button) => {
     }
   });
 });
+
+document.querySelectorAll("[data-print]").forEach((button) => {
+  button.addEventListener("click", () => window.print());
+});

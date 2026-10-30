@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load billing_tags connect_tags %}
+{% block title %}{{ invoice.number|default:"Draft invoice" }} · Billing · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><p class="eyebrow"><a href="{% url 'invoice_list' %}">Billing</a> · {{ invoice.get_status_display }}</p><h1>{{ invoice.number|default:"Draft invoice" }}</h1><p>For <a href="{% url 'contact_detail' invoice.contact.pk %}">{{ invoice.contact }}</a>{% if invoice.matter %} · <a href="{% url 'matter_detail' invoice.matter.pk %}">{{ invoice.matter }}</a>{% endif %}</p></div>
+  <div class="actions">
+    {% if invoice.status != "void" %}<a class="button" href="{% url 'invoice_print' invoice.pk %}">{% if invoice.is_draft %}Preview{% else %}Print{% endif %}</a>{% endif %}
+    {% if invoice.is_draft %}<form method="post" action="{% url 'invoice_delete' invoice.pk %}" data-confirm="Delete this draft invoice?">{% csrf_token %}<button class="button danger" type="submit">Delete draft</button></form><form method="post" action="{% url 'invoice_issue' invoice.pk %}" data-confirm="Issue this invoice? Its lines can't be changed afterward.">{% csrf_token %}<button class="button primary" type="submit">Issue invoice</button></form>{% endif %}
+  </div>
+</div>
+{% if invoice.status == "void" %}<div class="privacy-note">Void: {{ invoice.void_reason }}</div>{% elif invoice.is_overdue %}<div class="message error">Overdue since {{ invoice.due_date|date:"M j, Y" }}.</div>{% endif %}
+<div class="detail-grid">
+  <div class="detail-main">
+    <section class="panel flush-panel"><div class="table-wrap"><table class="invoice-lines"><thead><tr><th>Description</th><th>Funds</th><th class="numeric">Qty</th><th class="numeric">Unit price</th><th class="numeric">Amount</th>{% if invoice.is_draft %}<th><span class="sr-only">Remove</span></th>{% endif %}</tr></thead><tbody>
+      {% for line in lines %}<tr><td class="wrap">{{ line.description }}<small>{{ line.get_kind_display }}</small></td><td><span class="badge funds-{{ line.funds }}">{% if line.funds == "advance" %}Trust{% else %}Operating{% endif %}</span></td><td class="numeric">{{ line.quantity }}</td><td class="numeric">{{ line.unit_price|money:currency }}</td><td class="numeric">{{ line.amount|money:currency }}</td>{% if invoice.is_draft %}<td><form method="post" action="{% url 'invoice_line_delete' invoice.pk line.pk %}">{% csrf_token %}<button class="text-button danger-text" type="submit">Remove</button></form></td>{% endif %}</tr>{% empty %}<tr><td colspan="6" class="muted">No lines yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+      <dl class="invoice-totals">
+        {% if advance_total %}<dt>Earned fees (operating)</dt><dd>{{ earned_total|money:currency }}</dd><dt>Advances (trust)</dt><dd>{{ advance_total|money:currency }}</dd>{% endif %}
+        <dt>Total</dt><dd>{{ invoice.subtotal|money:currency }}</dd>
+        {% if not invoice.is_draft %}<dt>Paid</dt><dd>{{ invoice.amount_paid|money:currency }}</dd><dt class="strong">Balance due</dt><dd class="strong">{{ invoice.balance|money:currency }}</dd>{% endif %}
+      </dl>
+    </section>
+    {% if invoice.is_draft %}
+      <section class="panel">
+        <div class="section-heading"><div><h2>Add a line</h2><p>Mark government filing fees and other money held for the client as advances (trust).</p></div></div>
+        <form method="post" action="{% url 'invoice_line_add' invoice.pk %}" class="stacked-form">{% csrf_token %}
+          <div class="form-grid">{% for field in line_form %}<div class="field {% if field.name == 'description' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}</div>
+          <div class="form-actions"><button class="button" type="submit">Add line</button></div>
+        </form>
+      </section>
+      <section class="panel">
+        <div class="section-heading"><div><h2>Unbilled time</h2><p>Each entry becomes a line at the staff member's rate, rounded up to the firm's billing increment.</p></div></div>
+        {% if unbilled %}<form method="post" action="{% url 'invoice_time_add' invoice.pk %}" class="stacked-form">{% csrf_token %}
+          <div class="choice-list"><div>{% for entry in unbilled %}<label for="entry-{{ entry.pk }}"><input type="checkbox" id="entry-{{ entry.pk }}" name="entries" value="{{ entry.pk }}" checked> {{ entry.started_at|date:"M j" }} · {{ entry.duration_display }} · {{ entry.user }}{% if entry.note %} · {{ entry.note }}{% endif %}</label>{% endfor %}</div></div>
+          <div class="form-actions"><button class="button" type="submit">Add selected time</button></div>
+        </form>{% else %}<p class="muted">No unbilled time for this {% if invoice.matter %}matter{% else %}contact{% endif %}.</p>{% endif %}
+      </section>
+    {% else %}
+      <section class="panel">
+        <div class="section-heading"><div><h2>Payments</h2><p>Record each payment and the account it was deposited to.</p></div></div>
+        {% for payment in payments %}<div class="mini-record"><div><strong>{{ payment.amount|money:currency }} · {{ payment.get_method_display }}{% if payment.voided_at %} · void{% endif %}</strong><span>{{ payment.received_on|date:"M j, Y" }} · {{ payment.get_deposit_account_display }}{% if payment.reference %} · {{ payment.reference }}{% endif %} · {% if payment.source_connection %}via {{ payment.source_connection }}{% else %}{{ payment.recorded_by|default:"—" }}{% endif %}{% if payment.voided_at %} · voided: {{ payment.void_reason }}{% endif %}</span></div>{% if user.is_superuser and not payment.voided_at %}<form method="post" action="{% url 'payment_void' invoice.pk payment.pk %}" class="inline-reason">{% csrf_token %}<label class="sr-only" for="void-{{ payment.pk }}">Reason</label><input id="void-{{ payment.pk }}" name="reason" placeholder="Reason" required><button class="text-button danger-text" type="submit">Void</button></form>{% endif %}</div>{% empty %}<p class="muted">No payments recorded.</p>{% endfor %}
+        {% if can_take_payment %}
+          <form method="post" action="{% url 'payment_record' invoice.pk %}" class="compact-form stacked-form">{% csrf_token %}
+            <div class="form-grid">{% for field in payment_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}</div>
+            {% if advance_total %}<small class="muted">This invoice includes {{ advance_total|money:currency }} of advances, which belong in the trust account.</small>{% endif %}
+            <div class="form-actions"><button class="button primary" type="submit">Record payment</button></div>
+          </form>
+          <div class="prompt-stack">{% connect_prompt "payments" "to send a payment link instead" %}</div>
+        {% endif %}
+      </section>
+    {% endif %}
+  </div>
+  <aside class="detail-aside">
+    <section class="panel facts"><h2>Details</h2><dl>
+      <dt>Bill to</dt><dd>{{ invoice.contact }}</dd>
+      <dt>Matter</dt><dd>{{ invoice.matter.matter_number|default:"—" }}</dd>
+      <dt>Issued</dt><dd>{{ invoice.issue_date|date:"M j, Y"|default:"Not yet" }}</dd>
+      <dt>Due</dt><dd>{{ invoice.due_date|date:"M j, Y"|default:"—" }}</dd>
+      <dt>Created by</dt><dd>{{ invoice.created_by|default:"—" }}</dd>
+    </dl></section>
+    <form method="post" action="{% url 'invoice_notes' invoice.pk %}" class="panel stacked-form">{% csrf_token %}
+      <div><h2>Notes</h2></div>
+      {% for field in notes_form %}<div class="field"><label for="{{ field.id_for_label }}">{% if field.name == "memo" %}Memo to the client{% else %}Internal notes{% endif %}</label>{% if field.name == "memo" and not invoice.is_draft %}<p class="prose">{{ invoice.memo|default:"—" }}</p><input type="hidden" name="memo" value="{{ invoice.memo }}">{% else %}{{ field }}{% endif %}</div>{% endfor %}
+      <div class="form-actions"><button class="button" type="submit">Save notes</button></div>
+    </form>
+    {% if user.is_superuser and can_take_payment %}
+      <form method="post" action="{% url 'invoice_void' invoice.pk %}" class="panel stacked-form" data-confirm="Void this invoice?">{% csrf_token %}
+        <div><h2>Void invoice</h2><p class="muted">Allowed when no payments remain. Its time can then be billed again.</p></div>
+        <div class="field"><label for="void-reason">Reason</label><input id="void-reason" name="reason" required></div>
+        <div class="form-actions"><button class="button danger" type="submit">Void invoice</button></div>
+      </form>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

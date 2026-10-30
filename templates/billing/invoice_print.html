@@ -1,0 +1,31 @@
+{% load static billing_tags %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{{ invoice.number|default:"Draft invoice" }} · {{ invoice.contact }}</title>
+  <link rel="stylesheet" href="{% static 'css/print.css' %}">
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+<body class="invoice-print">
+  <nav class="no-print"><a href="{% url 'invoice_detail' invoice.pk %}">Back to invoice</a> <button type="button" data-print>Print or save as PDF</button></nav>
+  {% if invoice.is_draft %}<p class="draft-mark">Draft — not issued</p>{% endif %}
+  <header class="letterhead">
+    <div><h1>{{ firm.name|default:"Invoice" }}</h1><p>{% if firm.address_line1 %}{{ firm.address_line1 }}<br>{% endif %}{% if firm.address_line2 %}{{ firm.address_line2 }}<br>{% endif %}{% if firm.city %}{{ firm.city }}{% if firm.region %}, {{ firm.region }}{% endif %} {{ firm.postal_code }}<br>{% endif %}{% if firm.phone %}{{ firm.phone }}{% endif %}{% if firm.email %} · {{ firm.email }}{% endif %}</p></div>
+    <dl><dt>Invoice</dt><dd>{{ invoice.number|default:"Draft" }}</dd><dt>Date</dt><dd>{{ invoice.issue_date|date:"F j, Y"|default:"—" }}</dd><dt>Due</dt><dd>{{ invoice.due_date|date:"F j, Y"|default:"—" }}</dd>{% if invoice.matter %}<dt>Matter</dt><dd>{{ invoice.matter.matter_number }}</dd>{% endif %}</dl>
+  </header>
+  <section class="bill-to"><h2>Bill to</h2><p>{{ invoice.contact.full_name }}{% if invoice.contact.address_line1 %}<br>{{ invoice.contact.address_line1 }}{% endif %}{% if invoice.contact.address_line2 %}<br>{{ invoice.contact.address_line2 }}{% endif %}{% if invoice.contact.city %}<br>{{ invoice.contact.city }}{% if invoice.contact.region %}, {{ invoice.contact.region }}{% endif %} {{ invoice.contact.postal_code }}{% endif %}</p>{% if invoice.matter %}<p>Re: {{ invoice.matter.title }}</p>{% endif %}</section>
+  <table>
+    <thead><tr><th>Description</th><th class="numeric">Qty</th><th class="numeric">Rate</th><th class="numeric">Amount</th></tr></thead>
+    <tbody>{% for line in lines %}<tr><td>{{ line.description }}{% if line.funds == "advance" %}<small>Advance, held in trust</small>{% endif %}</td><td class="numeric">{{ line.quantity }}</td><td class="numeric">{{ line.unit_price|money:currency }}</td><td class="numeric">{{ line.amount|money:currency }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <dl class="totals">
+    <dt>Total</dt><dd>{{ invoice.subtotal|money:currency }}</dd>
+    {% for payment in payments %}<dt>Payment received {{ payment.received_on|date:"M j, Y" }}</dt><dd>−{{ payment.amount|money:currency }}</dd>{% endfor %}
+    <dt class="strong">Balance due</dt><dd class="strong">{{ invoice.balance|money:currency }}</dd>
+  </dl>
+  {% if invoice.memo %}<section><h2>Note</h2><p>{{ invoice.memo|linebreaksbr }}</p></section>{% endif %}
+  {% if billing.payment_instructions %}<section><h2>How to pay</h2><p>{{ billing.payment_instructions|linebreaksbr }}</p></section>{% endif %}
+</body>
+</html>

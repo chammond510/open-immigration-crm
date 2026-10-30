@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load billing_tags connect_tags %}
+{% block title %}Billing · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Billing</p><h1>Invoices</h1><p>{{ outstanding|money:currency }} outstanding{% if overdue_count %} · <span class="danger-text">{{ overdue_count }} overdue</span>{% endif %}</p></div><div class="actions">{% if user.is_superuser %}<a class="button" href="{% url 'billing_settings' %}">Billing settings</a>{% endif %}<a class="button primary" href="{% url 'invoice_create' %}">New invoice</a></div></div>
+<div class="prompt-stack page-prompts">{% connect_prompt "payments" "to accept card and bank payments" %}</div>
+<form class="filter-bar" method="get">
+  <label class="sr-only" for="invoice-q">Search invoices</label><input id="invoice-q" type="search" name="q" value="{{ query }}" placeholder="Invoice number, client, or matter">
+  <label class="sr-only" for="invoice-status">Status</label><select id="invoice-status" name="status"><option value="">All statuses</option>{% for key, label in statuses %}<option value="{{ key }}" {% if selected_status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="button" type="submit">Filter</button>
+</form>
+<section class="panel flush-panel">{% if invoices %}<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Issued</th><th>Due</th><th class="numeric">Total</th><th class="numeric">Balance</th></tr></thead><tbody>
+  {% for invoice in invoices %}<tr><td><a class="primary-link" href="{% url 'invoice_detail' invoice.pk %}">{{ invoice.number|default:"Draft" }}</a>{% if invoice.matter %}<small>{{ invoice.matter.matter_number }}</small>{% endif %}</td><td>{{ invoice.contact }}</td><td><span class="badge {{ invoice.status }}">{{ invoice.get_status_display }}</span>{% if invoice.is_overdue %} <span class="badge failed">Overdue</span>{% endif %}</td><td>{{ invoice.issue_date|date:"M j, Y"|default:"—" }}</td><td>{{ invoice.due_date|date:"M j, Y"|default:"—" }}</td><td class="numeric">{{ invoice.subtotal|money:currency }}</td><td class="numeric">{{ invoice.balance|money:currency }}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="empty-state"><h3>No invoices found</h3><p>Create an invoice from a contact or matter, or start one here.</p></div>{% endif %}</section>
+{% endblock %}

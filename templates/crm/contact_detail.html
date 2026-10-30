@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load comms_tags %}
+{% load billing_tags comms_tags %}
 {% block title %}{{ contact }} · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading"><div><p class="eyebrow">{{ contact.get_status_display }} · {{ contact.get_stage_display }}</p><h1>{{ contact.full_name }}</h1><p>{{ contact.email|default:"No email" }}{% if contact.phone %} · {{ contact.phone }}{% endif %}</p></div><div class="actions"><form method="post" action="{% url 'timer_start' %}">{% csrf_token %}<input type="hidden" name="contact" value="{{ contact.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="button" type="submit">Start timer</button></form><a class="button" href="{% url 'work_create' %}?contact={{ contact.pk }}">Add work</a><a class="button" href="{% url 'contact_update' contact.pk %}">Edit</a><a class="button primary" href="{% url 'matter_create' %}?contact={{ contact.pk }}">New matter</a></div></div>
@@ -7,6 +7,7 @@
   <div class="detail-main">
     <section class="panel"><div class="section-heading"><div><h2>Matters</h2><p>Case work linked to this contact.</p></div></div>{% if matters %}<div class="record-list">{% for matter in matters %}<a class="record-row linked-row" href="{% url 'matter_detail' matter.pk %}"><div class="record-main"><strong>{{ matter.matter_number }} · {{ matter.title }}</strong><span>{{ matter.get_case_type_display }}</span></div><span class="badge {{ matter.status }}">{{ matter.get_status_display }}</span></a>{% endfor %}</div>{% else %}<div class="empty-state compact"><p>No matters yet.</p></div>{% endif %}</section>
     {% communications_panel contact=contact %}
+    {% billing_panel contact=contact %}
     <section class="panel"><div class="section-heading"><div><h2>Activity</h2><p>Notes and meaningful case events.</p></div></div><form method="post" action="{% url 'contact_add_activity' contact.pk %}" class="inline-entry">{% csrf_token %}{{ activity_form.kind }}{{ activity_form.subject }}{{ activity_form.body }}{{ activity_form.occurred_at }}<button class="button primary" type="submit">Add activity</button></form><div class="timeline">{% for activity in activities %}<article><span class="timeline-dot"></span><div><div class="timeline-heading"><strong>{{ activity.subject }}</strong><time>{{ activity.occurred_at|date:"M j, Y · g:i a" }}</time></div>{% if activity.body %}<p>{{ activity.body|linebreaksbr }}</p>{% endif %}<small>{{ activity.get_kind_display }}{% if activity.created_by %} · {{ activity.created_by }}{% endif %}</small></div></article>{% empty %}<div class="empty-state compact"><p>No activity yet.</p></div>{% endfor %}</div></section>
   </div>
   <aside class="detail-aside">
