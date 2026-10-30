@@ -14,6 +14,7 @@ from crm.connect.models import OutboundRequest
 from crm.models import Contact, Matter
 from crm.services import audit
 
+from .emailing import email_connections, send_email
 from .forms import CommunicationForm
 from .models import Communication
 from .services import set_texting_opt_out
@@ -174,9 +175,8 @@ def communication_create(request):
     return render(request, "comms/communication_form.html", {"form": form})
 
 
-@staff_required
-@require_POST
-def communication_send_text(request):
+def send_from_page(request, connections, noun, send):
+    """Send a text or email to a contact from a contact or matter page, and say what happened."""
     contact = get_object_or_404(Contact, pk=request.POST.get("contact"))
     matter = Matter.objects.filter(pk=request.POST.get("matter") or None).first()
     fallback = (
@@ -184,8 +184,7 @@ def communication_send_text(request):
         if matter
         else reverse("contact_detail", args=[contact.pk])
     )
-    connections = {str(c.pk): c for c in texting_connections(request.user)}
-    connection = connections.get(request.POST.get("connection", ""))
+    connection = {str(c.pk): c for c in connections}.get(request.POST.get("connection", ""))
     if connection is None:
         raise PermissionDenied
     if (
@@ -195,29 +194,47 @@ def communication_send_text(request):
     ):
         raise PermissionDenied
     try:
-        outbound = send_text(
-            connection,
-            contact=contact,
-            body=request.POST.get("body", ""),
-            actor=request.user,
-            matter=matter,
-        )
+        outbound = send(connection, contact=contact, actor=request.user, matter=matter)
     except ValidationError as exc:
         messages.error(request, " ".join(exc.messages))
         return redirect(safe_next(request, fallback))
     if outbound.status == OutboundRequest.Status.SENT:
-        messages.success(request, f"Text sent through {connection.label}.")
+        messages.success(request, f"{noun.capitalize()} sent through {connection.label}.")
     elif outbound.status == OutboundRequest.Status.PREVIEWED:
         messages.info(
             request,
-            f"{connection.label} is in preview mode, so the text was recorded but not sent. "
+            f"{connection.label} is in preview mode, so the {noun} was recorded but not sent. "
             "A superuser can turn preview mode off on the connection's page.",
         )
     elif outbound.status == OutboundRequest.Status.FAILED:
-        messages.error(request, f"The text was not sent: {outbound.error}")
+        messages.error(request, f"The {noun} was not sent: {outbound.error}")
     else:
-        messages.error(request, f"The text was not sent. {outbound.error}")
+        messages.error(request, f"The {noun} was not sent. {outbound.error}")
     return redirect(safe_next(request, fallback))
+
+
+@staff_required
+@require_POST
+def communication_send_text(request):
+    body = request.POST.get("body", "")
+    return send_from_page(
+        request,
+        texting_connections(request.user),
+        "text",
+        lambda connection, **kwargs: send_text(connection, body=body, **kwargs),
+    )
+
+
+@staff_required
+@require_POST
+def communication_send_email(request):
+    subject, body = request.POST.get("subject", ""), request.POST.get("body", "")
+    return send_from_page(
+        request,
+        email_connections(request.user),
+        "email",
+        lambda connection, **kwargs: send_email(connection, subject=subject, body=body, **kwargs),
+    )
 
 
 @staff_required

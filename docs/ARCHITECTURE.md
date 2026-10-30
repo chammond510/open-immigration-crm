@@ -84,7 +84,7 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
 
     It records every attempt as an `OutboundRequest`, storing only safe error text.
   - `testing.ConnectorContract` holds the shared contract tests. They block network access.
-- `connectors/<provider>/` holds one optional adapter package per provider. `connectors/example/` is a fictional connector, hidden from the catalog, that exercises the framework. `connectors/webhooks/` is the built-in automation connector: it signs each event with the Standard Webhooks scheme and posts it to the firm's chosen address. `connectors/uscis_case_status/` checks receipt numbers through the firm's own USCIS developer app. `connectors/twilio/` and `connectors/dialpad/` send and receive texts, and Dialpad also brings in calls.
+- `connectors/<provider>/` holds one optional adapter package per provider. `connectors/example/` is a fictional connector, hidden from the catalog, that exercises the framework. `connectors/webhooks/` is the built-in automation connector: it signs each event with the Standard Webhooks scheme and posts it to the firm's chosen address. `connectors/uscis_case_status/` checks receipt numbers through the firm's own USCIS developer app. `connectors/twilio/` and `connectors/dialpad/` send and receive texts, and Dialpad also brings in calls. `connectors/google_workspace/` connects each staff member's Gmail and Google Calendar.
 
 - **Worker.** `python manage.py run_worker` runs two things:
   - a scheduler thread that records a `WorkerHeartbeat` and queues a `SyncRun` for each due capability of each active connection;
@@ -92,7 +92,8 @@ The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without chang
 
   Each sync resumes from the previous successful run's cursor. Synced and webhook records are typed records (`crm/connect/records.py`), delivered through the `records_received` signal.
   - `crm/comms/records.py` stores calls, texts, and emails, handles STOP and START replies, and links unmatched records when a contact gains that number or address. A later copy of a record adds to the stored one: the first time is kept, empty values erase nothing, new summary paragraphs are appended, and a text's delivery status only moves forward.
-  - `crm/comms/texting.py` sends texts from contact and matter pages through any connection with the standard `send_text` action, via the outbound policy, and logs each sent text under the provider's message ID.
+  - `crm/comms/texting.py` and `crm/comms/emailing.py` send texts and emails from contact and matter pages through any connection with the standard `send_text` or `send_email` action, via the outbound policy, and log each one under the provider's message ID.
+  - `crm/appointments.py` also puts each appointment on its staff member's connected calendars (`save_event` and `delete_event`), from the worker and through the outbound policy. It changes only events the CRM created, and ignores changes that came from a calendar, so nothing echoes back.
   - `crm/appointments.py` stores calendar events (only those with a known contact) and bookings.
   - `crm/billing/records.py` records payments. It never guesses the operating or trust account for an invoice with advance lines.
   - `crm/notices/records.py` records case status readings. An automatic reading that changes the status creates a review task (`crm/notices/alerts.py` sets its title and priority from USCIS's status title), and updates the receipt's open review task if there is one.

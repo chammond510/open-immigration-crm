@@ -53,11 +53,12 @@ The system can hold names, contact information, birth dates, addresses, national
 10. A documented offboarding process that disables staff accounts immediately.
 11. A tested incident-response plan appropriate for attorney/client information.
 
-## Connectors (planned)
+## Connectors
 
-The connector framework and Connections page are in place; no connector for a real provider has shipped yet. Controls in place:
+The connector framework and Connections page are in place, with Beta connectors for USCIS Case Status, Twilio, Dialpad, and Google Workspace. Controls in place:
 - Only superusers can create firm-wide connections, acknowledge data flows, change outbound settings, or enter OAuth app credentials.
 - Staff manage only their own personal connections.
+- A personal connection, such as a staff member's own mailbox and calendar, sends only what its owner sends. The one thing it does on its own is keep the owner's records in step on the owner's account, such as putting their appointments on their calendar. It never runs the firm's automations or sends a message by itself.
 - OAuth sign-in uses PKCE and a single-use, expiring state value.
 - OAuth client secrets, tokens, and API keys are stored encrypted and never displayed.
 
@@ -65,8 +66,8 @@ Connectors change the risk picture in these ways:
 
 - **Data leaves the installation.** Each connector sends data to a provider the firm chooses. The connect screen lists what is sent and received, and a superuser must acknowledge it. The firm remains responsible for evaluating each provider and its data-use terms. Consumer and business AI plans often have different terms.
 - **Some features need public reachability.** Provider webhooks and the MCP endpoint must be reachable from the provider's network. Expose only those paths through the reverse proxy, use polling where a provider supports it, or leave those connectors off.
-- **More credentials to protect.** Connection credentials will be stored encrypted, scoped to the capabilities the firm turns on, and deleted on disconnect. They use the same `FIELD_ENCRYPTION_KEYS` encryption as two-factor keys.
-- **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models will pass an outbound policy and start in preview mode.
+- **More credentials to protect.** Connection credentials are stored encrypted, scoped to the capabilities the firm turns on, and deleted on disconnect. Where the provider supports it, disconnecting also revokes them there. They use the same `FIELD_ENCRYPTION_KEYS` encryption as two-factor keys.
+- **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, and calling AI models pass an outbound policy and start in preview mode. Calendar events the CRM writes have no attendees, so no invitations go out.
 - **Webhooks fail closed.** A webhook with a missing or invalid signature is rejected in every environment, including development settings. Each connection has its own unguessable URL token, stored only as a hash. Twilio's connector, which needs the address to ask for delivery updates, keeps it encrypted with its other credentials. Dialpad's events are signed tokens (JWT, HS256 only), read only after their signature checks out. Twilio's are checked against the exact address and every parameter. A verified event's payload is stored minimized and encrypted, and deleted once the worker has processed it.
 
 ## AI assistants (MCP)

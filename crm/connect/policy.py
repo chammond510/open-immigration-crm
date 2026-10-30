@@ -37,7 +37,17 @@ def texting_opted_out(target):
     return bool(getattr(contact, "texting_opted_out_at", None))
 
 
-def evaluate(connection, *, capability, actor=None, is_automation=False, target=None):
+def owner_sync(connection, action, target):
+    """True for an action that only keeps the owner's own account in step, on their record."""
+    cls = connection.connector_class
+    return (
+        cls is not None
+        and action in cls.owner_sync_actions
+        and getattr(target, "assigned_to_id", None) == connection.owner_id
+    )
+
+
+def evaluate(connection, *, capability, actor=None, is_automation=False, target=None, action=""):
     """Decide whether an outbound action may run. Checks run in a fixed, documented order."""
     if not settings.CONNECTORS_OUTBOUND_ENABLED:
         return Decision(False, Codes.KILL_SWITCH, "Outbound actions are turned off for this site.")
@@ -54,11 +64,16 @@ def evaluate(connection, *, capability, actor=None, is_automation=False, target=
             "A superuser must review what this connection sends before it is used.",
         )
     is_owner = actor is not None and actor.pk == connection.owner_id
-    if connection.owner_id is not None and (is_automation or not is_owner):
+    if (
+        connection.owner_id is not None
+        and (is_automation or not is_owner)
+        and not (is_automation and owner_sync(connection, action, target))
+    ):
         return Decision(
             False,
             Codes.PERSONAL_CONNECTION,
-            "A personal connection runs only its owner's own requests, never automations.",
+            "A personal connection runs only its owner's own requests, and automations only "
+            "to keep the owner's own records in step.",
         )
     if connection.outbound_admin_only and not is_automation and not (actor and actor.is_superuser):
         return Decision(
@@ -93,6 +108,7 @@ def send(connection, action, payload, *, actor=None, is_automation=False, summar
         actor=actor,
         is_automation=is_automation,
         target=target,
+        action=action,
     )
     request = OutboundRequest(
         connection=connection,

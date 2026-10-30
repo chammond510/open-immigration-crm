@@ -13,10 +13,10 @@ from django.utils import timezone
 
 from crm.connect import policy
 from crm.connect.base import Capability
-from crm.connect.models import Connection, OutboundRequest
-from crm.connect.services import visible_connections
+from crm.connect.models import OutboundRequest
 
 from .models import Communication
+from .outbound import connections_for
 from .services import record_communication
 
 SEND_TEXT = "send_text"
@@ -25,17 +25,7 @@ MAX_LENGTH = 1600
 
 def texting_connections(user):
     """Active connections this person can send texts through: the firm's and their own."""
-    found = []
-    for connection in visible_connections(user).filter(status=Connection.Status.ACTIVE):
-        cls = connection.connector_class
-        if (
-            cls is not None
-            and Capability.TEXTING in connection.enabled_capabilities
-            and cls.outbound_actions.get(SEND_TEXT) == Capability.TEXTING
-            and connection.owner_id in (None, user.pk)
-        ):
-            found.append(connection)
-    return found
+    return connections_for(user, SEND_TEXT, Capability.TEXTING)
 
 
 def send_text(connection, *, contact, body, actor, matter=None):

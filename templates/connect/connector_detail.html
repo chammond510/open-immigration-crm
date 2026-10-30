@@ -31,7 +31,7 @@
     {% endif %}
     {% if form %}
       <section class="panel">
-        <div class="section-heading"><div><h2>Connect {{ entry.name }}</h2><p>{% if form.personal %}This connects your own account. Only you can use it, and never for automations.{% else %}This connection is shared by the whole firm.{% endif %}</p></div></div>
+        <div class="section-heading"><div><h2>Connect {{ entry.name }}</h2><p>{% if form.personal %}This connects your own account. Only you can send through it. On its own, the CRM only keeps your records in step there, such as putting your appointments on your calendar; the firm's automations never use it.{% else %}This connection is shared by the whole firm.{% endif %}</p></div></div>
         <form method="post" class="stacked-form">
           {% csrf_token %}
           {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors|join:" " }}</div>{% endif %}

@@ -85,6 +85,8 @@ def manifest_problems(cls):
         and cls.register_webhook is Connector.register_webhook
     ):
         problems.append("webhooks that offer registration must implement register_webhook()")
+    if not set(cls.owner_sync_actions) <= set(cls.outbound_actions):
+        problems.append("owner_sync_actions must be declared outbound actions")
     stray = set(cls.outbound_actions.values()) - set(cls.capabilities)
     if stray:
         problems.append(f"outbound actions use undeclared capabilities: {', '.join(sorted(stray))}")
