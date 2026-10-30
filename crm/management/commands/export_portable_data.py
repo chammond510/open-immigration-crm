@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.core.serializers import serialize
 from django.db.models import Model
 
+from crm.comms.models import Communication
 from crm.models import (
     Activity,
     AuditLog,
@@ -30,6 +31,7 @@ MODELS: tuple[type[Model], ...] = (
     Matter,
     MatterParty,
     Activity,
+    Communication,
     WorkItem,
     TimeEntry,
     ChecklistItem,

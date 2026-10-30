@@ -402,13 +402,13 @@ phone, payments.
 These are ported from the firm CRM as core features before their connectors, so every empty state
 has a working manual path:
 
-1. Communications log for calls, texts, emails and meetings, shown in the activity timeline
+1. Communications log for calls, texts, emails and meetings, with a texting opt-out
 2. Billing: invoices, line items flagged as earned fee or advance, manual payments, rates on the
    existing time entries, and payment plans with reminders as work items
 3. USCIS notices and receipt tracking on matters
 4. Workflow templates, firm-authored, with none shipped
 5. Custom fields on contacts and matters
-6. Engagements: one consult or retainer covering several people
+6. Engagements: one consult or retainer covering several people (deferred until after Phase 3)
 7. An operating dashboard built from CRM data only
 8. REST API with scoped tokens and an API audit log
 9. Signed outbound webhooks
@@ -419,11 +419,36 @@ has a working manual path:
 |---|---|---|
 | 0. Boundary | Docs and check scripts listed above | Release gate passes under the new rules |
 | 1. Foundation | Encryption, TOTP, worker and scheduler, core tables, registry and manifests, `catalog.toml`, Connections UI, API-key and BYO-OAuth flows, webhooks, outbound policy, data-flow acknowledgment, an `example` connector, and the contract test harness | The example connector can be connected, receive a signed webhook, sync, attempt a preview-mode send and disconnect, all audited. No vendor code yet. |
-| 2. Manual-first features | The nine features above, each with its empty state | Every screen is fully usable with zero connections |
+| 2. Manual-first features | The features above except engagements, each with its empty state; see "Phase 2 plan" | Every capability's "Connect your ..." prompt sits beside a working manual path |
 | 3. Port the firm's adapters, plus AI access | Google, Microsoft 365, Dialpad, Twilio (texting), Calendly, LawPay, OpenAI, Anthropic, USCIS Case Status and BIA Edge, rewritten against the interfaces with firm-specific behavior removed. AI access: the MCP server, OpenRouter, the OpenAI-compatible endpoint, and the ChatGPT plan connector behind a Beta flag | Each connector passes its contract tests on recorded fixtures and has its data flows filled in. A staff member can work with the CRM from Claude through the MCP server. |
 | 4. Second adapters | IMAP/SMTP, Twilio voice, Dialpad texting, Stripe, Cal.com, Documenso, Zoom, CourtListener, the website-form webhook, OIDC sign-in and SMTP system email | No interface needed a vendor-specific escape hatch; any interface fixes were made in core and the first adapter was updated |
 | 5. Ecosystem | Connector SDK guide and template, entry-point packages, filled-out Wanted catalog, n8n/Zapier/Make recipes, migration importers, WhatsApp, shipping, translation | An outside contributor can ship a Beta connector without touching `crm/` |
 | 6. Broker | Hosted OAuth broker and webhook relay | Starts after Phase 4 (see "Decisions") |
+
+## Phase 2 plan
+
+Each feature is its own Django app inside `crm/` (like `crm/connect/`), so features keep separate
+migrations and stay out of `crm/views.py`. Each works fully by hand, shows its "Connect your ..."
+prompt, and stores a source connection and provider ID so Phase 3 connectors need no schema change.
+
+| PR | Scope | Unblocks in Phase 3 |
+|---|---|---|
+| 2.1 Communications log (`crm/comms`) | Calls, texts, emails and meetings on contact and matter pages and a list page; per-contact texting opt-out enforced by the outbound policy; existing call and meeting activities moved into the log | Phone, texting, mailbox and calendar connectors |
+| 2.2 Billing (`crm/billing`) | Rates on time entries, numbered invoices, line items flagged earned fee or advance, manual payments recording operating or trust deposit, printable invoice page | Payment connectors |
+| 2.3 Payment plans | Installments, with reminders as work items | Automated reminders |
+| 2.4 USCIS notices (`crm/notices`) | Notice records (receipt, biometrics, interview, RFE, NOID, approval, denial, transfer, card) linked to documents; due dates and appointments create work items; manual status history | USCIS Case Status connector |
+| 2.5 REST API (`crm/api`) | Versioned JSON API with scoped, hashed, expiring tokens and an API audit log | MCP server |
+| 2.6 Outbound webhooks | A built-in, vendor-neutral connector that sends signed events to firm-chosen addresses through the Phase 1 policy, preview mode and worker | n8n, Zapier and Make recipes |
+| 2.7 Workflow templates and custom fields | Firm-authored phases and checklist items applied to matters; custom fields on contacts and matters | — |
+| 2.8 Operating dashboard | Leads, consults, retentions, open matters, deadlines, time, invoiced and collected | — |
+
+Decided 2026-10-29:
+- Engagements wait until after Phase 3; they move the pipeline off the contact and nothing in
+  Phase 3 depends on them.
+- Billing is visible to superusers and staff granted a Billing permission; everyone can log time.
+- The API uses plain Django views, not an API framework.
+- Invoices print from an HTML page; no PDF library.
+- Trust accounting stays at recording which account a payment went to.
 
 ## Testing
 

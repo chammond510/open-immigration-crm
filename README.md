@@ -9,6 +9,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Staff-only contacts and a simple contact pipeline
 - Matters, primary contacts, additional parties, status history, and notes
 - Tasks, deadlines, and appointments in one work queue
+- A communications log of calls, texts, emails, and meetings, with a per-contact texting opt-out
 - One-click time tracking against a matter or contact, with per-record totals
 - Firm-created per-matter checklists—zero legal templates ship with the project
 - Private PDF, DOCX, PNG, and JPEG document storage

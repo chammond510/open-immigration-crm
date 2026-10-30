@@ -32,6 +32,7 @@ urlpatterns = [
     path("admin/login/", RedirectView.as_view(pattern_name="login", query_string=True)),
     path("admin/", admin.site.urls),
     path("connections/", include("crm.connect.urls")),
+    path("communications/", include("crm.comms.urls")),
     path("accounts/login/", FirstRunAwareLoginView.as_view(), name="login"),
     path("accounts/login/verify/", two_factor_verify, name="two_factor_verify"),
     path("accounts/two-factor/", two_factor_settings, name="two_factor_settings"),

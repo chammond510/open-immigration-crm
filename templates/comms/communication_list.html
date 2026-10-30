@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load connect_tags %}
+{% block title %}Communications · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Communications</p><h1>Calls, texts, emails, and meetings</h1><p>{% if filter_matter %}For <a href="{% url 'matter_detail' filter_matter.pk %}">{{ filter_matter }}</a> · <a href="{% url 'communication_list' %}">Show all</a>{% elif filter_contact %}For <a href="{% url 'contact_detail' filter_contact.pk %}">{{ filter_contact }}</a> · <a href="{% url 'communication_list' %}">Show all</a>{% else %}Everything logged by staff or brought in by connections.{% endif %}</p></div><div class="actions"><a class="button primary" href="{% url 'communication_create' %}{% if filter_matter %}?matter={{ filter_matter.pk }}{% elif filter_contact %}?contact={{ filter_contact.pk }}{% endif %}">Log communication</a></div></div>
+<div class="prompt-stack page-prompts">{% connect_prompt "phone" "to log calls automatically" %}{% connect_prompt "mailbox" "to file emails automatically" %}</div>
+<form class="filter-bar" method="get">
+  {% if filter_contact %}<input type="hidden" name="contact" value="{{ filter_contact.pk }}">{% endif %}{% if filter_matter %}<input type="hidden" name="matter" value="{{ filter_matter.pk }}">{% endif %}
+  <label class="sr-only" for="comm-q">Search communications</label><input id="comm-q" type="search" name="q" value="{{ query }}" placeholder="Subject, summary, contact, phone, or email">
+  <label class="sr-only" for="comm-channel">Type</label><select id="comm-channel" name="channel"><option value="">All types</option>{% for key, label in channels %}<option value="{{ key }}" {% if selected_channel == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <label class="sr-only" for="comm-direction">Direction</label><select id="comm-direction" name="direction"><option value="">Any direction</option>{% for key, label in directions %}<option value="{{ key }}" {% if selected_direction == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="button" type="submit">Filter</button>
+</form>
+<section class="panel flush-panel">{% if communications %}<div class="table-wrap"><table><thead><tr><th>When</th><th>Type</th><th>Contact or matter</th><th>Subject</th><th>Length</th><th>Logged by</th></tr></thead><tbody>
+  {% for item in communications %}<tr><td>{{ item.occurred_at|date:"M j, Y g:i a" }}</td><td><span class="badge channel-{{ item.channel }}">{{ item.get_channel_display }}</span>{% if item.direction %}<small>{{ item.get_direction_display }}</small>{% endif %}</td><td>{% if item.matter %}<a class="primary-link" href="{% url 'matter_detail' item.matter.pk %}">{{ item.matter.matter_number }}</a>{% endif %}{% if item.contact %}<small><a href="{% url 'contact_detail' item.contact.pk %}">{{ item.contact }}</a></small>{% endif %}</td><td>{{ item.subject|default:"—" }}{% if item.counterpart %}<small>{{ item.counterpart }}</small>{% endif %}</td><td>{{ item.duration_display|default:"—" }}</td><td>{% if item.source_connection %}via {{ item.source_connection }}{% else %}{{ item.logged_by|default:"—" }}{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% if communications|length >= limit %}<p class="fine-print table-note">Showing the latest {{ limit }}. Filter to narrow the list.</p>{% endif %}{% else %}<div class="empty-state"><h3>No communications found</h3><p>Log one by hand, or connect a phone system or mailbox.</p></div>{% endif %}</section>
+{% endblock %}

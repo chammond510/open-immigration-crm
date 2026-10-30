@@ -8,7 +8,7 @@ license = { text = "AGPL-3.0-only" }
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-exclude = ["crm/migrations", "crm/connect/migrations"]
+exclude = ["**/migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "DJ", "UP"]
@@ -16,12 +16,7 @@ ignore = ["DJ001", "DJ012"]
 
 [tool.coverage.run]
 source = ["crm", "connectors"]
-omit = [
-    "crm/migrations/*",
-    "crm/connect/migrations/*",
-    "crm/management/*",
-    "crm/connect/management/*",
-]
+omit = ["*/migrations/*", "*/management/*"]
 
 [tool.coverage.report]
 show_missing = true
