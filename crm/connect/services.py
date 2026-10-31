@@ -206,10 +206,14 @@ def usable_connections(user, action, capability):
 
 
 def needs_worker(connection):
-    """Syncs, received webhooks, and automation event deliveries all run in the worker."""
+    """Syncs, received webhooks, automation event deliveries, work kept in step with the
+    owner's records (calendar events, meetings), and document copies run in the worker."""
     cls = connection.connector_class
     return cls is not None and bool(
-        cls.sync_capabilities or cls.webhooks or Capability.AUTOMATION in cls.capabilities
+        cls.sync_capabilities
+        or cls.webhooks
+        or cls.owner_sync_actions
+        or {Capability.AUTOMATION, Capability.STORAGE} & set(cls.capabilities)
     )
 
 
