@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from crm.connect import lookups
 from crm.connect.records import ShipmentRecord
+from crm.connect.scheduler import tick
 from crm.connect.signals import records_received
 from crm.models import Activity, AuditLog, WorkItem
 from crm.shipments.models import Shipment
@@ -206,10 +207,25 @@ class TrackingTests(ShipmentCase):
             (task.title, task.priority, task.assigned_to, task.matter),
             ("Check on shipment: I-130 package", "high", self.admin, self.matter),
         )
-        self.assertIn("Alert: Insufficient address", task.description)
+        self.assertIn("Needs attention", task.description)
+        self.assertNotIn("Insufficient address", task.description + note.body)
         records_received.send(
             sender=None, connection=None, capability="texting", records=[reading()], source="sync"
         )
+
+    def test_carrier_details_are_cleared_after_nine_months(self):
+        old = self.ship(
+            status_detail="Delivered, CHICAGO, IL",
+            expected_on=date(2026, 1, 2),
+            status=Shipment.Status.DELIVERED,
+            checked_at=timezone.now() - timedelta(days=271),
+        )
+        recent = self.ship("B2", status_detail="In transit", checked_at=timezone.now())
+        tick("test-worker")
+        old.refresh_from_db()
+        recent.refresh_from_db()
+        self.assertEqual((old.status_detail, old.expected_on, old.status), ("", None, "delivered"))
+        self.assertEqual(recent.status_detail, "In transit")
 
     def test_shipment_records_check_themselves(self):
         self.assertEqual(reading().problems(), [])
