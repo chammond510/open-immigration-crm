@@ -4,7 +4,6 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -15,6 +14,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from crm.connect.base import ConnectorError
 from crm.connect.models import OutboundRequest
 from crm.models import Contact, Document, Matter
+from crm.search import words_match
 from crm.services import audit
 
 from .emailing import email_connections, send_email
@@ -74,11 +74,10 @@ def communication_list(request):
         communications = communications.filter(contact__isnull=True, matter__isnull=True)
     if query:
         communications = communications.filter(
-            Q(subject__icontains=query)
-            | Q(summary__icontains=query)
-            | Q(counterpart__icontains=query)
-            | Q(contact__first_name__icontains=query)
-            | Q(contact__last_name__icontains=query)
+            words_match(
+                query,
+                ("subject", "summary", "counterpart", "contact__first_name", "contact__last_name"),
+            )
         )
     return render(
         request,
@@ -132,10 +131,7 @@ def communication_match(request, pk):
     candidates = Contact.objects.none()
     if query:
         candidates = Contact.objects.filter(
-            Q(first_name__icontains=query)
-            | Q(last_name__icontains=query)
-            | Q(email__icontains=query)
-            | Q(phone__icontains=query)
+            words_match(query, ("first_name", "last_name", "email", "phone"))
         )[:20]
     remote = communication.counterpart
     create_params = {"email": remote} if "@" in remote else {"phone": remote}

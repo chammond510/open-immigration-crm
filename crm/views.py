@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Case, Count, F, IntegerField, Q, Value, When
+from django.db.models import Case, Count, F, IntegerField, Value, When
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -49,6 +49,7 @@ from .models import (
     TwoFactorDevice,
     WorkItem,
 )
+from .search import CONTACT_SEARCH_FIELDS, MATTER_SEARCH_FIELDS, words_match
 from .services import add_activity, audit
 from .two_factor import (
     ACCEPTED,
@@ -327,21 +328,6 @@ WORK_ORDER = (
 )
 
 
-def words_match(query, fields):
-    """Match records where every word of the query appears in one of the fields,
-    so a search for a full name finds the person."""
-    match = Q()
-    for word in query.split():
-        any_field = Q()
-        for field in fields:
-            any_field |= Q(**{f"{field}__icontains": word})
-        match &= any_field
-    return match
-
-
-CONTACT_SEARCH_FIELDS = ("first_name", "last_name", "email", "phone", "a_number")
-
-
 @staff_required
 @require_GET
 def dashboard(request):
@@ -515,18 +501,7 @@ def matter_list(request):
     status = request.GET.get("status", "").strip()
     matters = Matter.objects.select_related("primary_contact", "assigned_to")
     if query:
-        matters = matters.filter(
-            words_match(
-                query,
-                (
-                    "matter_number",
-                    "title",
-                    "primary_contact__first_name",
-                    "primary_contact__last_name",
-                    "receipt_number",
-                ),
-            )
-        )
+        matters = matters.filter(words_match(query, MATTER_SEARCH_FIELDS))
     if status in Matter.Status.values:
         matters = matters.filter(status=status)
     case_type = request.GET.get("type", "").strip()
@@ -1206,16 +1181,7 @@ def search(request):
     if query:
         contacts = Contact.objects.filter(words_match(query, CONTACT_SEARCH_FIELDS))[:30]
         matters = Matter.objects.select_related("primary_contact").filter(
-            words_match(
-                query,
-                (
-                    "matter_number",
-                    "title",
-                    "receipt_number",
-                    "primary_contact__first_name",
-                    "primary_contact__last_name",
-                ),
-            )
+            words_match(query, MATTER_SEARCH_FIELDS)
         )[:30]
     return render(
         request, "crm/search.html", {"query": query, "contacts": contacts, "matters": matters}

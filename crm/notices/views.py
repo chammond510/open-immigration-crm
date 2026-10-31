@@ -1,13 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from crm.models import Matter
+from crm.search import words_match
 
 from .forms import CaseNoticeForm, StatusCheckForm
 from .models import CaseNotice
@@ -38,10 +38,16 @@ def notice_list(request):
         ).order_by("response_due_date")
     if query:
         notices = notices.filter(
-            Q(receipt_number__icontains=query)
-            | Q(form_type__icontains=query)
-            | Q(matter__matter_number__icontains=query)
-            | Q(matter__primary_contact__last_name__icontains=query)
+            words_match(
+                query,
+                (
+                    "receipt_number",
+                    "form_type",
+                    "matter__matter_number",
+                    "matter__primary_contact__first_name",
+                    "matter__primary_contact__last_name",
+                ),
+            )
         )
     return render(
         request,

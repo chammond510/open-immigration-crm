@@ -1,6 +1,6 @@
 # Importing from a spreadsheet
 
-Superusers can bring contacts and their matters into the CRM from a spreadsheet saved as CSV, such as an export from another practice-management system. Open **Import from a spreadsheet** in the sidebar's account links.
+Superusers can bring contacts and their matters into the CRM from a spreadsheet saved as CSV, such as an export from another practice-management system. Open **Settings → Import** in the sidebar.
 
 Each row is a contact, with a matter when the row has one. A client with two matters takes two rows.
 

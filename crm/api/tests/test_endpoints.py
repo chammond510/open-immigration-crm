@@ -91,6 +91,17 @@ class ContactEndpointTests(ApiTestCase):
         self.assertEqual(self.api("get", missing).status_code, 404)
 
 
+class SearchEndpointTests(ApiTestCase):
+    def test_q_matches_every_word(self):
+        ana = make_contact(first_name="Ana", last_name="Muestra", email="ana@example.test")
+        make_contact(first_name="Ana", last_name="Ejemplo", email="ana.e@example.test")
+        make_matter(ana, title="Fictional asylum matter")
+        contacts = self.api("get", "/api/v1/contacts/?q=Ana%20Muestra").json()["results"]
+        self.assertEqual([c["last_name"] for c in contacts], ["Muestra"])
+        matters = self.api("get", "/api/v1/matters/?q=muestra%20asylum").json()["results"]
+        self.assertEqual([m["title"] for m in matters], ["Fictional asylum matter"])
+
+
 class MatterEndpointTests(ApiTestCase):
     def test_create_list_and_patch(self):
         contact = make_contact(self.user)
