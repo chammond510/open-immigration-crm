@@ -11,6 +11,16 @@ urlpatterns = [
     path("<uuid:pk>/delete/", views.communication_delete, name="communication_delete"),
     path("<uuid:pk>/match/", views.communication_match, name="communication_match"),
     path(
+        "attachments/<uuid:pk>/download/",
+        views.communication_attachment_download,
+        name="communication_attachment_download",
+    ),
+    path(
+        "attachments/<uuid:pk>/save/",
+        views.communication_attachment_save,
+        name="communication_attachment_save",
+    ),
+    path(
         "contacts/<uuid:pk>/texting/",
         views.contact_texting_opt_out,
         name="contact_texting_opt_out",

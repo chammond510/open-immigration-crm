@@ -45,7 +45,7 @@ def communications_panel(context, contact=None, matter=None):
     owner = matter or contact
     communications = (
         owner.communications.select_related("logged_by", "source_connection").prefetch_related(
-            "translations"
+            "translations", "attachments__saved_document__matter"
         )
         if owner
         else Communication.objects.none()

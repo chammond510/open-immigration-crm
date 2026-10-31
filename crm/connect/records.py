@@ -15,6 +15,10 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
+
+from crm.validators import ALLOWED_DOCUMENT_TYPES
+
 from .base import Capability, Record
 
 INBOUND, OUTBOUND = "inbound", "outbound"
@@ -28,6 +32,28 @@ CASE_STATUS_PROBLEMS = (NOT_FOUND, INVALID_RECEIPT, UNAVAILABLE)
 
 def aware(value):
     return value is not None and value.tzinfo is not None
+
+
+# The kinds of file core keeps from a message: those staff may upload as documents.
+ATTACHMENT_TYPES = frozenset(ALLOWED_DOCUMENT_TYPES.values())
+
+
+def attachment_limit():
+    """The largest attachment core keeps, in bytes: the document upload limit."""
+    return settings.DOCUMENT_UPLOAD_MAX_BYTES
+
+
+@dataclass(frozen=True)
+class Attachment:
+    """A file that came with a message, such as a photo a client sent.
+
+    Core keeps it only if it is one of ``ATTACHMENT_TYPES`` by its contents, its name
+    has the matching extension, and it is no larger than ``attachment_limit()``.
+    """
+
+    filename: str
+    mime_type: str
+    content: bytes = field(repr=False)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -76,6 +102,8 @@ class TextRecord(TypedRecord):
     # The provider's own reading of an opt-out reply: "stop", "start", or empty. Core
     # also checks the body for the standard keywords.
     opt_out: str = ""
+    # Files that came with an incoming message; kept the first time the text is seen.
+    attachments: tuple[Attachment, ...] = ()
 
     def problems(self):
         problems = super().problems()

@@ -231,6 +231,8 @@ code { padding: 1px 5px; border-radius: 4px; background: rgb(23 32 51 / 6%); fon
 .page-prompts { margin: 0 0 14px; }
 .texting-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; font-size: 12px; }
 .comm-item p.prose { margin: 6px 0 0; }
+.comm-item p.comm-attachment { margin: 6px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.comm-item p.comm-attachment a { color: var(--accent); }
 .comm-item .badge { margin-right: 4px; vertical-align: 1px; }
 .table-note { padding: 10px 13px; }
 .badge.channel-call { background: var(--accent-soft); color: var(--accent-dark); }

@@ -12,24 +12,33 @@ Incoming messages and delivery updates arrive by webhook, signed by Meta with th
 secret over the raw body (``X-Hub-Signature-256``), and may come several to a
 delivery. Meta first checks the address with a GET carrying a verify token, which the
 connector derives from the app secret and the address and shows when webhooks are
-turned on. Messages for other numbers on the same app are ignored. Photos, documents,
-and other attachments are not downloaded; the message notes what was sent. A client
-who uses a WhatsApp username may arrive without a phone number, as WhatsApp's user ID,
-and waits in Needs matching.
+turned on. Messages for other numbers on the same app are ignored. A client who uses a
+WhatsApp username may arrive without a phone number, as WhatsApp's user ID, and waits
+in Needs matching.
+
+When the worker handles a message with a photo, or a PDF or Word document, it fetches
+the file from Meta, which keeps it for 7 days, and core keeps it with the message.
+Meta's media links carry the access token, so a file is fetched only from Meta's own
+hosts. Voice messages, videos, stickers, other kinds of file, and files over the
+CRM's upload limit are noted on the message, not fetched.
 
 Documentation (read 2026-10-31):
 https://developers.facebook.com/documentation/business-messaging/whatsapp/messages/send-messages
 https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-management
 https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/create-webhook-endpoint
 https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids
+https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/media
 """
 
 import hashlib
 import hmac
 import json
+import os
 import re
 from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, urlsplit
+
+from django.utils import timezone
 
 from crm.connect.base import (
     ApiKeyAuth,
@@ -45,7 +54,14 @@ from crm.connect.base import (
     WebhookSpec,
 )
 from crm.connect.http import ProviderClient
-from crm.connect.records import INBOUND, OUTBOUND, TextRecord
+from crm.connect.records import (
+    ATTACHMENT_TYPES,
+    INBOUND,
+    OUTBOUND,
+    Attachment,
+    TextRecord,
+    attachment_limit,
+)
 from crm.connect.registry import register
 
 API_URL = "https://graph.facebook.com/v26.0"
@@ -97,6 +113,17 @@ ATTACHMENTS = {
     "video": "a video",
     "sticker": "a sticker",
 }
+# The kinds of attachment fetched, if core keeps their type, and the extensions a kept
+# file's name may have.
+FETCHED = {"image", "document"}
+EXTENSIONS = {
+    "image/jpeg": (".jpg", ".jpeg"),
+    "image/png": (".png",),
+    "application/pdf": (".pdf",),
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (".docx",),
+}
+# Meta serves media from its own hosts; the access token is sent to no others.
+MEDIA_HOSTS = ("fbsbx.com", "facebook.com", "fbcdn.net", "whatsapp.net")
 # WhatsApp's delivery statuses that core ranks; others, such as played, are left out.
 STATUSES = {"sent", "delivered", "read", "failed"}
 
@@ -124,7 +151,11 @@ def field_label(name, kind):
 
 
 def describe(message):
-    """The words of an incoming message, or a note of what it was; "" for a reaction."""
+    """The words of an incoming message, or a note of what it was.
+
+    "" for a reaction, and for an attachment without a caption, whose note depends on
+    whether the file is fetched.
+    """
     kind = message.get("type", "")
     if kind == "text":
         return str((message.get("text") or {}).get("body") or "")
@@ -135,12 +166,7 @@ def describe(message):
         chosen = reply.get("button_reply") or reply.get("list_reply") or {}
         return str(chosen.get("title") or "")
     if kind in ATTACHMENTS:
-        note = (
-            f"[Sent {ATTACHMENTS[kind]}, which the CRM does not download. Ask the client to "
-            "send it another way if it is needed.]"
-        )
-        caption = str((message.get(kind) or {}).get("caption") or "").strip()
-        return f"{caption}\n\n{note}" if caption else note
+        return str((message.get(kind) or {}).get("caption") or "").strip()
     if kind == "location":
         place = message.get("location") or {}
         named = ", ".join(str(place[k]) for k in ("name", "address") if place.get(k))
@@ -197,15 +223,16 @@ class WhatsAppBusinessConnector(Connector):
         label="WhatsApp Cloud API credentials",
     )
     data_flows = DataFlows(
-        version=1,
+        version=2,
         sends=(
             "Messages staff send: the client's phone number and the message, or the chosen "
             "template and the values staff fill in",
         ),
         receives=(
             "Messages clients send to the firm's number: their number, or their WhatsApp "
-            "user ID when WhatsApp leaves the number out, and the words, with a note of any "
-            "photo, document, or other attachment, which is not downloaded",
+            "user ID when WhatsApp leaves the number out, and the words",
+            "Photos, and PDF or Word documents, clients send with a message, fetched from "
+            "Meta and kept with it; other attachments are only noted",
             "Delivery and read updates for messages sent from this CRM",
             "The account's approved message templates",
         ),
@@ -400,17 +427,77 @@ class WhatsAppBusinessConnector(Connector):
         )
 
     def handle_webhook(self, capability, payload):
-        return [
-            TextRecord(
-                external_id=item["id"],
-                occurred_at=datetime.fromisoformat(item["at"]),
-                direction=item["direction"],
-                remote=item["remote"],
-                body=item["body"],
-                status=item["status"],
+        records = []
+        for item in payload.get("items") or []:
+            sent_at = datetime.fromisoformat(item["at"])
+            body, attachments = item["body"], ()
+            if item.get("media"):
+                attachment, note = self.fetch_media(item["media"], sent_at)
+                if attachment:
+                    # A kept file needs no note when its caption says what it is.
+                    attachments, note = (attachment,), "" if body else note
+                body = "\n\n".join(part for part in (body, note) if part)
+            records.append(
+                TextRecord(
+                    external_id=item["id"],
+                    occurred_at=sent_at,
+                    direction=item["direction"],
+                    remote=item["remote"],
+                    body=body,
+                    status=item["status"],
+                    attachments=attachments,
+                )
             )
-            for item in payload.get("items") or []
-        ]
+        return records
+
+    # Attachments
+
+    def fetch_media(self, media, sent_at):
+        """A file a client sent, as an Attachment, and a note for staff.
+
+        The note says what was sent when there is no caption, or why the file was
+        not fetched.
+        """
+        what = ATTACHMENTS[media["kind"]]
+        mime_type = str(media.get("mime_type") or "").split(";")[0].strip().lower()
+        if media["kind"] not in FETCHED or mime_type not in ATTACHMENT_TYPES:
+            return None, (
+                f"[Sent {what}, which the CRM does not keep. Ask the client to send it "
+                "another way if it is needed.]"
+            )
+        limit = attachment_limit()
+        too_large = (
+            f"[Sent {what} larger than the CRM keeps ({limit // (1024 * 1024)} MB). Ask the "
+            "client to send it another way if it is needed.]"
+        )
+        try:
+            if not str(media.get("id") or "").isdigit():
+                raise ConnectorError("The media ID was not understood.")
+            info = self.call("GET", f"/{media['id']}", params={"phone_number_id": self.number_id})
+            if int(info.get("file_size") or 0) > limit:
+                return None, too_large
+            url = str(info.get("url") or "")
+            host = urlsplit(url).hostname or ""
+            if not any(host == h or host.endswith("." + h) for h in MEDIA_HOSTS):
+                raise ConnectorError("Meta gave a media address outside its own hosts.")
+            media_client = ProviderClient(
+                name="Meta",
+                headers={"Authorization": self.client.headers["Authorization"]},
+                max_bytes=limit,
+            )
+            content = media_client.request("GET", url).content
+        except (ConnectorError, TypeError, ValueError):
+            return None, (
+                f"[Sent {what}, which could not be fetched from WhatsApp. Ask the client to "
+                "send it again if it is needed.]"
+            )
+        name = os.path.basename(str(media.get("filename") or "")).strip()
+        if not name:
+            label = "photo" if media["kind"] == "image" else "document"
+            name = f"whatsapp-{label}-{timezone.localtime(sent_at):%Y%m%d-%H%M%S}"
+        if not name.lower().endswith(EXTENSIONS[mime_type]):
+            name += EXTENSIONS[mime_type][0]
+        return Attachment(filename=name, mime_type=mime_type, content=content), f"[Sent {what}.]"
 
 
 def template_message(payload):
@@ -530,16 +617,27 @@ def incoming(message, senders):
         name = str(profile.get("username") or user_id).replace("@", "")
         remote = f"WhatsApp user {name}"
     body = describe(message)
-    if not (message.get("id") and sent_at and remote and body):
-        return None
-    return {
-        "id": str(message["id"])[:255],
+    kind = message.get("type", "")
+    item = {
+        "id": str(message.get("id") or "")[:255],
         "direction": INBOUND,
         "remote": remote[:255],
         "body": body[:MAX_BODY],
         "status": "received",
-        "at": sent_at.isoformat(),
+        "at": sent_at.isoformat() if sent_at else "",
     }
+    if kind in ATTACHMENTS:
+        # Fetched by the worker, which handles the stored event.
+        media = message.get(kind) if isinstance(message.get(kind), dict) else {}
+        item["media"] = {
+            "kind": kind,
+            "id": str(media.get("id") or "")[:64],
+            "mime_type": str(media.get("mime_type") or "")[:120],
+            "filename": str(media.get("filename") or "")[:255],
+        }
+    elif not body:
+        return None
+    return item if item["id"] and sent_at and remote else None
 
 
 def delivery_update(status):

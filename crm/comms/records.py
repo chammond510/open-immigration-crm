@@ -8,15 +8,20 @@ a contact with that number or address, links it and others like it.
 import logging
 from datetime import timedelta
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 
 from crm.connect.records import INBOUND, OUTBOUND, CallRecord, EmailRecord, TextRecord
 from crm.connect.signals import records_received
 from crm.matching import match_contact, match_staff, normalize_email
 from crm.models import Contact
 
-from .models import Communication
-from .services import record_communication, set_texting_opt_out
+from .models import Communication, CommunicationAttachment
+from .services import (
+    delete_attachment_file,
+    keep_attachments,
+    record_communication,
+    set_texting_opt_out,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +126,8 @@ def store_one(connection, record):
     communication = record_communication(
         source_connection=connection, external_id=record.external_id, **fields
     )
+    if isinstance(record, TextRecord) and record.attachments and not existing:
+        keep_attachments(communication, record.attachments)
     contact = communication.contact
     if isinstance(record, TextRecord) and record.direction == INBOUND and contact:
         keyword = record.body.strip().upper()
@@ -163,3 +170,8 @@ def contact_saved(sender, instance, raw=False, **kwargs):
 def connect():
     records_received.connect(store_records, dispatch_uid="comms-store-records")
     post_save.connect(contact_saved, sender=Contact, dispatch_uid="comms-link-unmatched")
+    post_delete.connect(
+        delete_attachment_file,
+        sender=CommunicationAttachment,
+        dispatch_uid="comms-delete-attachment-file",
+    )

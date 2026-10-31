@@ -1,9 +1,11 @@
+import os
 from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -12,13 +14,13 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from crm.connect.base import ConnectorError
 from crm.connect.models import OutboundRequest
-from crm.models import Contact, Matter
+from crm.models import Contact, Document, Matter
 from crm.services import audit
 
 from .emailing import email_connections, send_email
-from .forms import CommunicationForm
-from .models import Communication
-from .services import set_texting_opt_out
+from .forms import AttachmentSaveForm, CommunicationForm
+from .models import Communication, CommunicationAttachment
+from .services import contact_matters, save_to_matter, set_texting_opt_out
 from .texting import (
     approved_templates,
     can_text_freely,
@@ -55,7 +57,7 @@ def communication_list(request):
     direction = request.GET.get("direction", "")
     communications = Communication.objects.select_related(
         "contact", "matter", "logged_by", "source_connection"
-    )
+    ).prefetch_related("attachments__saved_document__matter")
     contact = Contact.objects.filter(pk=request.GET.get("contact") or None).first()
     matter = Matter.objects.filter(pk=request.GET.get("matter") or None).first()
     if contact:
@@ -353,3 +355,68 @@ def contact_texting_opt_out(request, pk):
             else "Recorded that this contact agreed to receive texts again.",
         )
     return redirect("contact_detail", pk=contact.pk)
+
+
+@staff_required
+@require_GET
+def communication_attachment_download(request, pk):
+    attachment = get_object_or_404(CommunicationAttachment, pk=pk)
+    try:
+        file_handle = attachment.file.open("rb")
+    except (FileNotFoundError, OSError):
+        raise Http404("The file is unavailable.") from None
+    audit(request, "communication_attachment.downloaded", attachment)
+    response = FileResponse(
+        file_handle,
+        as_attachment=True,
+        filename=attachment.original_filename,
+        content_type=attachment.mime_type,
+    )
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+@staff_required
+@require_http_methods(["GET", "POST"])
+def communication_attachment_save(request, pk):
+    """Save a copy of a file a contact sent to one of their matters, as a document."""
+    attachment = get_object_or_404(
+        CommunicationAttachment.objects.select_related(
+            "communication__contact", "saved_document__matter"
+        ),
+        pk=pk,
+    )
+    contact = attachment.communication.contact
+    matters = contact_matters(contact) if contact else Matter.objects.none()
+    chosen = matters.filter(pk=request.GET.get("matter") or None).first()
+    form = AttachmentSaveForm(
+        request.POST or None,
+        matters=matters,
+        initial={
+            "matter": chosen,
+            "title": os.path.splitext(attachment.original_filename)[0],
+            "category": Document.Category.OTHER,
+        },
+    )
+    if request.method == "POST" and form.is_valid():
+        matter = form.cleaned_data["matter"]
+        document = save_to_matter(
+            attachment,
+            matter,
+            title=form.cleaned_data["title"],
+            category=form.cleaned_data["category"],
+            actor=request.user,
+        )
+        audit(request, "document.saved_from_message", document)
+        messages.success(request, f"Saved to {matter} as a document.")
+        return redirect("matter_detail", pk=matter.pk)
+    return render(
+        request,
+        "comms/attachment_save.html",
+        {
+            "attachment": attachment,
+            "contact": contact,
+            "form": form,
+            "has_matters": matters.exists(),
+        },
+    )

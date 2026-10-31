@@ -102,3 +102,34 @@ class Communication(models.Model):
 
     def __str__(self):
         return self.subject or f"{self.get_channel_display()} on {self.occurred_at:%Y-%m-%d}"
+
+
+class CommunicationAttachment(models.Model):
+    """A file that came with a communication, such as a photo a client sent by message.
+
+    Staff can save a copy to one of the contact's matters as a document.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    communication = models.ForeignKey(
+        Communication, on_delete=models.CASCADE, related_name="attachments"
+    )
+    file = models.FileField(upload_to="communications/%Y/%m/")
+    original_filename = models.CharField(max_length=255)
+    mime_type = models.CharField(max_length=120)
+    size_bytes = models.PositiveBigIntegerField(default=0)
+    # The matter document a copy was saved as, if staff saved one.
+    saved_document = models.ForeignKey(
+        "crm.Document",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return self.original_filename

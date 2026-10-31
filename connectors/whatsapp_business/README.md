@@ -8,7 +8,8 @@ Each firm connects its own Meta app, WhatsApp Business Account, and number. The 
 
 - **Sending.** The contact or matter page has a **Send a text** form. WhatsApp allows free-form messages only within 24 hours of the client's last message, its customer service window. While the window is open, the page says until when and the form works as for any text. Otherwise the page offers **Send an approved template** instead.
 - **Templates.** The template page lists the account's approved templates, shows each one's text, and asks for its values, such as the client's first name. Templates with a photo, video, document, or location header, a link that takes a value, or a one-time code are left out, since they need more than words. A sent template is logged as its text with the values in place. The CRM keeps the list for five minutes, since Meta limits how often it can be read.
-- **Receiving.** Messages to the firm's number are filed on the contact with that number; a message from a number no contact has waits in **Needs matching**. Photos, documents, voice messages, and videos are not downloaded. The message notes what was sent, with its caption, so staff can ask for the file another way. Reactions are not filed.
+- **Receiving.** Messages to the firm's number are filed on the contact with that number; a message from a number no contact has waits in **Needs matching**. Reactions are not filed.
+- **Photos and documents.** A photo, or a PDF or Word document, a client sends is fetched from Meta and kept with the message, on the same terms as a document staff upload, up to the CRM's upload limit (20 MB by default). Staff download it from the message, or choose **Save to a matter** to file a copy as a document on one of the contact's matters. Voice messages, videos, stickers, other kinds of file, and larger files are noted on the message instead, so staff can ask for them another way. Meta keeps a file for 7 days; one that could not be fetched is noted too.
 - **Usernames.** A client who uses a WhatsApp username may arrive without their number. Their message is filed as from "WhatsApp user" and the username, and waits in Needs matching. Without a number it does not open the 24-hour window on the contact's page, so the reply is a template to the number on the contact.
 - **Opt-outs.** A reply of STOP (or STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT) records that the contact opted out of texts, and START or UNSTOP records consent again, as for other texting services. The opt-out covers every texting connection. A client can also stop marketing messages in WhatsApp itself; Meta then refuses marketing templates to them.
 - **Delivery updates.** Messages sent from the CRM show Sent, then Delivered, Read, or Failed. A status never moves backward when updates arrive out of order.
@@ -46,5 +47,5 @@ These points come from Meta's terms and policies, read on 2026-10-31. They are f
 ## What it never does
 
 - It never answers a message on its own.
-- It never downloads attachments, and never sends one.
+- It fetches no attachment but a photo or a PDF or Word document, sends the access token for one only to Meta's own hosts, and never sends an attachment.
 - It never puts message text or phone numbers in the errors it records. A refusal is explained by Meta's error code.
