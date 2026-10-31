@@ -10,6 +10,6 @@ class AiConfig(AppConfig):
     def ready(self):
         from crm.connect.signals import worker_ticked
 
-        from . import jobs
+        from . import jobs, translation  # noqa: F401 (registers the translation feature)
 
         worker_ticked.connect(jobs.queue_due, dispatch_uid="ai-background-work")

@@ -263,6 +263,9 @@ td.wrap { white-space: normal; min-width: 220px; }
 .badge.failed, .badge.blocked { background: var(--danger-soft); color: var(--danger); }
 .privacy-note p { margin: 2px 0 0; }
 .answers { display: grid; }
+.machine-translation { margin: 10px 0; padding: 10px 12px; border-left: 3px solid var(--line); background: var(--surface); }
+.machine-translation .eyebrow { margin-bottom: 4px; }
+.translate-form form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
 .answers article { padding: 17px 0; border-top: 1px solid var(--line-soft); }
 .answers article p { margin-bottom: 0; color: #3f495a; }
 .copy-field { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin: 20px 0 10px; }

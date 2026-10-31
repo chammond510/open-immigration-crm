@@ -44,6 +44,7 @@ urlpatterns = [
     path("workflows/", include("crm.workflows.urls")),
     path("reports/", include("crm.reports.urls")),
     path("settings/custom-fields/", include("crm.customfields.urls")),
+    path("translations/", include("crm.translations.urls")),
     path("imports/", include("crm.imports.urls")),
     path("communications/", include("crm.comms.urls")),
     path("billing/", include("crm.billing.urls")),

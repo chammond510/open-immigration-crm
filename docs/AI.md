@@ -22,6 +22,9 @@ Each feature is off until a superuser ticks it in **AI features**. Whatever a fe
   - **Changes.** It can propose adding a task or note, logging a communication, or marking work done. Each proposal is shown to the staff member, and is made only if they confirm it. The audit log records it as confirmed by staff in the AI assistant.
   - **Drafts.** It can draft an email or text, but it has no way to send one. The draft appears with the usual send form, filled in, and only the staff member can send it.
   - **Conversations.** Each conversation is kept in the CRM, visible only to the person who started it, and they can delete it. Each request sends the conversation so far to the provider.
+- **Translation.** Staff can translate a communication or an intake submission into the language they choose, through an AI connection they may use, as they can through a translation service such as [DeepL](../connectors/deepl/README.md).
+  - **What it sends.** Only the text of that message or those answers, with instructions to translate faithfully, keep names, numbers, and dates as written, and treat the text as data.
+  - **Where it shows.** Beside the original, never in its place, labelled as a machine translation by the connection, with a reminder to check it against the original.
 
 ## Controls
 
