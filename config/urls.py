@@ -7,6 +7,7 @@ from django.views.generic import RedirectView
 from crm.connect import sign_in
 from crm.connect.views import receive_webhook
 from crm.mcp import views as mcp_views
+from crm.team import views as team_views
 from crm.views import (
     AuditedPasswordChangeView,
     FirstRunAwareLoginView,
@@ -55,6 +56,13 @@ urlpatterns = [
     # Token-authenticated JSON API; see docs/API.md.
     path("api/", include("crm.api.urls")),
     path("settings/api/", include("crm.api.page_urls")),
+    path("settings/team/", include("crm.team.urls")),
+    path("accounts/profile/", team_views.profile, name="profile"),
+    # Invitation links; see crm/team.
+    path("accounts/welcome/done/", team_views.welcome_done, name="welcome_done"),
+    path(
+        "accounts/welcome/<uidb64>/<token>/", team_views.WelcomeView.as_view(), name="welcome"
+    ),
     path("accounts/login/", FirstRunAwareLoginView.as_view(), name="login"),
     path("accounts/login/verify/", two_factor_verify, name="two_factor_verify"),
     path("accounts/sign-in/callback/", sign_in.callback, name="staff_sign_in_callback"),

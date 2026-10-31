@@ -42,6 +42,8 @@
             <a href="{% url 'custom_field_list' %}" {% if nav_section == 'custom_fields' %}aria-current="page"{% endif %}>Custom fields</a>
           {% endif %}
           {% if perms.crm.import_records %}<a href="{% url 'import_list' %}" {% if nav_section == 'imports' %}aria-current="page"{% endif %}>Import</a>{% endif %}
+          {% if perms.crm.export_records %}<a href="{% url 'export_csv' %}" download>Export</a>{% endif %}
+          {% if perms.crm.manage_staff %}<a href="{% url 'team_list' %}" {% if nav_section == 'team' %}aria-current="page"{% endif %}>Team</a>{% endif %}
           {% if perms.crm.manage_firm_settings %}<a href="{% url 'firm_settings' %}" {% if nav_section == 'firm' %}aria-current="page"{% endif %}>Firm settings</a>{% endif %}
           {% if user.is_superuser %}<a href="{% url 'admin:index' %}">Administration</a>{% endif %}
         </nav>
@@ -75,6 +77,7 @@
             </summary>
             <div class="menu-panel">
               <p class="menu-heading"><strong>{{ user.get_full_name|default:user.username }}</strong><small>Signed in as {{ user.username }}</small></p>
+              <a href="{% url 'profile' %}">Profile</a>
               <a href="{% url 'password_change' %}">Change password</a>
               <a href="{% url 'two_factor_settings' %}">Two-factor sign-in</a>
               <a href="{% url 'api_access' %}" {% if nav_section == 'api' %}aria-current="page"{% endif %}>API access</a>

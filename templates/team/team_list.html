@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Team · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Settings</p><h1>Team</h1><p>Everyone with a staff account. Every active person works with every contact and matter; their role adds what goes beyond that.</p></div><div class="actions"><a class="button primary" href="{% url 'team_add' %}">Add a person</a></div></div>
+<div class="page-stack">
+  <section class="panel flush-panel"><div class="table-wrap"><table><thead><tr><th>Name</th><th class="optional-column">Email</th><th>Role</th><th class="optional-column">Two-factor</th><th class="optional-column">Last sign-in</th></tr></thead><tbody>
+    {% for row in people %}<tr><td><a class="primary-link" href="{% url 'team_detail' row.person.pk %}">{{ row.person.get_full_name|default:row.person.username }}</a>{% if row.person.pk == user.pk %} <span class="muted">(you)</span>{% endif %}{% if row.status != "Active" %} <span class="badge{% if row.status == 'Invited' %} pending{% endif %}">{{ row.status }}</span>{% endif %}</td><td class="optional-column">{{ row.person.email|default:"—" }}</td><td>{% if row.person.is_superuser %}Superuser{% elif row.role %}{{ row.role.name }}{% else %}<span class="muted">No role</span>{% endif %}</td><td class="optional-column">{{ row.two_factor|yesno:"On,Off" }}</td><td class="optional-column">{{ row.person.last_login|date:"M j, Y"|default:"Never" }}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <section class="panel"><div class="section-heading"><div><h2>Roles</h2><p>What each role adds to everyday work. A superuser can change a role, or add one, under Administration → Groups.</p></div></div><dl class="summary-list">{% for group, summary in roles %}<dt>{{ group.name }}</dt><dd>{{ summary }}</dd>{% endfor %}<dt>Superuser</dt><dd>Everything, including Administration</dd></dl></section>
+</div>
+{% endblock %}

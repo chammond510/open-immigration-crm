@@ -21,6 +21,9 @@ MANAGE_FIRM_SETTINGS = "crm.manage_firm_settings"
 MANAGE_CONNECTIONS = "crm.manage_connections"
 MANAGE_STAFF = "crm.manage_staff"
 
+# The roles the CRM creates, in the order they are offered.
+PRESET_ROLES = ("Managing partner", "Attorney", "Paralegal", "Office administrator")
+
 # (permission, label, what it allows), in the order people read them.
 PERMISSIONS = (
     (BILLING, "Billing", "Invoices, payments, and payment plans"),

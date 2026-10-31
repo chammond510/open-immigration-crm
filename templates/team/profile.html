@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Your profile · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow">Account</p><h1>Your profile</h1><p>You sign in as {{ user.username }}.{% if user.username|lower == user.email|lower %} Changing your email changes it too.{% endif %}</p></div></div>
+  <div class="page-stack">
+  <form method="post" class="panel stacked-form">
+    {% csrf_token %}
+    {% if form.errors %}<div class="message error" role="alert">Check the fields marked below.</div>{% endif %}
+    <div class="form-grid">{% for field in form %}{% include "crm/includes/form_field.html" %}{% endfor %}</div>
+    <div class="form-actions"><button class="button primary" type="submit">Save</button><a class="button" href="{% url 'dashboard' %}">Cancel</a></div>
+  </form>
+  <section class="panel"><div class="inline-actions"><a class="button" href="{% url 'password_change' %}">Change password</a><a class="button" href="{% url 'two_factor_settings' %}">Two-factor sign-in</a></div></section>
+  </div>
+</div>
+{% endblock %}

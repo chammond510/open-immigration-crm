@@ -10,7 +10,7 @@
     <div class="form-actions"><button class="button" type="submit">Create new recovery codes</button></div>
   </form>
   {% if firm_requires %}
-    <p class="panel muted">Your firm requires two-factor sign-in. If you lose your phone and your recovery codes, ask an administrator to reset it.</p>
+    <p class="panel muted">Your firm requires two-factor sign-in. If you lose your phone and your recovery codes, ask whoever manages staff to reset it on the Team page.</p>
   {% else %}
     <form method="post" action="{% url 'two_factor_disable' %}" class="panel stacked-form">
       {% csrf_token %}

@@ -1,0 +1,20 @@
+{% extends "public_base.html" %}
+{% block title %}Choose a password · Open Immigration CRM{% endblock %}
+{% block public_content %}
+<div class="login-shell">
+  <section class="login-panel">
+    <div class="brand login-brand"><span class="brand-mark" aria-hidden="true">OI</span><span><strong>{{ firm_profile.name|default:"Open Immigration CRM" }}</strong><small>Private practice workspace</small></span></div>
+    {% if validlink %}
+      <div class="login-copy"><p class="eyebrow">Welcome</p><h1>Choose a password</h1><p>You will sign in as <strong>{{ form.user.username }}</strong>.</p></div>
+      <form method="post" class="stacked-form">
+        {% csrf_token %}
+        {% if form.errors %}<div class="message error" role="alert">Check the password below.</div>{% endif %}
+        {% for field in form %}{% include "crm/includes/form_field.html" %}{% endfor %}
+        <button class="button primary wide" type="submit">Save password</button>
+      </form>
+    {% else %}
+      <div class="login-copy"><p class="eyebrow">Link unavailable</p><h1>This link cannot be used</h1><p>It may have expired, been replaced by a newer one, or already been used. Ask whoever added you for a new invitation, or <a href="{% url 'login' %}">sign in</a> if you already chose a password.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

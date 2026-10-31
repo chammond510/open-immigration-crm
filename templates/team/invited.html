@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load connect_tags %}
+{% block title %}Invitation · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page"><div class="page-heading"><div><p class="eyebrow"><a href="{% url 'team_list' %}">Team</a></p><h1>{% if problem %}Send {{ person.first_name|default:person.username }} this link{% else %}Invitation sent{% endif %}</h1><p>{% if problem %}Not emailed: {{ problem }}. Copy the link now; it is not stored, so it cannot be shown again.{% else %}{{ person.get_full_name|default:person.username }} gets an email at {{ person.email }} with a link to choose a password.{% endif %}</p></div></div>
+  <section class="panel">
+    <dl class="summary-list"><dt>Username</dt><dd>{{ person.username }}</dd><dt>Link works for</dt><dd>{{ days }} day{{ days|pluralize }}, once</dd></dl>
+    {% if problem %}<div class="copy-field"><label class="sr-only" for="invite-link">Invitation link</label><input id="invite-link" type="text" value="{{ link }}" readonly data-copy-source><button class="button primary" type="button" data-copy-button>Copy link</button></div><p class="fine-print">Anyone with this link can choose the password for this account, so send it only to {{ person.first_name|default:"them" }}, through a channel your firm trusts.</p><div class="prompt-stack">{% connect_prompt "system_email" "to email invitations from here" %}</div>{% endif %}
+    <div class="form-actions"><a class="button" href="{% url 'team_detail' person.pk %}">See {{ person.first_name|default:person.username }}</a><a class="button" href="{% url 'team_list' %}">Back to the team</a></div>
+  </section>
+</div>
+{% endblock %}

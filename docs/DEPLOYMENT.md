@@ -94,7 +94,20 @@ Every active staff account sees and works with every contact, matter, and work i
 | Connections and AI | Firm connections, AI features, AI assistants, and the API | ✓ | | | |
 | Manage staff | Add people, change their roles, and deactivate accounts | ✓ | | | ✓ |
 
-Superusers hold every permission, and only they see **Administration**. The first administrator is a superuser. A superuser gives someone a role under **Administration → Users → the user → Groups**. To change a preset or add a role of your own, edit it under **Administration → Groups**; the permissions are listed under "crm | firm profile" and "billing | invoice". Staff who open a page their role does not include see a page that says so.
+Superusers hold every permission, and only they see **Administration**. The first administrator is a superuser. To change a preset or add a role of your own, a superuser edits it under **Administration → Groups**; the permissions are listed under "crm | firm profile" and "billing | invoice". Staff who open a page their role does not include see a page that says so.
+
+### The Team page
+
+People whose role includes **Manage staff** run the team from **Settings → Team**:
+
+- **Add a person** with their name, email, and role. Their username is their email address, and the account has no password until they choose one. If the firm has connected an email delivery service (a connection with the System email capability), the CRM emails them a link to choose a password. Otherwise, or if the email is held in preview mode or refused, the link is shown once to whoever added them, to send through a channel the firm trusts. The link works once and expires after three days (Django's `PASSWORD_RESET_TIMEOUT`); sending a new invitation ends the earlier link.
+- **Change a role**, name, or email. Each person has one role, or none.
+- **Reset two-factor sign-in** for someone who lost their phone and recovery codes.
+- **Deactivate** someone who leaves. Their open work items, open matters, and active contacts go to a colleague you choose, or stay unassigned. They are signed out everywhere, their API tokens and AI assistant sign-ins stop working, a running timer of theirs stops, and their personal connections, such as their own mailbox and calendar, are disconnected; what those brought in stays. **Reactivate** brings the account back without giving work back.
+
+Nobody can give a role with a permission they do not hold, or change someone who holds a permission they do not, so an office administrator can add attorneys and paralegals but not a managing partner. Nobody changes their own role or deactivates themselves, so whoever manages staff cannot lock the firm out. Only a superuser changes a superuser. Every change is in the audit log.
+
+Each person edits their own name and email under **Profile** in the menu under their name. When their username is their email address, changing the email changes the username too.
 
 Upgrading creates the presets and changes nobody's access: existing staff have no role, and so only everyday work, until someone gives them one, and billing access granted to a person directly is kept.
 
@@ -112,13 +125,13 @@ Lockout tracking uses the same proxy-aware client address as the audit log, so t
 
 Each user can turn on two-factor sign-in under **Two-factor sign-in** in the sidebar, using any authenticator app. Someone who manages firm settings can require it for all staff in **Firm settings**; staff without it are then sent to set it up before they can use the CRM. Five incorrect codes in a row lock the second step for the same cooling-off period as a password lockout (tune with `TWO_FACTOR_FAILURE_LIMIT`).
 
-If someone loses their phone and their recovery codes, reset their two-factor sign-in from the console, or delete their entry under **Two-factor devices** in administration:
+If someone loses their phone and their recovery codes, someone who manages staff resets their two-factor sign-in on their page under **Settings → Team**. It can also be reset from the console, or by deleting their entry under **Two-factor devices** in administration:
 
 ```bash
 python manage.py reset_two_factor <username>
 ```
 
-They can then sign in with their password and set it up again. Both paths are recorded in the audit log.
+They can then sign in with their password and set it up again. Each path is recorded in the audit log.
 
 ## Connector worker
 

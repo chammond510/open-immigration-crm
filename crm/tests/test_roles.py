@@ -71,9 +71,7 @@ class PresetTests(TestCase):
     def test_the_migration_creates_each_preset_with_its_permissions(self):
         for name, expected in PRESETS.items():
             group = Group.objects.get(name=name)
-            granted = {
-                f"{p.content_type.app_label}.{p.codename}" for p in group.permissions.all()
-            }
+            granted = {f"{p.content_type.app_label}.{p.codename}" for p in group.permissions.all()}
             self.assertEqual(granted, expected, name)
 
     def test_superusers_hold_every_permission_and_inactive_staff_none(self):
@@ -166,24 +164,18 @@ class NavigationTests(TestCase):
             "Firm settings": reverse("firm_settings"),
             "Administration": reverse("admin:index"),
             "Billing": reverse("invoice_list"),
+            "Export": reverse("export_csv"),
+            "Team": reverse("team_list"),
         }
         return {name for name, url in names.items() if f'href="{url}"' in page}
 
     def test_the_sidebar_shows_what_each_role_can_open(self):
         self.assertEqual(self.settings_links(member("Paralegal")), set())
         self.assertEqual(self.settings_links(member("Attorney")), {"Billing"})
-        self.assertEqual(
-            self.settings_links(member("Office administrator")),
-            {"Workflows", "Custom fields", "Import", "Firm settings", "Billing"},
-        )
-        self.assertEqual(
-            self.settings_links(member("Managing partner")),
-            {"Workflows", "Custom fields", "Import", "Firm settings", "Billing"},
-        )
-        self.assertEqual(
-            self.settings_links(make_user()),
-            {"Workflows", "Custom fields", "Import", "Firm settings", "Billing", "Administration"},
-        )
+        office = {"Workflows", "Custom fields", "Import", "Firm settings", "Billing", "Team"}
+        self.assertEqual(self.settings_links(member("Office administrator")), office)
+        self.assertEqual(self.settings_links(member("Managing partner")), office | {"Export"})
+        self.assertEqual(self.settings_links(make_user()), office | {"Export", "Administration"})
 
     def test_settings_pages_say_who_can_turn_things_on(self):
         self.client.force_login(member("Paralegal"))

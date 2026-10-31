@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Deactivate {{ person.get_full_name|default:person.username }} · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'team_list' %}">Team</a></p><h1>Deactivate {{ person.get_full_name|default:person.username }}</h1><p>They will no longer be able to sign in, use API tokens, or use AI assistants. Their history stays.</p></div></div>
+  <form method="post" class="panel stacked-form">
+    {% csrf_token %}
+    <dl class="summary-list"><dt>Open work</dt><dd>{{ counts.work }}</dd><dt>Open matters</dt><dd>{{ counts.matters }}</dd><dt>Active contacts</dt><dd>{{ counts.contacts }}</dd></dl>
+    <div class="form-grid">{% for field in form %}{% include "crm/includes/form_field.html" %}{% endfor %}</div>
+    {% if connections %}<p class="muted">Their personal connections will be disconnected: {% for connection in connections %}{{ connection.label }}{% if not forloop.last %}, {% endif %}{% endfor %}. What those connections brought in stays.</p>{% endif %}
+    <p class="fine-print">A running timer of theirs is stopped. You can reactivate them later; work given to someone else stays with that person.</p>
+    <div class="form-actions"><button class="button danger" type="submit">Deactivate</button><a class="button" href="{% url 'team_detail' person.pk %}">Cancel</a></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ person.get_full_name|default:person.username }} · Team · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{% url 'team_list' %}">Team</a></p><h1>{{ person.get_full_name|default:person.username }}</h1><p>{% if person.is_superuser %}Superuser{% elif role %}{{ role.name }}{% else %}No role{% endif %} · {{ status }} · signs in as {{ person.username }}</p></div></div>
+  <div class="page-stack">
+  {% if is_self %}<div class="privacy-note note-neutral">This is you. Change your name and email in <a href="{% url 'profile' %}">your profile</a>; someone else who manages staff changes your role.</div>
+  {% elif not manageable %}<div class="privacy-note note-neutral">{% if person.is_superuser %}Only a superuser can change a superuser's account.{% else %}You can't change this account, because their role includes permissions you don't have.{% endif %}</div>{% endif %}
+  {% if manageable %}
+    <form method="post" class="panel stacked-form">
+      {% csrf_token %}
+      {% if form.errors %}<div class="message error" role="alert">Check the fields marked below.</div>{% endif %}
+      <div class="form-grid">{% for field in form %}{% include "crm/includes/form_field.html" %}{% endfor %}</div>
+      <div class="form-actions"><button class="button primary" type="submit">Save</button><a class="button" href="{% url 'team_list' %}">Cancel</a></div>
+    </form>
+    {% if person.is_active and invited %}
+      <form method="post" action="{% url 'team_invite' person.pk %}" class="panel stacked-form">
+        {% csrf_token %}
+        <div><h2>Invitation</h2><p class="muted">They have not chosen a password yet. A new invitation ends the one sent before.</p></div>
+        <div class="form-actions"><button class="button" type="submit">Send a new invitation</button></div>
+      </form>
+    {% endif %}
+    {% if two_factor %}
+      <form method="post" action="{% url 'team_two_factor_reset' person.pk %}" class="panel stacked-form" data-confirm="Reset two-factor sign-in for {{ person.get_full_name|default:person.username }}? They sign in with their password alone until they set it up again.">
+        {% csrf_token %}
+        <div><h2>Two-factor sign-in</h2><p class="muted">On. Reset it when they lose their phone and recovery codes; they set it up again after signing in with their password.</p></div>
+        <div class="form-actions"><button class="button" type="submit">Reset two-factor sign-in</button></div>
+      </form>
+    {% endif %}
+    {% if person.is_active %}
+      <section class="panel stacked-form"><div><h2>Deactivate</h2><p class="muted">For someone leaving the firm. They can no longer sign in, and you choose who takes over their open work, matters, and contacts.</p></div><div class="form-actions"><a class="button danger" href="{% url 'team_deactivate' person.pk %}">Deactivate…</a></div></section>
+    {% else %}
+      <form method="post" action="{% url 'team_reactivate' person.pk %}" class="panel stacked-form">
+        {% csrf_token %}
+        <div><h2>Deactivated</h2><p class="muted">They cannot sign in. Reactivating lets them sign in again with their role; work given to others stays with them.</p></div>
+        <div class="form-actions"><button class="button" type="submit">Reactivate</button></div>
+      </form>
+    {% endif %}
+  {% else %}
+    <section class="panel"><dl class="summary-list"><dt>Email</dt><dd>{{ person.email|default:"—" }}</dd><dt>Two-factor sign-in</dt><dd>{{ two_factor|yesno:"On,Off" }}</dd><dt>Last sign-in</dt><dd>{{ person.last_login|date:"M j, Y · g:i a"|default:"Never" }}</dd></dl></section>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}

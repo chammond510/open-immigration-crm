@@ -39,6 +39,7 @@ NAV_SECTIONS = (
     ("/settings/mcp/", "mcp"),
     ("/settings/ai/", "ai"),
     ("/settings/api/", "api"),
+    ("/settings/team/", "team"),
     ("/accounts/", "account"),
 )
 

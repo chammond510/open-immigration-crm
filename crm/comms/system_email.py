@@ -7,6 +7,8 @@ has one sender: its oldest active, firm-wide connection with the System email
 capability. Every email goes through the outbound policy, which holds it in
 preview mode and records the attempt. A sent email is logged on the contact with
 a summary the caller writes, so a secret such as an intake link is never kept.
+Email to staff, such as an invitation, is not logged anywhere but the policy's
+record, which keeps no body.
 """
 
 from django.core.exceptions import ValidationError
@@ -92,6 +94,33 @@ def send_system_email(contact, *, subject, body, log_summary, purpose, actor=Non
             logged_by=actor,
         )
     return request
+
+
+def email_staff(user, *, subject, body, purpose, actor=None):
+    """Email a member of staff from the firm; return the policy's ``OutboundRequest``."""
+    connection = sender()
+    if connection is None:
+        raise ValidationError("Connect an email delivery service first.")
+    try:
+        validate_email(user.email)
+    except ValidationError as exc:
+        raise ValidationError(
+            f"Add a valid email address for {user.get_full_name() or user.username} first."
+        ) from exc
+    return policy.send(
+        connection,
+        SEND_SYSTEM_EMAIL,
+        {
+            "to": user.email,
+            "subject": " ".join(subject.split())[:MAX_SUBJECT],
+            "body": body.strip()[:MAX_BODY],
+            "sender_name": FirmProfile.load().name,
+        },
+        actor=actor,
+        is_automation=actor is None,
+        target=user,
+        summary=f"{purpose} email",
+    )
 
 
 def not_sent_reason(request):

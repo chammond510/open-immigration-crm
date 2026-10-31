@@ -15,6 +15,7 @@ The system can hold names, contact information, birth dates, addresses, national
 - A firm setting that requires two-factor sign-in for all staff; sessions that skip the second step are signed out
 - Encryption of stored secrets, such as two-factor keys, with keys kept outside the database and support for key rotation
 - Roles that grant permissions beyond everyday work: billing, voids and rates, deleting records, imports, exports, firm settings, connections and AI, and managing staff. Four presets (Managing partner, Attorney, Paralegal, Office administrator) are created on install and can be changed in administration; superusers hold every permission (see [Staff and roles](DEPLOYMENT.md#staff-and-roles))
+- A Team page for people who may manage staff: invitations by a one-time, expiring link to choose a password (emailed through the firm's system email connection, or shown once), role changes limited to roles whose permissions the changer holds, two-factor resets, and deactivation that hands open work to a colleague and disconnects the person's personal connections
 - Billing visible only to staff whose role includes Billing; voiding invoices or payments and changing rates need Voids and rates, and every billing change is audited
 - CSRF protection on state-changing browser requests
 - Secure/HTTP-only/SameSite cookies and HTTPS redirect/HSTS when production settings are enabled
@@ -50,7 +51,7 @@ The system can hold names, contact information, birth dates, addresses, national
 7. Prompt OS, container, Python dependency, PostgreSQL, and application patching.
 8. Encrypted, tested, offsite backups of both database and media files.
 9. Monitoring for authentication anomalies, server errors, disk capacity, backup failure, and certificate expiry.
-10. A documented offboarding process that disables staff accounts immediately.
+10. A documented offboarding process that disables staff accounts immediately (**Settings → Team → Deactivate**).
 11. A tested incident-response plan appropriate for attorney/client information.
 
 ## Connectors
