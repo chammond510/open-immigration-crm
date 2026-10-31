@@ -1,10 +1,10 @@
 {% load translation_tags %}
 {% for translation, answers in found %}
-<div class="machine-translation">
-  <p class="eyebrow">Machine translation into {{ translation.language|language_label }}{% if translation.source_language %} from {{ translation.source_language|language_label }}{% endif %} · {{ translation.translator }}{% if translation.by_ai %} (AI){% endif %} · {{ translation.created_at|date:"M j, Y" }}</p>
+<div class="machine-translation" lang="{{ translation.language }}">
+  <p class="eyebrow" lang="en">Machine translation into {{ translation.language|language_label }}{% if translation.source_language %} from {{ translation.source_language|language_label }}{% endif %} · {{ translation.translator }}{% if translation.by_ai %} (AI){% endif %} · {{ translation.created_at|date:"M j, Y" }}</p>
   {% if kind == "submission" %}{% for label, text in answers %}<p><strong>{{ label }}</strong><br>{{ text|linebreaksbr }}</p>{% endfor %}
   {% else %}{% if translation.content.subject %}<p><strong>{{ translation.content.subject }}</strong></p>{% endif %}{% if translation.content.summary %}<p>{{ translation.content.summary|linebreaksbr }}</p>{% endif %}{% endif %}
-  <small class="muted">Made by a machine. Check it against the original before relying on it.</small>
+  <small class="muted" lang="en">Made by a machine. Check it against the original before relying on it.</small>
 </div>
 {% endfor %}
 {% if form and withheld %}

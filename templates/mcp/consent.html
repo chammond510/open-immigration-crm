@@ -3,7 +3,7 @@
 {% block public_content %}
 <div class="login-shell">
   <section class="login-panel consent-panel">
-    <div class="brand login-brand"><span class="brand-mark">OI</span><span><strong>Open Immigration CRM</strong><small>Signed in as {{ user.get_full_name|default:user.username }}</small></span></div>
+    <div class="brand login-brand"><span class="brand-mark" aria-hidden="true">OI</span><span><strong>Open Immigration CRM</strong><small>Signed in as {{ user.get_full_name|default:user.username }}</small></span></div>
     {% if error %}
       <div class="login-copy"><p class="eyebrow">AI assistants</p><h1>This request can't be approved</h1><p>{{ error.description|default:error.error }}</p></div>
       <p class="fine-print">Start again from your assistant's connector settings.</p>

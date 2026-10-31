@@ -5,76 +5,90 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="color-scheme" content="light">
   <title>{% block title %}Open Immigration CRM{% endblock %}</title>
   <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
 <body class="{% if not user.is_authenticated %}signed-out{% endif %}">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   {% if user.is_authenticated %}
     <div class="app-shell">
       <aside class="sidebar" id="sidebar">
-        <div class="brand">
-          <span class="brand-mark">OI</span>
+        <a class="brand" href="{% url 'dashboard' %}">
+          <span class="brand-mark" aria-hidden="true">OI</span>
           <span><strong>{{ firm_profile.short_name|default:firm_profile.name|default:"Open Immigration CRM" }}</strong><small>Practice workspace</small></span>
-        </div>
-        <nav aria-label="Primary navigation">
-          <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>Overview</a>
-          <a href="{% url 'contact_list' %}" {% if 'contact' in request.resolver_match.url_name or request.resolver_match.url_name == 'pipeline' %}aria-current="page"{% endif %}>Contacts</a>
-          <a href="{% url 'matter_list' %}" {% if 'matter' in request.resolver_match.url_name or 'checklist' in request.resolver_match.url_name or 'document' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Matters</a>
-          <a href="{% url 'work_list' %}" {% if 'work' in request.resolver_match.url_name and 'workflow' not in request.resolver_match.url_name %}aria-current="page"{% endif %}>Work</a>
-          <a href="{% url 'notice_list' %}" {% if 'notice' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Notices</a>
-          <a href="{% url 'communication_list' %}" {% if 'communication' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Communications</a>
-          {% if perms.billing.access_billing %}<a href="{% url 'invoice_list' %}" {% if 'invoice' in request.resolver_match.url_name or 'billing' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Billing</a>{% endif %}
-          <a href="{% url 'intake_workspace' %}" {% if 'intake' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Intake</a>
-          <a href="{% url 'operating_dashboard' %}" {% if request.resolver_match.url_name == 'operating_dashboard' %}aria-current="page"{% endif %}>Reports</a>
-          <a href="{% url 'connections' %}" {% if 'connect' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Connections</a>
-          {% if ai_assistant_on %}<a href="{% url 'ai_assistant' %}" {% if 'ai_assistant' in request.resolver_match.url_name or 'ai_conversation' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Assistant</a>{% endif %}
+        </a>
+        <nav class="sidebar-nav" aria-label="Primary navigation">
+          <a href="{% url 'dashboard' %}" {% if nav_section == 'overview' %}aria-current="page"{% endif %}>Overview</a>
+          <a href="{% url 'contact_list' %}" {% if nav_section == 'contacts' %}aria-current="page"{% endif %}>Contacts</a>
+          <a href="{% url 'matter_list' %}" {% if nav_section == 'matters' %}aria-current="page"{% endif %}>Matters</a>
+          <a href="{% url 'work_list' %}" {% if nav_section == 'work' %}aria-current="page"{% endif %}>Work</a>
+          <a href="{% url 'notice_list' %}" {% if nav_section == 'notices' %}aria-current="page"{% endif %}>Notices</a>
+          <a href="{% url 'communication_list' %}" {% if nav_section == 'communications' %}aria-current="page"{% endif %}>Communications</a>
+          {% if perms.billing.access_billing %}<a href="{% url 'invoice_list' %}" {% if nav_section == 'billing' %}aria-current="page"{% endif %}>Billing</a>{% endif %}
+          <a href="{% url 'intake_workspace' %}" {% if nav_section == 'intake' %}aria-current="page"{% endif %}>Intake</a>
+          <a href="{% url 'operating_dashboard' %}" {% if nav_section == 'reports' %}aria-current="page"{% endif %}>Reports</a>
+          {% if ai_assistant_on %}<a href="{% url 'ai_assistant' %}" {% if nav_section == 'assistant' %}aria-current="page"{% endif %}>Assistant</a>{% endif %}
         </nav>
-        <div class="sidebar-bottom">
+        <nav class="sidebar-nav sidebar-settings" aria-labelledby="settings-nav-label">
+          <p class="nav-label" id="settings-nav-label">Settings</p>
+          <a href="{% url 'connections' %}" {% if nav_section == 'connections' %}aria-current="page"{% endif %}>Connections</a>
+          <a href="{% url 'ai_settings' %}" {% if nav_section == 'ai' %}aria-current="page"{% endif %}>AI features</a>
+          <a href="{% url 'mcp_settings' %}" {% if nav_section == 'mcp' %}aria-current="page"{% endif %}>AI assistants</a>
           {% if user.is_superuser %}
-            <a href="{% url 'firm_settings' %}">Firm settings</a>
-            <a href="{% url 'workflow_template_list' %}" {% if 'workflow_template' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Workflows</a>
-            <a href="{% url 'custom_field_list' %}" {% if 'custom_field' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Custom fields</a>
-            <a href="{% url 'import_list' %}" {% if 'import_' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Import from a spreadsheet</a>
+            <a href="{% url 'workflow_template_list' %}" {% if nav_section == 'workflows' %}aria-current="page"{% endif %}>Workflows</a>
+            <a href="{% url 'custom_field_list' %}" {% if nav_section == 'custom_fields' %}aria-current="page"{% endif %}>Custom fields</a>
+            <a href="{% url 'import_list' %}" {% if nav_section == 'imports' %}aria-current="page"{% endif %}>Import</a>
+            <a href="{% url 'firm_settings' %}" {% if nav_section == 'firm' %}aria-current="page"{% endif %}>Firm settings</a>
             <a href="{% url 'admin:index' %}">Administration</a>
           {% endif %}
-          <a href="{% url 'password_change' %}">Change password</a>
-          <a href="{% url 'two_factor_settings' %}">Two-factor sign-in</a>
-          <a href="{% url 'api_access' %}">API access</a>
-          <a href="{% url 'mcp_settings' %}" {% if request.resolver_match.url_name == 'mcp_settings' %}aria-current="page"{% endif %}>AI assistants</a>
-          <a href="{% url 'ai_settings' %}" {% if request.resolver_match.url_name == 'ai_settings' %}aria-current="page"{% endif %}>AI features</a>
-          <form action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <button class="quiet-button" type="submit">Sign out</button>
-          </form>
-          <a class="source-link" href="https://github.com/chammond510/open-immigration-crm">Source · AGPL-3.0 · No warranty</a>
-        </div>
+        </nav>
+        <a class="source-link" href="https://github.com/chammond510/open-immigration-crm">Source · AGPL-3.0 · No warranty</a>
       </aside>
+      <div class="sidebar-backdrop" data-menu-close hidden></div>
       <div class="workspace">
         <header class="topbar">
-          <button class="menu-button" type="button" aria-controls="sidebar" aria-expanded="false" data-menu-toggle>Menu</button>
+          <button class="menu-button" type="button" aria-controls="sidebar" aria-expanded="false" data-menu-toggle><span class="menu-icon" aria-hidden="true"></span><span class="sr-only">Menu</span></button>
           <form class="global-search" action="{% url 'search' %}" method="get" role="search">
             <label class="sr-only" for="global-q">Search contacts and matters</label>
-            <input id="global-q" name="q" type="search" value="{{ request.GET.q|default:'' }}" placeholder="Search contacts or matters">
+            <input id="global-q" name="q" type="search" value="{% if request.resolver_match.url_name == 'search' %}{{ request.GET.q }}{% endif %}" placeholder="Search contacts or matters" autocomplete="off" data-search-input>
+            <kbd class="search-key" aria-hidden="true">/</kbd>
           </form>
           {% if running_timer %}
             <form class="timer-chip" action="{% url 'timer_stop' %}" method="post">
               {% csrf_token %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <span class="timer-dot" aria-hidden="true"></span>
               <span class="timer-elapsed" data-timer-started="{{ running_timer.started_at|date:'c' }}">{{ running_timer.duration_display }}</span>
               <span class="timer-target">{{ running_timer.target_label }}</span>
               <label class="sr-only" for="timer-note">Time entry note</label>
               <input class="timer-note" id="timer-note" name="note" maxlength="500" placeholder="Note (optional)">
-              <button class="button" type="submit">Stop</button>
+              <button class="button small" type="submit">Stop<span class="timer-word"> timer</span></button>
             </form>
           {% endif %}
-          <span class="user-chip">{{ user.get_full_name|default:user.username }}</span>
+          <details class="account-menu" data-account-menu>
+            <summary aria-label="Account menu for {{ user.get_full_name|default:user.username }}">
+              <span class="avatar" aria-hidden="true">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}{{ user.username|first|upper }}{% endif %}</span>
+              <span class="account-name">{{ user.get_full_name|default:user.username }}</span>
+            </summary>
+            <div class="menu-panel">
+              <p class="menu-heading"><strong>{{ user.get_full_name|default:user.username }}</strong><small>Signed in as {{ user.username }}</small></p>
+              <a href="{% url 'password_change' %}">Change password</a>
+              <a href="{% url 'two_factor_settings' %}">Two-factor sign-in</a>
+              <a href="{% url 'api_access' %}" {% if nav_section == 'api' %}aria-current="page"{% endif %}>API access</a>
+              <form action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit">Sign out</button>
+              </form>
+            </div>
+          </details>
         </header>
-        <main id="main-content">
+        <main id="main-content" tabindex="-1">
           {% if messages %}
-            <div class="messages" aria-live="polite">
-              {% for message in messages %}<div class="message {{ message.tags }}">{{ message }}</div>{% endfor %}
+            <div class="messages">
+              {% for message in messages %}<div class="message {{ message.tags }}" role="{% if message.level >= 40 %}alert{% else %}status{% endif %}">{{ message }}</div>{% endfor %}
             </div>
           {% endif %}
           {% block content %}{% endblock %}
@@ -82,7 +96,7 @@
       </div>
     </div>
   {% else %}
-    <main id="main-content">{% block signed_out_content %}{% endblock %}</main>
+    <main id="main-content" tabindex="-1">{% block signed_out_content %}{% endblock %}</main>
   {% endif %}
 </body>
 </html>

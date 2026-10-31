@@ -1,6 +1,6 @@
 {% if connections %}<div class="table-wrap"><table><thead><tr><th>Assistant</th>{% if show_owner %}<th>Staff member</th>{% endif %}<th>Connected</th><th>Returns to</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
   {% for row in connections %}<tr>
-    <td><strong>{{ row.application.name|default:"Unnamed assistant" }}</strong><small>{{ row.registered_by }}</small></td>
+    <td><strong>{{ row.application.name|default:"Unnamed assistant" }}</strong><small>{{ row.registered_by.get_full_name|default:row.registered_by }}</small></td>
     {% if show_owner %}<td>{{ row.user.get_full_name|default:row.user.username }}</td>{% endif %}
     <td>{{ row.since|date:"M j, Y" }}</td>
     <td><span class="mono">{{ row.callback_host|default:"—" }}</span></td>

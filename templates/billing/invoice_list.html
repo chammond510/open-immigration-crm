@@ -11,5 +11,5 @@
 </form>
 <section class="panel flush-panel">{% if invoices %}<div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Client</th><th>Status</th><th>Issued</th><th>Due</th><th class="numeric">Total</th><th class="numeric">Balance</th></tr></thead><tbody>
   {% for invoice in invoices %}<tr><td><a class="primary-link" href="{% url 'invoice_detail' invoice.pk %}">{{ invoice.number|default:"Draft" }}</a>{% if invoice.matter %}<small>{{ invoice.matter.matter_number }}</small>{% endif %}</td><td>{{ invoice.contact }}</td><td><span class="badge {{ invoice.status }}">{{ invoice.get_status_display }}</span>{% if invoice.is_overdue %} <span class="badge failed">Overdue</span>{% endif %}</td><td>{{ invoice.issue_date|date:"M j, Y"|default:"—" }}</td><td>{{ invoice.due_date|date:"M j, Y"|default:"—" }}</td><td class="numeric">{{ invoice.subtotal|money:currency }}</td><td class="numeric">{{ invoice.balance|money:currency }}</td></tr>{% endfor %}
-</tbody></table></div>{% else %}<div class="empty-state"><h3>No invoices found</h3><p>Create an invoice from a contact or matter, or start one here.</p></div>{% endif %}</section>
+</tbody></table></div>{% else %}<div class="empty-state"><h2>No invoices found</h2><p>Create an invoice from a contact or matter, or start one here.</p></div>{% endif %}</section>
 {% endblock %}

@@ -4,15 +4,15 @@
   <div class="section-heading"><div><h2>Consult prep</h2><p>Internal memos for upcoming consults, drafted by AI from this contact's records.</p></div></div>
   {% for consult in consults %}
     <article class="ai-memo">
-      <div class="ai-memo-heading"><strong>{{ consult.appointment.title }}</strong><span class="muted">{{ consult.appointment.scheduled_for|date:"D, M j · g:i a" }}{% if consult.appointment.assigned_to %} · {{ consult.appointment.assigned_to }}{% endif %}</span></div>
+      <div class="ai-memo-heading"><strong>{{ consult.appointment.title }}</strong><span class="muted">{{ consult.appointment.scheduled_for|date:"D, M j · g:i a" }}{% if consult.appointment.assigned_to %} · {{ consult.appointment.assigned_to.get_full_name|default:consult.appointment.assigned_to }}{% endif %}</span></div>
       {% with memo=consult.memo %}
         {% if consult.preparing %}
-          <p class="muted" data-poll-url="{% url 'ai_consult_memo_status' consult.appointment.pk %}">Preparing the memo…{% if not worker_running %} The background worker isn't running, so this starts when it does.{% endif %}</p>
+          <p class="muted" role="status" data-poll-url="{% url 'ai_consult_memo_status' consult.appointment.pk %}">Preparing the memo…{% if not worker_running %} The background worker isn't running, so this starts when it does.{% endif %}</p>
         {% elif memo and memo.body %}
           <p class="ai-label">AI draft for attorney review · not for the client</p>
           <h3>{{ memo.headline }}</h3>
           <div class="prose">{{ memo.body|linebreaks }}</div>
-          <small class="muted">Prepared {{ memo.prepared_at|date:"M j, g:i a" }}{% if memo.model %} with {{ memo.model }}{% endif %}{% if memo.requested_by %} for {{ memo.requested_by }}{% else %} in the background{% endif %}.</small>
+          <small class="muted">Prepared {{ memo.prepared_at|date:"M j, g:i a" }}{% if memo.model %} with {{ memo.model }}{% endif %}{% if memo.requested_by %} for {{ memo.requested_by.get_full_name|default:memo.requested_by }}{% else %} in the background{% endif %}.</small>
           {% if memo.error %}<p class="danger-text">Preparing it again did not finish: {{ memo.error }}</p>{% endif %}
         {% elif memo.error %}
           <p class="danger-text">The memo could not be prepared: {{ memo.error }}</p>

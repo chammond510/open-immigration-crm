@@ -8,7 +8,7 @@
     {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
     {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
     <div class="form-grid">
-      {% for field in form %}<div class="field {% if field.field.widget.input_type == 'textarea' or field.name == 'description' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+      {% for field in form %}<div class="field {% if field.widget_type == 'textarea' or field.name == 'description' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}{% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>{% endif %}</div>{% endfor %}
     </div>
     <div class="form-actions"><button class="button primary" type="submit">Create the task</button><a class="button" href="{{ next }}">Cancel</a></div>
   </form>

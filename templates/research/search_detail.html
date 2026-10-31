@@ -2,7 +2,7 @@
 {% load research_tags %}
 {% block title %}Research · {{ matter.matter_number }} · Open Immigration CRM{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow"><a href="{% url 'matter_detail' matter.pk %}#research">{{ matter.matter_number }}</a> · Legal research</p><h1>{{ search.query }}</h1><p>Searched {{ search.created_at|date:"M j, Y · g:i a" }}{% if search.source %} in {{ search.source }}{% endif %}{% if search.searched_by %} by {{ search.searched_by }}{% endif %}.</p></div></div>
+<div class="page-heading"><div><p class="eyebrow"><a href="{% url 'matter_detail' matter.pk %}#research">{{ matter.matter_number }}</a> · Legal research</p><h1>{{ search.query }}</h1><p>Searched {{ search.created_at|date:"M j, Y · g:i a" }}{% if search.source %} in {{ search.source }}{% endif %}{% if search.searched_by %} by {{ search.searched_by.get_full_name|default:search.searched_by }}{% endif %}.</p></div></div>
 <div class="page-stack research-page">
   {% if form.target.field.choices %}
     <form method="post" action="{% url 'research_search' matter.pk %}" class="panel stacked-form">
@@ -15,7 +15,7 @@
     </form>
   {% endif %}
   {% if search.status == "previewed" %}
-    <div class="privacy-note">{{ search.source }} is in preview mode, so the search was not sent. A superuser can turn preview mode off on the connection's page.</div>
+    <div class="privacy-note note-info">{{ search.source }} is in preview mode, so the search was not sent. A superuser can turn preview mode off on the connection's page.</div>
   {% elif search.status == "failed" %}
     <div class="message error">The search did not finish: {{ search.error }}</div>
   {% else %}

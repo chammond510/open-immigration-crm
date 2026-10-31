@@ -6,8 +6,8 @@
   <div><p class="eyebrow">Account</p><h1>API access</h1><p>Tokens let scripts and automation tools such as n8n, Zapier, or Make use the CRM as you, limited to the records you choose. The API address is <code>{{ api_url }}</code>; the <a href="https://github.com/chammond510/open-immigration-crm/blob/main/docs/API.md">API guide</a> lists what it offers.</p></div>
   {% if can_create %}<div class="actions"><a class="button primary" href="{% url 'api_token_create' %}">Create a token</a></div>{% endif %}
 </div>
-{% if not api_settings.enabled %}<div class="privacy-note">The API is off, so every token is refused. {% if user.is_superuser %}Turn it on under API settings.{% else %}A superuser can turn it on.{% endif %}</div>{% endif %}
-{% if not can_create %}<div class="privacy-note">Only superusers can create tokens on this installation.</div>{% endif %}
+{% if not api_settings.enabled %}<div class="privacy-note note-neutral">The API is off, so every token is refused. {% if user.is_superuser %}Turn it on below.{% else %}A superuser can turn it on.{% endif %}</div>{% endif %}
+{% if not can_create %}<div class="privacy-note note-neutral">Only superusers can create tokens on this installation.</div>{% endif %}
 <div class="prompt-stack page-prompts">{% connect_prompt "automation" "to send CRM events to n8n, Zapier, Make, or any webhook" %}</div>
 <div class="api-page">
   <div class="{% if user.is_superuser %}two-column{% else %}api-page{% endif %}">

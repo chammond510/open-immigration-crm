@@ -120,7 +120,7 @@ class SharingLimitTests(SharingLimitTestCase):
         allow = reverse("connection_ai_use", args=[self.limited.pk])
         response = self.client.post(allow, {"allowed": "yes"}, follow=True)
         self.assertContains(response, "may now read this connection&#x27;s messages.")
-        self.assertContains(response, "Keep them out again")
+        self.assertContains(response, "Stop AI and translation access")
         self.limited.refresh_from_db()
         self.assertTrue(self.limited.ai_use_allowed)
         self.client.post(allow, {"allowed": "no"})

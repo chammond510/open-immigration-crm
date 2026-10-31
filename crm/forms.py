@@ -26,6 +26,31 @@ DATE_INPUT = forms.DateInput(attrs={"type": "date"})
 DATETIME_INPUT = forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M")
 
 
+def staff_choices(field):
+    """Limit a user field to active staff, shown by name rather than username."""
+    field.queryset = get_user_model().objects.filter(is_active=True, is_staff=True)
+    field.label_from_instance = lambda user: user.get_full_name() or user.username
+    field.empty_label = "Unassigned"
+
+
+class SectionedFormMixin:
+    """Groups a form's fields under headings on the form page. Fields not named in
+    `sections`, such as custom fields, come last under "More details"."""
+
+    sections = ()
+
+    def field_sections(self):
+        named = {name for _, names in self.sections for name in names}
+        groups = [
+            (title, [self[name] for name in names if name in self.fields])
+            for title, names in self.sections
+        ]
+        rest = [self[name] for name in self.fields if name not in named]
+        if rest:
+            groups.append(("More details", rest))
+        return [(title, fields) for title, fields in groups if fields]
+
+
 class FirstRunSetupForm(UserCreationForm):
     """Creates the first administrator while the installation has no accounts."""
 
@@ -41,6 +66,12 @@ class TwoFactorCodeForm(forms.Form):
         widget=forms.TextInput(attrs={"autocomplete": "one-time-code", "autofocus": True}),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.prefix:
+            # A second code form on a settings page should not take focus on load.
+            self.fields["code"].widget.attrs.pop("autofocus", None)
+
 
 class TwoFactorDisableForm(forms.Form):
     password = forms.CharField(
@@ -53,8 +84,26 @@ class TwoFactorDisableForm(forms.Form):
     )
 
 
-class ContactForm(CustomFieldsMixin, forms.ModelForm):
+class ContactForm(SectionedFormMixin, CustomFieldsMixin, forms.ModelForm):
     custom_fields_for = "contact"
+    sections = (
+        ("Name and contact", ("first_name", "last_name", "email", "phone", "preferred_language")),
+        (
+            "Immigration details",
+            (
+                "date_of_birth",
+                "country_of_birth",
+                "nationality",
+                "a_number",
+                "current_immigration_status",
+            ),
+        ),
+        (
+            "Address",
+            ("address_line1", "address_line2", "city", "region", "postal_code", "country"),
+        ),
+        ("Relationship", ("status", "stage", "assigned_to", "notes")),
+    )
 
     class Meta:
         model = Contact
@@ -81,21 +130,39 @@ class ContactForm(CustomFieldsMixin, forms.ModelForm):
             "notes",
         ]
         widgets = {
+            "email": forms.EmailInput(attrs={"autocomplete": "off"}),
+            "phone": forms.TextInput(attrs={"type": "tel", "autocomplete": "off"}),
             "date_of_birth": DATE_INPUT,
+            "a_number": forms.TextInput(
+                attrs={
+                    "placeholder": "A123456789",
+                    "autocapitalize": "characters",
+                    "spellcheck": "false",
+                }
+            ),
             "notes": forms.Textarea(attrs={"rows": 4}),
+        }
+        labels = {
+            "address_line1": "Address line 1",
+            "address_line2": "Address line 2",
+            "region": "State or region",
+            "current_immigration_status": "Current immigration status",
+            "assigned_to": "Owner",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["assigned_to"].queryset = get_user_model().objects.filter(
-            is_active=True,
-            is_staff=True,
-        )
+        staff_choices(self.fields["assigned_to"])
         self.add_custom_fields()
 
 
-class MatterForm(CustomFieldsMixin, forms.ModelForm):
+class MatterForm(SectionedFormMixin, CustomFieldsMixin, forms.ModelForm):
     custom_fields_for = "matter"
+    sections = (
+        ("Matter", ("primary_contact", "title", "case_type", "status", "assigned_to")),
+        ("USCIS", ("receipt_number", "priority_date", "filing_date")),
+        ("Notes", ("description", "notes")),
+    )
 
     class Meta:
         model = Matter
@@ -112,19 +179,25 @@ class MatterForm(CustomFieldsMixin, forms.ModelForm):
             "notes",
         ]
         widgets = {
+            "receipt_number": forms.TextInput(
+                attrs={
+                    "placeholder": "IOE0123456789",
+                    "autocapitalize": "characters",
+                    "spellcheck": "false",
+                }
+            ),
             "priority_date": DATE_INPUT,
             "filing_date": DATE_INPUT,
             "description": forms.Textarea(attrs={"rows": 3}),
             "notes": forms.Textarea(attrs={"rows": 4}),
         }
+        labels = {"assigned_to": "Owner"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["primary_contact"].queryset = Contact.objects.all()
-        self.fields["assigned_to"].queryset = get_user_model().objects.filter(
-            is_active=True,
-            is_staff=True,
-        )
+        self.fields["primary_contact"].empty_label = "Choose a contact"
+        staff_choices(self.fields["assigned_to"])
         self.add_custom_fields()
 
 
@@ -158,16 +231,17 @@ class WorkItemForm(forms.ModelForm):
     class Meta:
         model = WorkItem
         fields = [
-            "kind",
             "title",
-            "description",
+            "kind",
             "priority",
+            "scheduled_for",
+            "assigned_to",
             "contact",
             "matter",
-            "assigned_to",
-            "scheduled_for",
+            "description",
             "meeting_url",
         ]
+        labels = {"kind": "Type", "scheduled_for": "Due or scheduled for"}
         widgets = {
             "description": forms.Textarea(attrs={"rows": 3}),
             "scheduled_for": DATETIME_INPUT,
@@ -179,10 +253,9 @@ class WorkItemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["assigned_to"].queryset = get_user_model().objects.filter(
-            is_active=True,
-            is_staff=True,
-        )
+        staff_choices(self.fields["assigned_to"])
+        self.fields["contact"].empty_label = "No contact"
+        self.fields["matter"].empty_label = "No matter"
 
     def clean(self):
         cleaned = super().clean()
@@ -250,10 +323,18 @@ class IntakeFormConfigForm(forms.ModelForm):
 
 
 class IntakeInviteForm(forms.Form):
-    intake_form = forms.ModelChoiceField(queryset=IntakeForm.objects.none())
-    contact = forms.ModelChoiceField(queryset=Contact.objects.none())
-    matter = forms.ModelChoiceField(queryset=Matter.objects.none(), required=False)
-    expires_in_days = forms.IntegerField(min_value=1, max_value=30, initial=7)
+    intake_form = forms.ModelChoiceField(
+        queryset=IntakeForm.objects.none(), empty_label="Choose a form"
+    )
+    contact = forms.ModelChoiceField(
+        queryset=Contact.objects.none(), empty_label="Choose a contact"
+    )
+    matter = forms.ModelChoiceField(
+        queryset=Matter.objects.none(), required=False, empty_label="No matter"
+    )
+    expires_in_days = forms.IntegerField(
+        label="Expires after (days)", min_value=1, max_value=30, initial=7
+    )
 
     def __init__(self, *args, can_email=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -295,9 +376,16 @@ class IntakeInviteForm(forms.Form):
 
 
 class PublicIntakeForm(forms.Form):
-    email = forms.EmailField(required=False, help_text="Optional updated email address")
+    email = forms.EmailField(
+        required=False,
+        help_text="Optional updated email address",
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+    )
     phone = forms.CharField(
-        required=False, max_length=40, help_text="Optional updated phone number"
+        required=False,
+        max_length=40,
+        help_text="Optional updated phone number",
+        widget=forms.TextInput(attrs={"type": "tel", "autocomplete": "tel"}),
     )
 
     def __init__(self, *args, intake_form, **kwargs):
@@ -340,3 +428,9 @@ class FirmProfileForm(forms.ModelForm):
             "matter_prefix",
             "require_two_factor",
         ]
+        widgets = {"phone": forms.TextInput(attrs={"type": "tel"})}
+        labels = {
+            "address_line1": "Address line 1",
+            "address_line2": "Address line 2",
+            "region": "State or region",
+        }

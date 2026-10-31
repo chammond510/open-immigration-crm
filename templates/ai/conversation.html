@@ -2,7 +2,7 @@
 {% load ai_tags connect_tags %}
 {% block title %}{{ conversation.title }} · Assistant · Open Immigration CRM{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow"><a href="{% url 'ai_assistant' %}">Assistant</a>{% if conversation.matter %} · <a href="{% url 'matter_detail' conversation.matter.pk %}">{{ conversation.matter.matter_number }}</a>{% endif %}</p><h1>{{ conversation.title }}</h1><p>Answers and drafts are AI drafts for attorney review. Changes wait for you to confirm them, and nothing is sent.</p></div><div class="actions"><form method="post" action="{% url 'ai_conversation_delete' conversation.pk %}" data-confirm="Delete this conversation?">{% csrf_token %}<button class="button" type="submit">Delete</button></form></div></div>
+<div class="page-heading"><div><p class="eyebrow"><a href="{% url 'ai_assistant' %}">Assistant</a>{% if conversation.matter %} · <a href="{% url 'matter_detail' conversation.matter.pk %}">{{ conversation.matter.matter_number }}</a>{% endif %}</p><h1>{{ conversation.title }}</h1><p>Answers and drafts are AI drafts for attorney review. Changes wait for you to confirm them, and nothing is sent.</p></div><div class="actions"><form method="post" action="{% url 'ai_conversation_delete' conversation.pk %}" data-confirm="Delete this conversation? This can't be undone.">{% csrf_token %}<button class="button danger" type="submit">Delete</button></form></div></div>
 <div class="chat">
   {% for entry in entries %}
     {% if entry.kind == "user" %}
@@ -53,7 +53,7 @@
     {% endif %}
   {% endfor %}
   {% if working %}
-    <div class="chat-turn from-ai" data-poll-url="{% url 'ai_conversation_status' conversation.pk %}"><span class="chat-who">Assistant</span><p class="muted">Working on it…{% if not worker_running %} The background worker isn't running, so this starts when it does.{% endif %}</p></div>
+    <div class="chat-turn from-ai" data-poll-url="{% url 'ai_conversation_status' conversation.pk %}"><span class="chat-who">Assistant</span><p class="muted" role="status">Working on it…{% if not worker_running %} The background worker isn't running, so this starts when it does.{% endif %}</p></div>
   {% elif conversation.error %}
     <p class="message error">The last request did not finish: {{ conversation.error }}</p>
   {% endif %}

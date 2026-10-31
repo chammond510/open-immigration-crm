@@ -2,7 +2,7 @@
 <section class="panel" id="communications">
   <div class="section-heading"><div><h2>Communications</h2><p>Calls, texts, emails, and meetings{% if total > communications|length %} · latest {{ communications|length }} of {{ total }}{% endif %}.</p></div><a href="{% url 'communication_list' %}?{% if matter %}matter={{ matter.pk }}{% else %}contact={{ contact.pk }}{% endif %}">View all</a></div>
   {% if contact and not matter %}
-    <div class="texting-status">{% if contact.texting_opted_out_at %}<span class="badge needs_attention">Opted out of texts · {{ contact.texting_opted_out_at|date:"M j, Y" }}</span>{% else %}<span class="muted">Texts allowed</span>{% endif %}<form method="post" action="{% url 'contact_texting_opt_out' contact.pk %}">{% csrf_token %}<input type="hidden" name="opted_out" value="{% if contact.texting_opted_out_at %}no{% else %}yes{% endif %}"><button class="text-button" type="submit">{% if contact.texting_opted_out_at %}Record consent to texts{% else %}Record texting opt-out{% endif %}</button></form></div>
+    <div class="texting-status">{% if contact.texting_opted_out_at %}<span class="badge needs_attention">Opted out of texts · {{ contact.texting_opted_out_at|date:"M j, Y" }}</span>{% else %}<span class="muted">Texts allowed</span>{% endif %}<form method="post" action="{% url 'contact_texting_opt_out' contact.pk %}">{% csrf_token %}<input type="hidden" name="opted_out" value="{% if contact.texting_opted_out_at %}no{% else %}yes{% endif %}"><button class="text-button small-link" type="submit">{% if contact.texting_opted_out_at %}Record consent to texts{% else %}Record texting opt-out{% endif %}</button></form></div>
   {% elif matter and matter.primary_contact.texting_opted_out_at %}
     <p class="muted">{{ matter.primary_contact }} has opted out of texts.</p>
   {% endif %}
@@ -52,10 +52,9 @@
       <div class="form-grid">
         {% for field in form.visible_fields %}<div class="field {% if field.name == 'summary' or field.name == 'subject' or field.name == 'counterpart' %}full-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}
       </div>
-      <div class="form-actions"><button class="button primary" type="submit">Log it</button></div>
+      <div class="form-actions"><button class="button primary" type="submit">Log communication</button></div>
     </form>
   </details>
   <div class="comm-list">{% for item in communications %}{% include "comms/includes/communication_item.html" %}{% empty %}<div class="empty-state compact"><p>Nothing logged yet.</p></div>{% endfor %}</div>
-  {% if not communications %}<div class="prompt-stack">{% connect_prompt "phone" "to log calls automatically" %}{% connect_prompt "mailbox" "to file emails automatically" %}</div>{% endif %}
-  {% if not text_connections %}<div class="prompt-stack">{% connect_prompt "texting" "to send and receive texts here" %}</div>{% endif %}
+  {% if not communications or not text_connections %}<div class="prompt-stack">{% if not communications %}{% connect_prompt "phone" "to log calls automatically" %}{% connect_prompt "mailbox" "to file emails automatically" %}{% endif %}{% if not text_connections %}{% connect_prompt "texting" "to send and receive texts here" %}{% endif %}</div>{% endif %}
 </section>

@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Match columns · Import from a spreadsheet · Open Immigration CRM{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>Match columns</h1><p>{{ spreadsheet.filename }}: {{ spreadsheet.row_count }} rows. Choose the field each column fills; columns you don't need stay "Don't import". Nothing is saved until you confirm on the next page.</p>{% if spreadsheet.connection %}<p>These rows come from {{ spreadsheet.source }}. A client's status and stage follow its matters; the defaults below apply to the other contacts.</p>{% endif %}</div></div>
+<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>Match columns</h1><p>{{ spreadsheet.filename }}: {{ spreadsheet.row_count }} row{{ spreadsheet.row_count|pluralize }}. Choose the field each column fills; columns you don't need stay "Don't import". Nothing is saved until you confirm on the next page.</p>{% if spreadsheet.connection %}<p>These rows come from {{ spreadsheet.source }}. A client's status and stage follow its matters; the defaults below apply to the other contacts.</p>{% endif %}</div></div>
 <form method="post" class="page-stack">
   {% csrf_token %}
   {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}
   <section class="panel flush-panel">
     <div class="table-wrap"><table><thead><tr><th>Column in the file</th><th>Examples</th><th>Fills</th></tr></thead><tbody>
-      {% for field, values in rows %}<tr><td><label for="{{ field.id_for_label }}">{{ field.label }}</label></td><td>{% for value in values %}<small>{{ value }}</small>{% empty %}<small class="muted">Empty</small>{% endfor %}</td><td>{{ field }}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</td></tr>{% endfor %}
+      {% for field, values in rows %}<tr><td><label for="{{ field.id_for_label }}">{{ field.label }}</label></td><td>{% for value in values %}<small>{{ value }}</small>{% empty %}<small class="muted">Empty</small>{% endfor %}</td><td>{{ field }}{% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>{% endif %}</td></tr>{% endfor %}
     </tbody></table></div>
   </section>
   <section class="panel stacked-form">
     <div class="section-heading"><div><h2>Dates and defaults</h2></div></div>
     <div class="form-grid">
-      {% for field in form.option_fields %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+      {% for field in form.option_fields %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>{% endif %}{% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>{% endif %}</div>{% endfor %}
     </div>
     <div class="form-actions"><button class="button primary" type="submit">Preview the import</button></div>
   </section>
 </form>
-<form method="post" action="{% url 'import_discard' spreadsheet.pk %}" class="form-actions">{% csrf_token %}<button class="button danger" type="submit">Cancel the import</button></form>
+<form method="post" action="{% url 'import_discard' spreadsheet.pk %}" class="form-actions" data-confirm="Cancel this import and delete the uploaded file? Nothing has been imported yet.">{% csrf_token %}<button class="button danger" type="submit">Cancel the import</button></form>
 {% endblock %}

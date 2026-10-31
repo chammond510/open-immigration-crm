@@ -5,7 +5,7 @@
     <div class="mini-record ai-suggestion">
       <div>
         <strong>{{ suggestion.title }}</strong>
-        <span>{% if mine %}{% if suggestion.matter %}{{ suggestion.matter.matter_number }} · {% endif %}{{ suggestion.contact }} · {% endif %}{{ suggestion.priority|capfirst }} priority{% if suggestion.due_date %} · due {{ suggestion.due_date|date:"M j" }}{% endif %}{% if suggestion.assigned_to %} · for {{ suggestion.assigned_to }}{% endif %}</span>
+        <span>{% if mine %}{% if suggestion.matter %}{{ suggestion.matter.matter_number }} · {% endif %}{{ suggestion.contact }} · {% endif %}{{ suggestion.priority|capfirst }} priority{% if suggestion.due_date %} · due {{ suggestion.due_date|date:"M j" }}{% endif %}{% if suggestion.assigned_to %} · for {{ suggestion.assigned_to.get_full_name|default:suggestion.assigned_to }}{% endif %}</span>
         {% if suggestion.reason %}<p class="prose">{{ suggestion.reason }}</p>{% endif %}
       </div>
       <div class="inline-actions">

@@ -15,7 +15,7 @@
     </div>
     <form method="post" class="stacked-form">
       {% csrf_token %}
-      <div class="field"><label for="{{ form.code.id_for_label }}">2. Enter the 6-digit code the app shows</label>{{ form.code }}{% for error in form.code.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>
+      <div class="field"><label for="{{ form.code.id_for_label }}">2. Enter the 6-digit code the app shows</label>{{ form.code }}{% if form.code.errors %}<div class="field-error" id="{{ form.code.auto_id }}_error">{{ form.code.errors|join:" " }}</div>{% endif %}</div>
       <div class="form-actions"><button class="button primary" type="submit">Turn on two-factor sign-in</button>{% if not firm_requires %}<a class="button" href="{% url 'dashboard' %}">Not now</a>{% endif %}</div>
     </form>
   </section>

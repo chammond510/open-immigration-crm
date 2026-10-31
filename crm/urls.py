@@ -27,6 +27,7 @@ urlpatterns = [
     ),
     path("work/", views.work_list, name="work_list"),
     path("work/new/", views.work_create, name="work_create"),
+    path("work/<int:pk>/edit/", views.work_update, name="work_update"),
     path("work/<int:pk>/toggle/", views.work_toggle, name="work_toggle"),
     path("time/start/", views.timer_start, name="timer_start"),
     path("time/stop/", views.timer_stop, name="timer_stop"),

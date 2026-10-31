@@ -57,8 +57,8 @@
               {% if field.name == "acknowledge" %}<label class="check-label wrap" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>
               {% elif field.name == "capabilities" %}<span class="field-label">What to connect</span><div class="choice-list">{{ field }}</div>
               {% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
-              {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-              {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+              {% if field.help_text %}<small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>{% endif %}
+              {% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>{% endif %}
             </div>
           {% endfor %}
           <div class="form-actions"><button class="button primary" type="submit">{% if is_oauth %}{{ connector.auth.button_label }}{% else %}Connect{% endif %}</button><a class="button" href="{% url 'connections' %}">Cancel</a></div>
@@ -76,7 +76,7 @@
       <dt>Receives webhooks</dt><dd>{% if connector.webhooks %}Yes; needs a public /hooks/ address{% else %}No{% endif %}</dd>
       <dt>Maintainers</dt><dd>{{ connector.maintainers|join:", "|default:"None named yet" }}</dd>
     </dl></section>
-    {% if connector.hidden %}<p class="privacy-note">This is a fictional connector for testing. It is listed only because hidden connectors are shown on this installation.</p>{% endif %}
+    {% if connector.hidden %}<p class="privacy-note note-neutral">This is a fictional connector for testing. It is listed only because hidden connectors are shown on this installation.</p>{% endif %}
   </aside>
 </div>
 {% endif %}

@@ -10,7 +10,7 @@
 <div class="metrics">
   <a href="{% url 'matter_list' %}"><strong>{{ open_matters }}</strong><span>Open matters</span></a>
   <a href="{% url 'contact_list' %}"><strong>{{ active_contacts }}</strong><span>Active contacts</span></a>
-  <a href="{% url 'work_list' %}"><strong class="{% if overdue_count %}danger-text{% endif %}">{{ overdue_count }}</strong><span>Overdue items</span></a>
+  <a href="{% url 'work_list' %}"><strong class="{% if overdue_count %}danger-text{% endif %}">{{ overdue_count }}</strong><span>Overdue work items</span></a>
 </div>
 <div class="dashboard-grid">
   <section class="panel span-two">
@@ -18,10 +18,10 @@
     {% if open_work %}
       <div class="record-list">
         {% for item in open_work %}
-          <div class="record-row"><span class="kind-dot {{ item.kind }}"></span><div class="record-main"><strong>{{ item.title }}</strong><span>{% if item.matter %}<a href="{% url 'matter_detail' item.matter.pk %}">{{ item.matter.matter_number }}</a>{% elif item.contact %}<a href="{% url 'contact_detail' item.contact.pk %}">{{ item.contact }}</a>{% endif %}</span></div><div class="record-meta {% if item.is_overdue %}danger-text{% endif %}">{% if item.scheduled_for %}{{ item.scheduled_for|date:"M j, g:i a" }}{% else %}Unscheduled{% endif %}</div></div>
+          <div class="record-row"><span class="kind-dot {{ item.kind }}" title="{{ item.get_kind_display }}"></span><div class="record-main"><strong><a href="{% url 'work_update' item.pk %}">{{ item.title }}</a></strong><span>{{ item.get_kind_display }}{% if item.matter %} · <a href="{% url 'matter_detail' item.matter.pk %}">{{ item.matter.matter_number }}</a> · {{ item.matter.primary_contact }}{% elif item.contact %} · <a href="{% url 'contact_detail' item.contact.pk %}">{{ item.contact }}</a>{% endif %}</span></div><div class="record-meta">{% if item.is_overdue %}<span class="badge overdue">Overdue</span> {% endif %}<time class="{% if item.is_overdue %}danger-text{% endif %}">{% if item.scheduled_for %}{{ item.scheduled_for|date:"M j · g:i a" }}{% else %}Not scheduled{% endif %}</time></div></div>
         {% endfor %}
       </div>
-    {% else %}<div class="empty-state"><h3>No open work</h3><p>Add a task, deadline, or appointment when you are ready.</p></div>{% endif %}
+    {% else %}<div class="empty-state"><h3>No open work</h3><p>Add a task, deadline, or appointment when you are ready.</p><a class="button" href="{% url 'work_create' %}">Add work</a></div>{% endif %}
   </section>
   <section class="panel">
     <div class="section-heading"><div><h2>Contact pipeline</h2><p>Current stage totals.</p></div><a href="{% url 'pipeline' %}">View board</a></div>
@@ -33,10 +33,10 @@
   <section class="panel span-three">
     <div class="section-heading"><div><h2>Recently updated matters</h2><p>The latest case activity.</p></div><a href="{% url 'matter_list' %}">All matters</a></div>
     {% if recent_matters %}
-      <div class="table-wrap"><table><thead><tr><th>Matter</th><th>Client</th><th>Status</th><th>Owner</th><th>Updated</th></tr></thead><tbody>
-        {% for matter in recent_matters %}<tr><td><a class="primary-link" href="{% url 'matter_detail' matter.pk %}">{{ matter.matter_number }}</a><small>{{ matter.title }}</small></td><td>{{ matter.primary_contact }}</td><td><span class="badge {{ matter.status }}">{{ matter.get_status_display }}</span></td><td>{{ matter.assigned_to|default:"Unassigned" }}</td><td>{{ matter.updated_at|date:"M j" }}</td></tr>{% endfor %}
+      <div class="table-wrap"><table><thead><tr><th>Matter</th><th class="optional-column">Client</th><th>Status</th><th class="optional-column">Owner</th><th class="optional-column">Updated</th></tr></thead><tbody>
+        {% for matter in recent_matters %}<tr><td class="title-cell"><a class="primary-link" href="{% url 'matter_detail' matter.pk %}">{{ matter.matter_number }}</a><small>{{ matter.title }}</small></td><td class="optional-column"><a href="{% url 'contact_detail' matter.primary_contact.pk %}">{{ matter.primary_contact }}</a></td><td><span class="badge {{ matter.status }}">{{ matter.get_status_display }}</span></td><td class="optional-column">{{ matter.assigned_to.get_full_name|default:matter.assigned_to|default:"Unassigned" }}</td><td class="optional-column">{{ matter.updated_at|date:"M j" }}</td></tr>{% endfor %}
       </tbody></table></div>
-    {% else %}<div class="empty-state"><h3>No matters yet</h3><p>Create a contact, then open their first matter.</p></div>{% endif %}
+    {% else %}<div class="empty-state"><h3>No matters yet</h3><p>Create a contact, then open their first matter.</p><a class="button" href="{% url 'contact_create' %}">New contact</a></div>{% endif %}
   </section>
 </div>
 {% endblock %}

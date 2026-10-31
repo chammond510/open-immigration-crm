@@ -10,7 +10,7 @@
     {% for contact in candidates %}
       <form method="post" class="mini-record">{% csrf_token %}<input type="hidden" name="contact" value="{{ contact.pk }}">
         <div><strong>{{ contact }}</strong><span>{{ contact.phone|default:"" }}{% if contact.phone and contact.email %} · {% endif %}{{ contact.email|default:"" }}</span></div>
-        <div class="actions">{% if same_count %}<label class="check-label"><input type="checkbox" name="include_same" checked> and {{ same_count }} more from this {% if "@" in communication.counterpart %}address{% else %}number{% endif %}</label>{% endif %}<button class="button primary" type="submit">Link</button></div>
+        <div class="actions">{% if same_count %}<label class="check-label"><input type="checkbox" name="include_same" checked> and {{ same_count }} more from this {% if "@" in communication.counterpart %}address{% else %}number{% endif %}</label>{% endif %}<button class="button primary" type="submit" aria-label="Link to {{ contact }}">Link</button></div>
       </form>
     {% empty %}{% if query %}<p class="muted">No contacts match "{{ query }}".</p>{% endif %}{% endfor %}
   </section>

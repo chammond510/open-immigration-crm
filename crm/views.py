@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q
+from django.db.models import Case, Count, F, IntegerField, Q, Value, When
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -312,14 +312,44 @@ superuser_required = user_passes_test(
 )
 
 
+# Most pressing first; the model's own ordering sorts priorities alphabetically.
+WORK_ORDER = (
+    "is_completed",
+    F("scheduled_for").asc(nulls_last=True),
+    Case(
+        When(priority=WorkItem.Priority.URGENT, then=Value(0)),
+        When(priority=WorkItem.Priority.HIGH, then=Value(1)),
+        When(priority=WorkItem.Priority.NORMAL, then=Value(2)),
+        default=Value(3),
+        output_field=IntegerField(),
+    ),
+    "title",
+)
+
+
+def words_match(query, fields):
+    """Match records where every word of the query appears in one of the fields,
+    so a search for a full name finds the person."""
+    match = Q()
+    for word in query.split():
+        any_field = Q()
+        for field in fields:
+            any_field |= Q(**{f"{field}__icontains": word})
+        match &= any_field
+    return match
+
+
+CONTACT_SEARCH_FIELDS = ("first_name", "last_name", "email", "phone", "a_number")
+
+
 @staff_required
 @require_GET
 def dashboard(request):
     today = timezone.localdate()
     open_work = (
         WorkItem.objects.filter(is_completed=False)
-        .select_related("contact", "matter", "assigned_to")
-        .order_by("scheduled_for")[:12]
+        .select_related("contact", "matter__primary_contact", "assigned_to")
+        .order_by(*WORK_ORDER)[:12]
     )
     recent_matters = Matter.objects.select_related("primary_contact", "assigned_to")[:8]
     stage_rows = Contact.objects.values("stage").annotate(total=Count("id"))
@@ -352,19 +382,13 @@ def contact_list(request):
     stage = request.GET.get("stage", "").strip()
     contacts = Contact.objects.select_related("assigned_to")
     if query:
-        contacts = contacts.filter(
-            Q(first_name__icontains=query)
-            | Q(last_name__icontains=query)
-            | Q(email__icontains=query)
-            | Q(phone__icontains=query)
-            | Q(a_number__icontains=query)
-        )
+        contacts = contacts.filter(words_match(query, CONTACT_SEARCH_FIELDS))
     if stage in Contact.Stage.values:
         contacts = contacts.filter(stage=stage)
     return render(
         request,
         "crm/contact_list.html",
-        {"contacts": contacts[:250], "query": query, "selected_stage": stage},
+        {"contacts": contacts[:250], "limit": 250, "query": query, "selected_stage": stage},
     )
 
 
@@ -405,7 +429,13 @@ def contact_create(request):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": "New contact", "submit_label": "Create contact"},
+        {
+            "form": form,
+            "title": "New contact",
+            "submit_label": "Create contact",
+            "eyebrow": "Contacts",
+            "cancel_url": reverse("contact_list"),
+        },
     )
 
 
@@ -417,7 +447,9 @@ def contact_detail(request, pk):
         "contact": contact,
         "matters": contact.matters.select_related("assigned_to"),
         "activities": contact.activities.select_related("created_by")[:30],
-        "work_items": contact.work_items.select_related("matter", "assigned_to")[:20],
+        "work_items": contact.work_items.filter(is_completed=False)
+        .select_related("matter", "assigned_to")
+        .order_by(*WORK_ORDER)[:20],
         "time_entries": contact.time_entries.select_related("user")[:50],
         "time_total": time_total_display(contact.time_entries.all()),
         "activity_form": ActivityForm(
@@ -449,7 +481,13 @@ def contact_update(request, pk):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": "Edit contact", "submit_label": "Save changes"},
+        {
+            "form": form,
+            "title": "Edit contact",
+            "submit_label": "Save changes",
+            "eyebrow": contact.full_name,
+            "cancel_url": reverse("contact_detail", args=[contact.pk]),
+        },
     )
 
 
@@ -478,18 +516,32 @@ def matter_list(request):
     matters = Matter.objects.select_related("primary_contact", "assigned_to")
     if query:
         matters = matters.filter(
-            Q(matter_number__icontains=query)
-            | Q(title__icontains=query)
-            | Q(primary_contact__first_name__icontains=query)
-            | Q(primary_contact__last_name__icontains=query)
-            | Q(receipt_number__icontains=query)
+            words_match(
+                query,
+                (
+                    "matter_number",
+                    "title",
+                    "primary_contact__first_name",
+                    "primary_contact__last_name",
+                    "receipt_number",
+                ),
+            )
         )
     if status in Matter.Status.values:
         matters = matters.filter(status=status)
+    case_type = request.GET.get("type", "").strip()
+    if case_type in Matter.CaseType.values:
+        matters = matters.filter(case_type=case_type)
     return render(
         request,
         "crm/matter_list.html",
-        {"matters": matters[:250], "query": query, "selected_status": status},
+        {
+            "matters": matters[:250],
+            "limit": 250,
+            "query": query,
+            "selected_status": status,
+            "selected_type": case_type,
+        },
     )
 
 
@@ -516,7 +568,13 @@ def matter_create(request):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": "New matter", "submit_label": "Create matter"},
+        {
+            "form": form,
+            "title": "New matter",
+            "submit_label": "Create matter",
+            "eyebrow": "Matters",
+            "cancel_url": reverse("matter_list"),
+        },
     )
 
 
@@ -531,16 +589,20 @@ def matter_detail(request, pk):
         "matter": matter,
         "parties": matter.parties.select_related("contact"),
         "activities": matter.activities.select_related("created_by")[:30],
-        "work_items": matter.work_items.select_related("contact", "assigned_to")[:20],
+        "work_items": matter.work_items.filter(is_completed=False)
+        .select_related("contact", "assigned_to")
+        .order_by(*WORK_ORDER)[:20],
         "documents": matter.documents.select_related("contact", "uploaded_by"),
         "time_entries": matter.time_entries.select_related("user")[:50],
         "time_total": time_total_display(matter.time_entries.all()),
-        "party_form": MatterPartyForm(),
+        "party_form": MatterPartyForm(auto_id="party_%s"),
         "activity_form": ActivityForm(
             instance=Activity(contact=matter.primary_contact, matter=matter),
             initial={"occurred_at": timezone.localtime().strftime("%Y-%m-%dT%H:%M")},
         ),
-        "document_form": DocumentUploadForm(initial={"contact": matter.primary_contact}),
+        "document_form": DocumentUploadForm(
+            auto_id="document_%s", initial={"contact": matter.primary_contact}
+        ),
     }
     return render(request, "crm/matter_detail.html", context)
 
@@ -567,7 +629,13 @@ def matter_update(request, pk):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": f"Edit {matter.matter_number}", "submit_label": "Save changes"},
+        {
+            "form": form,
+            "title": f"Edit {matter.matter_number}",
+            "submit_label": "Save changes",
+            "eyebrow": "Matters",
+            "cancel_url": reverse("matter_detail", args=[matter.pk]),
+        },
     )
 
 
@@ -628,18 +696,53 @@ def matter_add_activity(request, pk):
 def work_list(request):
     kind = request.GET.get("kind", "").strip()
     owner = request.GET.get("owner", "all").strip()
-    work_items = WorkItem.objects.select_related("contact", "matter", "assigned_to")
+    work_items = WorkItem.objects.select_related(
+        "contact", "matter__primary_contact", "assigned_to"
+    ).order_by(*WORK_ORDER)
     if kind in WorkItem.Kind.values:
         work_items = work_items.filter(kind=kind)
     if owner == "mine":
         work_items = work_items.filter(assigned_to=request.user)
     if request.GET.get("completed") != "1":
         work_items = work_items.filter(is_completed=False)
+    work_items = list(work_items[:300])
     return render(
         request,
         "crm/work_list.html",
-        {"work_items": work_items[:300], "selected_kind": kind, "owner": owner},
+        {
+            "work_items": work_items,
+            "limit": 300,
+            "work_groups": work_groups(work_items),
+            "kinds": WorkItem.Kind.choices,
+            "selected_kind": kind,
+            "owner": owner,
+        },
     )
+
+
+def work_groups(items):
+    """Work items grouped by when they are due, in the order the work list shows them."""
+    now = timezone.now()
+    today = timezone.localdate()
+    groups = {}
+    for item in items:
+        if item.is_completed:
+            label = "Done"
+        elif item.scheduled_for is None:
+            label = "Not scheduled"
+        elif item.scheduled_for < now:
+            label = "Overdue"
+        else:
+            day = timezone.localdate(item.scheduled_for)
+            if day == today:
+                label = "Today"
+            elif (day - today).days < 7:
+                label = "Next 7 days"
+            else:
+                label = "Later"
+        groups.setdefault(label, []).append(item)
+    order = ("Overdue", "Today", "Next 7 days", "Later", "Not scheduled", "Done")
+    return [(label, groups[label]) for label in order if label in groups]
 
 
 @staff_required
@@ -665,8 +768,33 @@ def work_create(request):
             "form": form,
             "title": "New work item",
             "submit_label": "Create item",
+            "eyebrow": "Work",
+            "cancel_url": reverse("work_list"),
             "prompt_capability": "video",
             "prompt_purpose": "to make a meeting for each of your appointments",
+        },
+    )
+
+
+@staff_required
+@require_http_methods(["GET", "POST"])
+def work_update(request, pk):
+    item = get_object_or_404(WorkItem, pk=pk)
+    form = WorkItemForm(request.POST or None, instance=item)
+    if form.is_valid():
+        item = form.save()
+        audit(request, "work_item.updated", item)
+        messages.success(request, f"{item.get_kind_display()} updated.")
+        return redirect("work_list")
+    return render(
+        request,
+        "crm/form_page.html",
+        {
+            "form": form,
+            "title": "Edit work item",
+            "submit_label": "Save changes",
+            "eyebrow": "Work",
+            "cancel_url": reverse("work_list"),
         },
     )
 
@@ -880,7 +1008,13 @@ def intake_form_create(request):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": "New intake form", "submit_label": "Create form"},
+        {
+            "form": form,
+            "title": "New intake form",
+            "submit_label": "Create form",
+            "eyebrow": "Intake",
+            "cancel_url": reverse("intake_workspace"),
+        },
     )
 
 
@@ -897,7 +1031,13 @@ def intake_form_update(request, pk):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": "Edit intake form", "submit_label": "Save changes"},
+        {
+            "form": form,
+            "title": "Edit intake form",
+            "submit_label": "Save changes",
+            "eyebrow": "Intake",
+            "cancel_url": reverse("intake_workspace"),
+        },
     )
 
 
@@ -945,7 +1085,13 @@ def intake_invite_create(request):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": "Create secure intake link", "submit_label": "Create link"},
+        {
+            "form": form,
+            "title": "Create secure intake link",
+            "submit_label": "Create link",
+            "eyebrow": "Intake",
+            "cancel_url": reverse("intake_workspace"),
+        },
     )
 
 
@@ -1042,7 +1188,12 @@ def firm_settings(request):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": "Firm settings", "submit_label": "Save settings"},
+        {
+            "form": form,
+            "title": "Firm settings",
+            "submit_label": "Save settings",
+            "eyebrow": "Settings",
+        },
     )
 
 
@@ -1053,17 +1204,18 @@ def search(request):
     contacts = Contact.objects.none()
     matters = Matter.objects.none()
     if query:
-        contacts = Contact.objects.filter(
-            Q(first_name__icontains=query)
-            | Q(last_name__icontains=query)
-            | Q(email__icontains=query)
-            | Q(phone__icontains=query)
-            | Q(a_number__icontains=query)
-        )[:30]
+        contacts = Contact.objects.filter(words_match(query, CONTACT_SEARCH_FIELDS))[:30]
         matters = Matter.objects.select_related("primary_contact").filter(
-            Q(matter_number__icontains=query)
-            | Q(title__icontains=query)
-            | Q(receipt_number__icontains=query)
+            words_match(
+                query,
+                (
+                    "matter_number",
+                    "title",
+                    "receipt_number",
+                    "primary_contact__first_name",
+                    "primary_contact__last_name",
+                ),
+            )
         )[:30]
     return render(
         request, "crm/search.html", {"query": query, "contacts": contacts, "matters": matters}

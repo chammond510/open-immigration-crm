@@ -3,13 +3,13 @@
 {% block title %}{{ connection.label }} · Connections · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading">
-  <div><p class="eyebrow"><a href="{% url 'connections' %}">Connections</a> · {{ connector.name|default:connection.connector_key }}</p><h1 class="with-monogram"><span class="monogram" aria-hidden="true">{{ monogram }}</span>{{ connection.label }}</h1><p><span class="badge {{ connection.status }}">{{ connection.get_status_display }}</span> {% if connection.owner %}Personal connection for {{ connection.owner }}{% else %}Shared by the whole firm{% endif %}{% if connection.preview_mode and not disconnected %} · Preview mode{% endif %}</p></div>
+  <div><p class="eyebrow"><a href="{% url 'connections' %}">Connections</a> · {{ connector.name|default:connection.connector_key }}</p><h1 class="with-monogram"><span class="monogram" aria-hidden="true">{{ monogram }}</span>{{ connection.label }}</h1><p><span class="badge {{ connection.status }}">{{ connection.get_status_display }}</span> {% if connection.owner %}Personal connection for {{ connection.owner.get_full_name|default:connection.owner }}{% else %}Shared by the whole firm{% endif %}{% if connection.preview_mode and not disconnected %} · Preview mode{% endif %}</p></div>
   {% if can_manage and connector and not disconnected %}<div class="actions">{% if is_oauth and not loopback %}<a class="button primary" href="{% url 'connection_oauth_start' connection.pk %}">{% if signed_in %}Reconnect{% else %}Sign in to {{ connector.name }}{% endif %}</a>{% endif %}{% if signed_in %}<form method="post" action="{% url 'connection_test' connection.pk %}">{% csrf_token %}<button class="button" type="submit">Test connection</button></form>{% endif %}{% if signed_in and connector.sync_capabilities and connection.status == "active" %}<form method="post" action="{% url 'connection_sync' connection.pk %}">{% csrf_token %}<button class="button" type="submit">{% if "migration" in connector.sync_capabilities %}Fetch records to import{% else %}Sync now{% endif %}</button></form>{% endif %}</div>{% endif %}
 </div>
 {% if not connector %}<div class="privacy-note">The connector for this connection is not installed on this site, so the connection is inactive.</div>{% endif %}
-{% if disconnected %}<div class="privacy-note">Disconnected. Stored credentials were deleted; history is kept below.{% if connector %} <a href="{% url 'connector_detail' connection.connector_key %}">Connect {{ connector.name }} again</a>.{% endif %}</div>{% endif %}
+{% if disconnected %}<div class="privacy-note note-neutral">Disconnected. Stored credentials were deleted; history is kept below.{% if connector %} <a href="{% url 'connector_detail' connection.connector_key %}">Connect {{ connector.name }} again</a>.{% endif %}</div>{% endif %}
 {% if worker_stopped %}<div class="privacy-note">The background worker has not checked in recently, so syncs and webhook processing are paused. Start it with <code>python manage.py run_worker</code>.</div>{% endif %}
-{% if is_oauth and not signed_in and not disconnected %}<div class="privacy-note">Finish connecting by signing in to {{ connector.name }}.</div>{% endif %}
+{% if is_oauth and not signed_in and not disconnected %}<div class="privacy-note note-info">Finish connecting by signing in to {{ connector.name }}.</div>{% endif %}
 {% if loopback and can_manage and not disconnected %}
   <section class="panel stacked-form loopback-sign-in" id="sign-in">
     <div><h2>{% if signed_in %}Sign in again{% else %}Sign in{% endif %}</h2><p class="muted">This sign-in comes back to your own computer rather than the CRM, so it takes one extra step.</p></div>
@@ -43,8 +43,8 @@
           <div class="field">
             {% if field.field.widget.input_type == "checkbox" %}<span class="field-label">{{ field.label }}</span><div class="choice-list">{{ field }}</div>
             {% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
-            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-            {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            {% if field.help_text %}<small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>{% endif %}
+            {% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>{% endif %}
           </div>
         {% endfor %}
         {% if config_form.fields %}<div class="form-actions"><button class="button" type="submit">Save settings</button></div>{% endif %}
@@ -67,9 +67,9 @@
     <section class="panel facts"><h2>Details</h2><dl>
       <dt>Capabilities</dt><dd>{{ capability_labels|join:", "|default:"—" }}</dd>
       {% for label, value in settings %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
-      <dt>Connected by</dt><dd>{{ connection.created_by|default:"—" }} · {{ connection.created_at|date:"M j, Y" }}</dd>
+      <dt>Connected by</dt><dd>{{ connection.created_by.get_full_name|default:connection.created_by|default:"—" }} · {{ connection.created_at|date:"M j, Y" }}</dd>
       <dt>Last success</dt><dd>{{ connection.last_success_at|date:"M j, g:i a"|default:"—" }}</dd>
-      <dt>Reviewed</dt><dd>{% if connection.data_flows_acknowledged %}{{ connection.data_flows_acknowledged_by|default:"—" }} · {{ connection.data_flows_acknowledged_at|date:"M j, Y" }}{% else %}Not yet{% endif %}</dd>
+      <dt>Reviewed</dt><dd>{% if connection.data_flows_acknowledged %}{{ connection.data_flows_acknowledged_by.get_full_name|default:connection.data_flows_acknowledged_by|default:"—" }} · {{ connection.data_flows_acknowledged_at|date:"M j, Y" }}{% else %}Not yet{% endif %}</dd>
       {% if connection.granted_scopes %}<dt>Permissions granted</dt><dd>{{ connection.granted_scopes|join:", " }}</dd>{% endif %}
     </dl></section>
     {% if user.is_superuser and connector and not disconnected %}
@@ -83,7 +83,7 @@
     {% if connector.sharing_limits and not disconnected %}
       <section class="panel stacked-form">
         <div><h2>AI and translation</h2><p class="muted">{% if connection.ai_use_allowed %}A superuser allowed AI features, the MCP server, and translation to read this connection's messages.{% else %}This connection's messages are kept out of AI features, the MCP server, and translation.{% endif %} {{ connector.sharing_limits }}</p></div>
-        {% if user.is_superuser %}<form method="post" action="{% url 'connection_ai_use' connection.pk %}"{% if not connection.ai_use_allowed %} data-confirm="Let AI features, the MCP server, and translation read messages from {{ connection.label }}? Check the provider's terms with the firm's lawyer first."{% endif %}>{% csrf_token %}<input type="hidden" name="allowed" value="{% if connection.ai_use_allowed %}no{% else %}yes{% endif %}"><div class="form-actions"><button class="button" type="submit">{% if connection.ai_use_allowed %}Keep them out again{% else %}Allow AI and translation{% endif %}</button></div></form>{% endif %}
+        {% if user.is_superuser %}<form method="post" action="{% url 'connection_ai_use' connection.pk %}"{% if not connection.ai_use_allowed %} data-confirm="Let AI features, the MCP server, and translation read messages from {{ connection.label }}? Check the provider's terms with the firm's lawyer first."{% endif %}>{% csrf_token %}<input type="hidden" name="allowed" value="{% if connection.ai_use_allowed %}no{% else %}yes{% endif %}"><div class="form-actions"><button class="button" type="submit">{% if connection.ai_use_allowed %}Stop AI and translation access{% else %}Allow AI and translation{% endif %}</button></div></form>{% endif %}
       </section>
     {% endif %}
     {% if webhooks and can_manage and not disconnected %}
