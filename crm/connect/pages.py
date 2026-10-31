@@ -30,7 +30,7 @@ from .forms import (
 )
 from .models import Connection, ConnectorApp
 from .registry import API_ACCESS, registry
-from .scheduler import worker_is_running
+from .scheduler import start_syncs, worker_is_running
 from .services import (
     acknowledge_data_flows,
     can_manage,
@@ -305,6 +305,12 @@ def connection_detail(request, pk):
         "config_form": (form := config_form(request, connection)),
         "settings": setting_values(connection, form),
         "sync_runs": connection.sync_runs.all()[:5],
+        # Imports made from a migration connection's records, for superusers to review.
+        "imports": (
+            connection.imports.all()[:5]
+            if request.user.is_superuser and "migration" in connection.enabled_capabilities
+            else ()
+        ),
         "webhook_events": connection.webhook_events.all()[:5],
         "outbound_requests": connection.outbound_requests.select_related("actor")[:5],
         "worker_stopped": connection.status == Connection.Status.ACTIVE
@@ -333,6 +339,18 @@ def connection_test(request, pk):
         messages.success(request, "The connection test passed.")
     else:
         messages.error(request, f"The connection test failed: {connection.last_error}")
+    return redirect("connection_detail", pk=pk)
+
+
+@staff_required
+@require_POST
+def connection_sync(request, pk):
+    connection = managed_connection_or_404(request, pk)
+    if start_syncs(connection):
+        record_audit(request.user, "connection.sync_started", connection)
+        messages.success(request, "Sync started. The background worker runs it shortly.")
+    else:
+        messages.info(request, "A sync is already under way, or this connection is not active.")
     return redirect("connection_detail", pk=pk)
 
 

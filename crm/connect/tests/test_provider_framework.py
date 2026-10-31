@@ -19,8 +19,10 @@ from crm.connect.records import (
     CalendarEventRecord,
     CallRecord,
     CaseStatusRecord,
+    ContactRecord,
     EmailRecord,
     LeadRecord,
+    MatterRecord,
     PaymentRecord,
     SignatureRecord,
     TextRecord,
@@ -282,6 +284,16 @@ class RecordTests(TestCase):
             SignatureRecord(
                 external_id="d", occurred_at=NOW, status="completed", signed_pdf=b"%PDF-1.7"
             ),
+            ContactRecord(external_id="1", occurred_at=NOW, first_name="Lena"),
+            ContactRecord(external_id="2", occurred_at=NOW, company="Fictional Employer LLC"),
+            MatterRecord(
+                external_id="m",
+                occurred_at=NOW,
+                client="1",
+                title="Spousal petition",
+                opened_on=NOW.date(),
+                parties=(("2", "Employer"),),
+            ),
         ]
         for record in records:
             self.assertEqual(record.problems(), [], record.kind)
@@ -297,8 +309,23 @@ class RecordTests(TestCase):
                 "case_status",
                 "lead_capture",
                 "esignature",
+                "migration",
             },
         )
+        self.assertEqual(
+            ContactRecord(external_id="c", occurred_at=NOW, date_of_birth="1990").problems(),
+            ["a name or company is required", "date_of_birth must be a date"],
+        )
+        broken = MatterRecord(
+            external_id="m",
+            occurred_at=NOW,
+            client="",
+            title="",
+            status="archived",
+            opened_on="2026",
+            parties=(("", "Spouse"),),
+        )
+        self.assertEqual(len(broken.problems()), 5)
         self.assertEqual(len(LeadRecord(external_id="l", occurred_at=NOW).problems()), 2)
         unsigned = SignatureRecord(external_id="d", occurred_at=NOW, status="completed")
         self.assertEqual(unsigned.problems(), ["a completed signature needs the signed PDF"])

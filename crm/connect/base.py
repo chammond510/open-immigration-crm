@@ -298,9 +298,11 @@ class Connector:
     # such as putting its owner's appointments on their own calendar. They may run
     # automatically, but only for records assigned to the connection's owner.
     owner_sync_actions: frozenset[str] = frozenset()
-    # Capabilities the worker pulls on a schedule, and how often.
+    # Capabilities the worker pulls on a schedule, and how often. With no interval
+    # (None), they are pulled only when staff start a sync from the connection's page,
+    # as for a migration from another system.
     sync_capabilities: frozenset[str] = frozenset()
-    sync_interval = timedelta(minutes=15)
+    sync_interval: timedelta | None = timedelta(minutes=15)
     webhooks: WebhookSpec | None = None
     # For legal research: what a search can cover, as (value, label) pairs, the first
     # being the default. Core passes the chosen value as the search's ``scope``.
@@ -327,6 +329,13 @@ class Connector:
         field = next(f for f in self.settings_fields if f.name == name)
         default = [] if field.multiple else field.default
         return (self.connection.config or {}).get(name, default)
+
+    def app_setting(self, name):
+        """For OAuth connectors: the firm's value for one of ``auth.app_fields``."""
+        from .models import ConnectorApp
+
+        app = ConnectorApp.objects.filter(connector_key=self.key).first()
+        return str(((app.config if app else None) or {}).get(name, ""))
 
     def access_token(self):
         """For OAuth connectors: a current access token, refreshed when it is about to expire."""

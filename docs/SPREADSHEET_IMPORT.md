@@ -14,6 +14,15 @@ Each row is a contact, with a matter when the row has one. A client with two mat
 3. **Preview.** The preview shows every row that will be skipped, with its reason, and the rows that will be imported. Nothing has been saved yet.
 4. **Import.** Every accepted row is saved in one step. Each new contact and matter gets a note saying it was imported, and sends the same [webhook events](WEBHOOKS.md) as one added by hand.
 
+## From another system
+
+A migration connector, such as [Clio Manage](../connectors/clio/README.md), brings its records the same way. A superuser chooses **Fetch records to import** on the connection's page, and the records become an import listed there and here, ready to review. Its columns are already matched, and these rules differ:
+
+- Each record is linked to its source when imported, and the next fetch leaves out what was imported before.
+- A contact already in the CRM is linked, not skipped, even with no matter to add.
+- A matter's other linked contacts are added as its parties, with their role.
+- A client's status and stage follow its matters: Client and Active matter while one is open or pending, otherwise Former client and Closed. The defaults chosen for the import apply to other contacts.
+
 ## How rows are matched
 
 - **Existing contacts are never changed.** A row whose email or phone matches a contact already in the CRM adds its matter, if it has one, to that contact. A row with no matter is skipped.

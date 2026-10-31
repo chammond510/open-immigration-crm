@@ -10,6 +10,8 @@ class ImportsConfig(AppConfig):
     def ready(self):
         from crm.connect.signals import worker_ticked
 
+        from . import migration
         from .spreadsheet import purge_uploads
 
+        migration.connect()
         worker_ticked.connect(purge_uploads, dispatch_uid="spreadsheet-import-purge")

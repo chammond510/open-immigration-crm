@@ -504,14 +504,6 @@ docs_url = "https://success.mitratech.com/INSZoom/Help_Articles/Support/Zoom_API
 api_access = "partner"
 
 [[connector]]
-key = "clio"
-name = "Clio"
-capabilities = ["migration"]
-description = "Move contacts and matters over from Clio Manage; for now, export them to a spreadsheet and use Import from a spreadsheet."
-docs_url = "https://docs.developers.clio.com/clio-manage/api-reference/"
-api_access = "open"
-
-[[connector]]
 key = "mycase"
 name = "MyCase"
 capabilities = ["migration"]
