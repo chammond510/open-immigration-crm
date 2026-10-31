@@ -43,9 +43,10 @@ def file_signed(signature_request, pdf):
 
 @transaction.atomic
 def store(connection, record):
+    # Lock only the request's own row: PostgreSQL cannot lock the nullable side of the
+    # join that loading its document with it would add.
     signature_request = (
         SignatureRequest.objects.select_for_update()
-        .select_related("matter", "document")
         .filter(connection=connection, external_id=record.external_id)
         .first()
     )
