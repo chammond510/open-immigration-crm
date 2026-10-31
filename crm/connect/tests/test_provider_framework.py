@@ -310,6 +310,7 @@ class RecordTests(TestCase):
                 "lead_capture",
                 "esignature",
                 "migration",
+                "shipping",
             },
         )
         self.assertEqual(

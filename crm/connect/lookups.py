@@ -14,14 +14,18 @@ _options = {}
 
 
 def provide(capability, function):
-    """Register ``function(limit=...)``, which returns the items due for a check, oldest first."""
+    """Register ``function(limit=..., **filters)``, which returns the items due for a check,
+    oldest first."""
     _providers[capability] = function
 
 
-def due(capability, *, limit):
-    """Up to ``limit`` items core wants checked for this capability, or none."""
+def due(capability, *, limit, **filters):
+    """Up to ``limit`` items core wants checked for this capability, or none.
+
+    ``filters`` narrow them where the capability allows, such as ``carrier`` for shipping.
+    """
     function = _providers.get(capability)
-    return list(function(limit=limit))[:limit] if function else []
+    return list(function(limit=limit, **filters))[:limit] if function else []
 
 
 def provide_options(name, function):

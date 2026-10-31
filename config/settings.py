@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "crm.signatures.apps.SignaturesConfig",
     "crm.translations.apps.TranslationsConfig",
     "crm.imports.apps.ImportsConfig",
+    "crm.shipments.apps.ShipmentsConfig",
 ]
 
 MIDDLEWARE = [
