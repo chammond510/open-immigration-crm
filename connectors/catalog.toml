@@ -372,24 +372,6 @@ description = "Show USCIS's posted processing times for each matter's form and o
 docs_url = "https://egov.uscis.gov/processing-times/"
 api_access = "none"
 
-# Shipping
-
-[[connector]]
-key = "fedex"
-name = "FedEx"
-capabilities = ["shipping"]
-description = "Track filing packages sent by FedEx and note their delivery on the matter."
-docs_url = "https://developer.fedex.com/api/en-us/catalog/track/v1/docs.html"
-api_access = "open"
-
-[[connector]]
-key = "ups"
-name = "UPS"
-capabilities = ["shipping"]
-description = "Track filing packages sent by UPS and note their delivery on the matter."
-docs_url = "https://developer.ups.com/tag/Tracking?loc=en_US"
-api_access = "open"
-
 # Leads and marketing
 
 [[connector]]
