@@ -1,0 +1,35 @@
+{% load connect_tags %}
+<section class="panel" id="signatures">
+  <div class="section-heading"><div><h2>Signatures</h2><p>Matter documents sent for signature. The signed copy is filed with the documents when everyone has signed.</p></div></div>
+  {% if requests %}
+    <div class="record-list">
+      {% for item in requests %}
+        <div class="record-row">
+          <div class="record-main"><strong>{{ item.title }}</strong><span>{{ item.get_status_display }} · sent {{ item.created_at|date:"M j, Y" }}{% if item.sent_by %} by {{ item.sent_by }}{% endif %}{% if item.connection %} through {{ item.connection.label }}{% endif %}</span><span>{% for signer in item.signers %}{{ signer.name }}{% if signer.status == "signed" %} (signed){% elif signer.status == "declined" %} (declined){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% if item.signed_document %}<span><a class="primary-link" href="{% url 'document_download' item.signed_document.pk %}">{{ item.signed_document.title }}</a></span>{% endif %}</div>
+          <span class="badge {% if item.status == 'completed' %}paid{% elif item.status == 'sent' %}{% else %}failed{% endif %}">{{ item.get_status_display }}</span>
+          {% if item.is_open %}<form method="post" action="{% url 'signature_cancel' item.pk %}" data-confirm="Cancel this signature request? The signers can no longer sign it.">{% csrf_token %}<button class="text-button danger-text" type="submit">Cancel</button></form>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% if can_send %}
+    {% if form.fields.document.choices and form.fields.signers.choices %}
+      <details class="inline-add"{% if not requests %} open{% endif %}><summary>Send a document for signature</summary>
+        <form method="post" action="{% url 'signature_send' matter.pk %}" class="stacked-form compact-form">
+          {% csrf_token %}
+          <div class="field"><label for="{{ form.document.id_for_label }}">{{ form.document.label }}</label>{{ form.document }}</div>
+          <div class="field"><label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>{{ form.title }}<small>{{ form.title.help_text }}</small></div>
+          <fieldset class="field"><legend>{{ form.signers.label }}</legend>{% for choice in form.signers %}<label class="check-label wrap" for="{{ choice.id_for_label }}">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>{% endfor %}</fieldset>
+          <div class="field"><label for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>{{ form.message }}</div>
+          {% if form.fields.connection.choices|length > 1 %}<div class="field"><label for="{{ form.connection.id_for_label }}">{{ form.connection.label }}</label>{{ form.connection }}</div>{% else %}<input type="hidden" name="connection" value="{{ form.fields.connection.choices.0.0 }}">{% endif %}
+          <p class="fine-print">The PDF and each signer's name and email go to the e-signature service, which emails the signers.</p>
+          <button class="button primary" type="submit">Send for signature</button>
+        </form>
+      </details>
+    {% else %}
+      <p class="muted">To send for signature, upload a PDF and give the client an email address.</p>
+    {% endif %}
+  {% else %}
+    <div class="prompt-stack">{% connect_prompt "esignature" "to send documents for signature from here" %}</div>
+  {% endif %}
+</section>

@@ -22,6 +22,7 @@ from crm.connect.records import (
     EmailRecord,
     LeadRecord,
     PaymentRecord,
+    SignatureRecord,
     TextRecord,
 )
 from crm.connect.registry import registry
@@ -277,6 +278,10 @@ class RecordTests(TestCase):
                 status_text="The source's own explanation.",
             ),
             LeadRecord(external_id="l", occurred_at=NOW, name="Lena", phone="+12025550144"),
+            SignatureRecord(external_id="d", occurred_at=NOW, status="signed"),
+            SignatureRecord(
+                external_id="d", occurred_at=NOW, status="completed", signed_pdf=b"%PDF-1.7"
+            ),
         ]
         for record in records:
             self.assertEqual(record.problems(), [], record.kind)
@@ -291,9 +296,15 @@ class RecordTests(TestCase):
                 "payments",
                 "case_status",
                 "lead_capture",
+                "esignature",
             },
         )
         self.assertEqual(len(LeadRecord(external_id="l", occurred_at=NOW).problems()), 2)
+        unsigned = SignatureRecord(external_id="d", occurred_at=NOW, status="completed")
+        self.assertEqual(unsigned.problems(), ["a completed signature needs the signed PDF"])
+        self.assertEqual(
+            len(SignatureRecord(external_id="d", occurred_at=NOW, status="x").problems()), 1
+        )
 
     def test_problems(self):
         naive = datetime(2026, 3, 2, 15, 0)

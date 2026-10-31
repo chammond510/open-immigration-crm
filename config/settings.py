@@ -104,6 +104,7 @@ INSTALLED_APPS = [
     "crm.mcp.apps.McpConfig",
     "crm.ai.apps.AiConfig",
     "crm.research.apps.ResearchConfig",
+    "crm.signatures.apps.SignaturesConfig",
 ]
 
 MIDDLEWARE = [
