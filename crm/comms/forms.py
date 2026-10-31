@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django import forms
 
-from crm.models import Contact, Matter
+from crm.models import Contact, Document, Matter
 
 from .models import Communication
 
@@ -78,3 +78,15 @@ class CommunicationForm(forms.ModelForm):
         if commit:
             communication.save()
         return communication
+
+
+class AttachmentSaveForm(forms.Form):
+    """Where to save a copy of a file a contact sent: one of their matters, as a document."""
+
+    matter = forms.ModelChoiceField(queryset=Matter.objects.none(), empty_label=None)
+    title = forms.CharField(max_length=255)
+    category = forms.ChoiceField(choices=Document.Category.choices)
+
+    def __init__(self, *args, matters, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["matter"].queryset = matters

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Save to a matter · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow">{% if contact %}<a href="{% url 'contact_detail' contact.pk %}#communications">{{ contact }}</a>{% else %}<a href="{% url 'communication_list' %}?matching=needed">Needs matching</a>{% endif %}</p><h1>Save {{ attachment.original_filename }} to a matter</h1><p>{{ attachment.size_bytes|filesizeformat }} · sent {{ attachment.communication.occurred_at|date:"M j, Y g:i a" }}{% if attachment.communication.source_connection %} via {{ attachment.communication.source_connection }}{% endif %}. A copy is saved as one of the matter's documents; the original stays with the message.</p></div></div>
+  {% if attachment.saved_document %}<div class="privacy-note">A copy was saved to <a href="{% url 'matter_detail' attachment.saved_document.matter_id %}">{{ attachment.saved_document.matter }}</a> as "{{ attachment.saved_document.title }}".</div>{% endif %}
+  {% if not contact %}<section class="panel"><p class="muted">This message is not linked to a contact yet. <a href="{% url 'communication_match' attachment.communication.pk %}">Link it to a contact</a> first.</p></section>
+  {% elif not has_matters %}<section class="panel"><p class="muted">{{ contact }} has no matters yet. The file stays with the message, and can be saved once a matter is opened.</p></section>
+  {% else %}
+  <form method="post" class="panel stacked-form">
+    {% csrf_token %}
+    <div class="form-grid">{% for field in form %}<div class="field full-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="error">{{ error }}</small>{% endfor %}</div>{% endfor %}</div>
+    <div class="form-actions"><button class="button primary" type="submit">Save to the matter</button><a class="button" href="{% url 'contact_detail' contact.pk %}#communications">Cancel</a></div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

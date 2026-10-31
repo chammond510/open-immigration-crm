@@ -1,12 +1,16 @@
 import hashlib
 import hmac
+import io
 import json
+import tempfile
+import zipfile
 from datetime import timedelta
+from pathlib import Path
 from unittest import mock
 
 import httpx
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -155,6 +159,7 @@ class FakeMeta:
         self.requests = []
         self.sent = []
         self.refuse = {}  # Client number -> error code for messages to them.
+        self.media = {}  # Media ID -> its type and bytes, and any odd answers.
 
     def __call__(self, request):
         self.requests.append(request)
@@ -191,6 +196,25 @@ class FakeMeta:
                     "messaging_product": "whatsapp",
                     "contacts": [{"input": message["to"], "wa_id": message["to"][1:]}],
                     "messages": [{"id": f"wamid.fictional-{len(self.sent)}"}],
+                },
+            )
+        if request.url.host == "lookaside.fbsbx.com":
+            found = self.media.get(request.url.params.get("mid"))
+            return httpx.Response(200, content=found["content"]) if found else error(100)
+        media_id = path.removeprefix("/v26.0/")
+        if request.method == "GET" and media_id in self.media:
+            assert request.url.params.get("phone_number_id") == NUMBER_ID
+            item = self.media[media_id]
+            url = f"https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid={media_id}"
+            return httpx.Response(
+                200,
+                json={
+                    "messaging_product": "whatsapp",
+                    "url": item.get("url", url),
+                    "mime_type": item["mime_type"],
+                    "sha256": "fictional",
+                    "file_size": item.get("file_size", len(item["content"])),
+                    "id": media_id,
                 },
             )
         return error(803, 404)
@@ -248,6 +272,25 @@ def status(wamid, state, recipient="12025550144", at=None):
     if recipient:
         item["recipient_id"] = recipient
     return item
+
+
+def docx_bytes():
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("[Content_Types].xml", "<Types/>")
+        archive.writestr("word/document.xml", "<document/>")
+    return buffer.getvalue()
+
+
+def media_message(kind, media_id, mime_type, wamid, *, caption="", filename=""):
+    media = {"id": media_id, "mime_type": mime_type, "sha256": "fictional"}
+    if caption:
+        media["caption"] = caption
+    if filename:
+        media["filename"] = filename
+    message = text(wamid=wamid)
+    del message["text"]
+    return {**message, "type": kind, kind: media}
 
 
 def connect(admin):
@@ -464,8 +507,7 @@ class WhatsAppSendingTests(FakeMetaMixin, TestCase):
             ),
             (
                 {"type": "document", "document": {"filename": "passport.pdf"}},
-                "[Sent a document, which the CRM does not download. Ask the client to send it "
-                "another way if it is needed.]",
+                "",
             ),
             (
                 {"type": "location", "location": {"name": "Office", "address": "1 Main St"}},
@@ -492,6 +534,9 @@ class WhatsAppWebhookTests(FakeMetaMixin, TestCase):
 
     def setUp(self):
         super().setUp()
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.enterContext(override_settings(MEDIA_ROOT=Path(directory.name)))
         self.admin = make_user()
         self.contact = make_contact(self.admin, phone="(202) 555-0144")
         self.connection = connect(self.admin)
@@ -692,3 +737,72 @@ class WhatsAppWebhookTests(FakeMetaMixin, TestCase):
             )
             self.assertEqual(response.status_code, 400)
         self.assertFalse(WebhookEvent.objects.exists())
+
+    def test_photos_and_documents_are_kept_with_the_message(self):
+        jpeg, pdf, docx = b"\xff\xd8\xff\xe0fictional photo", b"%PDF-1.4 notice", docx_bytes()
+        pdf_type = "application/pdf"
+        docx_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        self.meta.media = {
+            "101": {"mime_type": "image/jpeg", "content": jpeg},
+            "102": {"mime_type": "image/png", "content": b"\x89PNG\r\n\x1a\nfictional"},
+            "103": {"mime_type": pdf_type, "content": pdf},
+            "104": {"mime_type": docx_type, "content": docx},
+            "105": {"mime_type": pdf_type, "content": pdf, "file_size": 30 * 1024 * 1024},
+            "106": {"mime_type": pdf_type, "content": pdf, "url": "https://files.example.test/x"},
+            "107": {
+                "mime_type": "image/jpeg",
+                "content": jpeg,
+                "url": "https://lookaside.fbsbx.com/?mid=gone",
+            },
+        }
+        messages = [
+            media_message("image", "101", "image/jpeg", "wamid.m1", caption="My receipt notice"),
+            media_message("image", "102", "image/png", "wamid.m2"),
+            media_message("document", "103", pdf_type, "wamid.m3", filename="I-797 notice.pdf"),
+            media_message("document", "104", docx_type, "wamid.m4", filename="letter"),
+            media_message("audio", "108", "audio/ogg; codecs=opus", "wamid.m5"),
+            media_message("document", "109", "application/vnd.ms-excel", "wamid.m6"),
+            media_message("document", "105", pdf_type, "wamid.m7"),
+            media_message("document", "106", pdf_type, "wamid.m8"),
+            media_message("image", "107", "image/jpeg", "wamid.m9"),
+            media_message("image", "../app", "image/jpeg", "wamid.m10"),
+        ]
+        self.post(event(messages=messages))
+        stored = {c.external_id: c for c in Communication.objects.prefetch_related("attachments")}
+        kept = {
+            wamid: [(a.original_filename, a.mime_type) for a in stored[wamid].attachments.all()]
+            for wamid in stored
+        }
+        photo_name = f"whatsapp-photo-{timezone.localtime():%Y%m%d}"
+        self.assertEqual(kept["wamid.m1"][0][1], "image/jpeg")
+        self.assertTrue(kept["wamid.m1"][0][0].startswith(photo_name))
+        self.assertTrue(kept["wamid.m2"][0][0].endswith(".png"))
+        self.assertEqual(kept["wamid.m3"], [("I-797 notice.pdf", pdf_type)])
+        self.assertEqual(kept["wamid.m4"], [("letter.docx", docx_type)])
+        with stored["wamid.m1"].attachments.get().file.open("rb") as handle:
+            self.assertEqual(handle.read(), jpeg)
+        summaries = {wamid: c.summary for wamid, c in stored.items()}
+        self.assertEqual(summaries["wamid.m1"], "My receipt notice")
+        self.assertEqual(summaries["wamid.m2"], "[Sent a photo.]")
+        self.assertEqual(summaries["wamid.m3"], "[Sent a document.]")
+        self.assertEqual(
+            summaries["wamid.m5"],
+            "[Sent a voice message or audio file, which the CRM does not keep. Ask the client "
+            "to send it another way if it is needed.]",
+        )
+        self.assertIn("which the CRM does not keep", summaries["wamid.m6"])
+        self.assertIn("larger than the CRM keeps (20 MB)", summaries["wamid.m7"])
+        for wamid in ("wamid.m8", "wamid.m9", "wamid.m10"):
+            self.assertIn("could not be fetched from WhatsApp", summaries[wamid])
+            self.assertEqual(kept[wamid], [])
+        self.assertTrue(all(c.contact == self.contact for c in stored.values()))
+        # The token went only to Meta, and only kept kinds of file were asked for.
+        hosts = {r.url.host for r in self.meta.requests}
+        self.assertEqual(hosts, {"graph.facebook.com", "lookaside.fbsbx.com"})
+        asked = {r.url.path.removeprefix("/v26.0/") for r in self.meta.requests}
+        self.assertNotIn("108", asked)
+        self.assertNotIn("109", asked)
+        # Meta resends the batch; nothing is kept twice.
+        self.post(event(messages=messages))
+        self.assertEqual(sum(len(files) for files in kept.values()), 4)
+        self.assertEqual(sum(c.attachments.count() for c in Communication.objects.all()), 4)
