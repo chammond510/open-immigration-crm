@@ -27,6 +27,8 @@ connectors/
 
 ## Writing a connector
 
+To build a connector as a package of its own, outside this repository, start with [docs/CONNECTOR_SDK.md](../docs/CONNECTOR_SDK.md) and `python manage.py startconnector`; the rest of this section applies to it too.
+
 1. Subclass `crm.connect.base.Connector` and declare the manifest as class attributes: `key`, `name`, `description`, `maturity`, `capabilities`, `auth`, `connection_scope`, `data_flows`, `maintainers`, `outbound_actions`, and `settings_fields`. Register the class with `@register` from `crm.connect.registry`. A manifest that is incomplete is rejected at startup.
 2. Implement `test_connection()`, plus:
    - `sync()` for the capabilities listed in `sync_capabilities` (the worker runs it every `sync_interval`);

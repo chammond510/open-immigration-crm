@@ -1,0 +1,28 @@
+import httpx
+from django.test import TestCase
+
+from crm.connect.http import use_transport
+from crm.connect.testing import ConnectorContract
+
+from . import $class_name
+
+KEY = "fictional-key"
+
+
+def fake_provider(request):
+    """Answers as the provider's documentation describes. Never use data from a real account."""
+    if request.headers.get("authorization") != f"Bearer {KEY}":
+        return httpx.Response(401, json={"error": "unauthorized"})
+    if request.url.path == "/v1/me":
+        return httpx.Response(200, json={"id": "fictional-account"})
+    return httpx.Response(404, json={})
+
+
+class ${class_name}ContractTests(ConnectorContract, TestCase):
+    connector_class = $class_name
+    valid_credentials = {"api_key": KEY}
+    invalid_credentials = {"api_key": "wrong"}
+
+    def setUp(self):
+        super().setUp()
+        self.enterContext(use_transport(httpx.MockTransport(fake_provider)))

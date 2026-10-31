@@ -6,6 +6,11 @@ from datetime import datetime, timedelta
 
 from django.db import models
 
+# The connector interface's version. The first number changes when a change would break
+# connectors written for the old interface; the second when the interface only grows.
+# A connector package declares the version it was written for in ``api_version``.
+API_VERSION = (1, 0)
+
 
 class Capability(models.TextChoices):
     PHONE = "phone", "Phone"
@@ -278,6 +283,8 @@ class Connector:
     key = ""
     name = ""
     description = ""
+    # The connector interface version this connector was written for; see API_VERSION.
+    api_version = API_VERSION
     maturity = Maturity.BETA
     capabilities: frozenset[str] = frozenset()
     auth: ApiKeyAuth | OAuthAuth | PublicDataAuth | None = None

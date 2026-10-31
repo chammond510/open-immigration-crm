@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import (
+    API_VERSION,
     AUTH_TYPES,
     WEBHOOK_SECRET_SOURCES,
     ApiKeyAuth,
@@ -38,9 +39,26 @@ class CatalogEntry:
     works_through: str = ""
 
 
+def api_version_problem(version):
+    """Why this installation cannot run a connector written for ``version``, or ""."""
+    if (
+        not isinstance(version, tuple)
+        or len(version) != 2
+        or not all(isinstance(part, int) for part in version)
+    ):
+        return "api_version must be two whole numbers, such as (1, 0)"
+    wanted, have = ".".join(map(str, version)), ".".join(map(str, API_VERSION))
+    if version[0] != API_VERSION[0] or version[1] > API_VERSION[1]:
+        return f"it was written for connector API {wanted}, and this installation has {have}"
+    return ""
+
+
 def manifest_problems(cls):
     """List what is missing or invalid in a connector's declared manifest."""
     problems = []
+    version_problem = api_version_problem(cls.api_version)
+    if version_problem:
+        problems.append(version_problem)
     if not KEY_PATTERN.match(cls.key or ""):
         problems.append("key must be 2-41 lowercase letters, digits, or underscores")
     if not cls.name:

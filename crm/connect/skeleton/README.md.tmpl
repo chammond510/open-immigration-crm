@@ -1,0 +1,27 @@
+# $name connector for Open Immigration CRM
+
+A connector package built outside the CRM's repository. It adds $name to the CRM's
+Connections page, for the $capability_label capability.
+
+## Developing it
+
+1. Check out Open Immigration CRM and set it up as its README describes.
+2. Install this package into the CRM's environment, editable while you work:
+   `pip install -e path/to/$dist`
+3. From the CRM's checkout, run this package's tests, including the shared contract tests
+   every connector must pass: `python manage.py test $module`
+4. Start the CRM. The registry loads the connector through its
+   `open_immigration_crm.connectors` entry point, and `python manage.py check` warns if it
+   could not be loaded.
+
+Read the CRM's `docs/CONNECTOR_SDK.md` for what a connector may use, and
+`connectors/README.md` for what the $capability_label capability expects.
+
+## Before others use it
+
+- Replace every "Replace with" text, and describe exactly what the connector sends and
+  receives in `data_flows`.
+- Keep tests off the network: answer with a fake transport, as `test_$key.py` does, and use
+  only fictional data.
+- The connector ships as Beta. It can be marked Ready once it has passed a live check against
+  a real account, run by hand, and has a named maintainer.

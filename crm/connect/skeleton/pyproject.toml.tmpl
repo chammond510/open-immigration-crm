@@ -1,0 +1,19 @@
+[project]
+name = "$dist"
+version = "0.1.0"
+description = "$name connector for Open Immigration CRM"
+readme = "README.md"
+requires-python = ">=3.12"
+# Open Immigration CRM is licensed under the AGPL-3.0; choose a license compatible with it.
+license = "AGPL-3.0-only"
+dependencies = []
+
+[project.entry-points."open_immigration_crm.connectors"]
+$key = "$module:$class_name"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["$module"]

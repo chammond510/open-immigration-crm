@@ -1,0 +1,52 @@
+"""$name: a connector for Open Immigration CRM.
+
+Replace this with what the connector does, the provider documentation it was checked
+against, and what a firm should know before connecting.
+"""
+
+from crm.connect.base import (
+    ApiKeyAuth,
+    Capability,
+    Connector,
+    ConnectorError,
+    CredentialField,
+    DataFlows,
+    Maturity,
+)
+from crm.connect.http import ProviderClient
+from crm.connect.registry import register
+
+API_URL = "https://api.example.test/v1"
+
+
+@register
+class $class_name(Connector):
+    key = "$key"
+    name = "$name"
+    description = "Replace with one sentence on what connecting it does for the firm."
+    api_version = ($api_major, $api_minor)
+    maturity = Maturity.BETA
+    capabilities = frozenset({Capability.$capability})
+    auth = ApiKeyAuth(fields=(CredentialField("api_key", "API key"),), label="API key")
+    data_flows = DataFlows(
+        version=1,
+        sends=("Replace with what the connector sends to the provider",),
+        receives=("Replace with what the connector brings into the CRM",),
+    )
+
+    def client(self):
+        return ProviderClient(
+            API_URL,
+            name=self.name,
+            headers={"Authorization": f"Bearer {self.credentials.get('api_key', '')}"},
+        )
+
+    def test_connection(self):
+        try:
+            self.client().get("/me")
+        except ConnectorError as exc:
+            if exc.status in (401, 403):
+                raise ConnectorError(
+                    f"{self.name} did not accept the API key.", status=401
+                ) from None
+            raise

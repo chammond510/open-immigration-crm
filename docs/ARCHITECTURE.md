@@ -68,7 +68,7 @@ Uploaded files are never routed through Django's public media URL. Downloads pas
 The [connector plan](CONNECTOR_PLAN.md) adds optional integrations without changing the shape of core. No provider connector has shipped yet. The framework is in place:
 
 - `crm/connect/` is a provider-neutral Django app (label `connect`).
-  - `registry.py` imports every module under the packages in `CONNECTOR_PACKAGES` (default `connectors`), plus installed packages that use the `open_immigration_crm.connectors` entry point. It rejects connectors whose manifest is incomplete, and it merges installed connectors with the wanted providers listed in `connectors/catalog.toml`.
+  - `registry.py` imports every module under the packages in `CONNECTOR_PACKAGES` (default `connectors`), plus installed packages that use the `open_immigration_crm.connectors` entry point. It rejects connectors whose manifest is incomplete or that were written for a connector API version this installation does not have (`API_VERSION`), and it merges installed connectors with the wanted providers listed in `connectors/catalog.toml`. `manage.py startconnector` writes a skeleton package for a connector built outside this repository ([CONNECTOR_SDK.md](CONNECTOR_SDK.md)).
   - `Connection` is one connected account, either firm-wide or a single staff member's. Its credentials are encrypted with `FIELD_ENCRYPTION_KEYS`. New connections start in preview mode, and each records which version of the connector's data-flow description a superuser acknowledged.
   - `policy.send()` is the only path for outbound actions. It checks, in order:
     1. the site-wide kill switch
