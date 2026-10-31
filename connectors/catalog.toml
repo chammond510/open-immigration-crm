@@ -51,11 +51,6 @@ capabilities = ["texting"]
 
 # Mailbox, calendar, and storage suites
 [[connector]]
-key = "onedrive_sharepoint"
-name = "OneDrive and SharePoint"
-capabilities = ["storage"]
-
-[[connector]]
 key = "imap_smtp"
 name = "IMAP and SMTP mail"
 capabilities = ["mailbox"]
