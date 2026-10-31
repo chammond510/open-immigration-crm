@@ -26,3 +26,6 @@ backups/
 
 # Operator-specific privacy tripwire patterns stay local.
 scripts/check_privacy.local
+
+# Trials from scripts/try.sh hold a demo database and its sign-in details.
+trial/
