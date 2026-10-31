@@ -36,6 +36,7 @@
             <a href="{% url 'firm_settings' %}">Firm settings</a>
             <a href="{% url 'workflow_template_list' %}" {% if 'workflow_template' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Workflows</a>
             <a href="{% url 'custom_field_list' %}" {% if 'custom_field' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Custom fields</a>
+            <a href="{% url 'import_list' %}" {% if 'import_' in request.resolver_match.url_name %}aria-current="page"{% endif %}>Import from a spreadsheet</a>
             <a href="{% url 'admin:index' %}">Administration</a>
           {% endif %}
           <a href="{% url 'password_change' %}">Change password</a>

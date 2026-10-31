@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Preview · Import from a spreadsheet · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>Preview</h1><p>{{ spreadsheet.filename }}: what each row will do. Nothing has been saved yet.</p></div></div>
+<div class="page-stack">
+  <div class="metrics">
+    <a href="#accepted"><strong>{{ plan.new_contacts|length }}</strong><span>New contacts</span></a>
+    <a href="#accepted"><strong>{{ plan.new_matters|length }}</strong><span>New matters{% if plan.matters_for_known_contacts %}, {{ plan.matters_for_known_contacts|length }} for contacts already in the CRM or earlier in the file{% endif %}</span></a>
+    <a href="#skipped"><strong>{{ plan.skipped|length }}</strong><span>Rows skipped</span></a>
+  </div>
+  {% if unmatchable %}<div class="message warning">No column fills Email or Phone, so rows cannot be matched to contacts already in the CRM. Importing the same file twice would add everyone twice.</div>{% endif %}
+  <section class="panel">
+    <form method="post" class="form-actions">{% csrf_token %}<button class="button primary" type="submit" {% if not plan.new_contacts and not plan.new_matters %}disabled{% endif %}>Import {{ plan.new_contacts|length }} contact{{ plan.new_contacts|length|pluralize }} and {{ plan.new_matters|length }} matter{{ plan.new_matters|length|pluralize }}</button><a class="button" href="{% url 'import_columns' spreadsheet.pk %}">Change the columns</a></form>
+    <p class="fine-print">Each new contact and matter gets a note saying it was imported, and sends the same events as one added by hand.</p>
+  </section>
+  <section class="panel flush-panel" id="skipped">
+    <div class="section-heading table-note"><div><h2>Skipped rows</h2><p>These rows will not be imported.</p></div>{% if plan.skipped %}<div class="actions"><a class="button" href="{% url 'import_skipped' spreadsheet.pk %}">Download the skipped rows</a></div>{% endif %}</div>
+    {% if plan.skipped %}<div class="table-wrap"><table><thead><tr><th>Row</th><th>Name</th><th>Reason</th></tr></thead><tbody>
+      {% for row in plan.skipped %}<tr><td>{{ row.number }}</td><td>{{ row.name }}</td><td>{{ row.reason }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state compact"><p>No rows will be skipped.</p></div>{% endif %}
+  </section>
+  <section class="panel flush-panel" id="accepted">
+    <div class="section-heading table-note"><div><h2>Rows to import</h2>{% if accepted|length == preview_rows %}<p>The first {{ preview_rows }}.</p>{% endif %}</div></div>
+    {% if accepted %}<div class="table-wrap"><table><thead><tr><th>Row</th><th>Contact</th><th>Matter</th></tr></thead><tbody>
+      {% for row in accepted %}<tr><td>{{ row.number }}</td><td>{% if row.contact %}<a class="primary-link" href="{% url 'contact_detail' row.contact.pk %}">{{ row.contact.full_name }}</a><small>Already in the CRM; not changed</small>{% elif row.same_as %}{{ row.name }}<small>Added by row {{ row.same_as }}</small>{% else %}{{ row.name }}<small>New contact</small>{% endif %}</td><td>{% if row.matter_form %}{{ row.matter_form.instance.title }}<small>{{ row.matter_form.instance.get_case_type_display }}</small>{% else %}<span class="muted">None</span>{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state compact"><p>No rows will be imported.</p></div>{% endif %}
+  </section>
+</div>
+<form method="post" action="{% url 'import_discard' spreadsheet.pk %}" class="form-actions">{% csrf_token %}<button class="button danger" type="submit">Cancel the import</button></form>
+{% endblock %}
