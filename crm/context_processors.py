@@ -41,6 +41,7 @@ NAV_SECTIONS = (
     ("/settings/api/", "api"),
     ("/settings/team/", "team"),
     ("/accounts/", "account"),
+    ("/notifications/", "notifications"),
 )
 
 

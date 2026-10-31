@@ -335,14 +335,21 @@ WORK_ORDER = (
 @staff_required
 @require_GET
 def dashboard(request):
+    """The signed-in person's own work, or the whole firm's with ?view=firm."""
     today = timezone.localdate()
+    firm_wide = request.GET.get("view") == "firm"
+    work, matters, contacts = WorkItem.objects.all(), Matter.objects.all(), Contact.objects.all()
+    if not firm_wide:
+        work, matters, contacts = (
+            records.filter(assigned_to=request.user) for records in (work, matters, contacts)
+        )
     open_work = (
-        WorkItem.objects.filter(is_completed=False)
+        work.filter(is_completed=False)
         .select_related("contact", "matter__primary_contact", "assigned_to")
         .order_by(*WORK_ORDER)[:12]
     )
-    recent_matters = Matter.objects.select_related("primary_contact", "assigned_to")[:8]
-    stage_rows = Contact.objects.values("stage").annotate(total=Count("id"))
+    recent_matters = matters.select_related("primary_contact", "assigned_to")[:8]
+    stage_rows = contacts.values("stage").annotate(total=Count("id"))
     stage_counts = {row["stage"]: row["total"] for row in stage_rows}
     pipeline = [
         {"key": key, "label": label, "count": stage_counts.get(key, 0)}
@@ -350,11 +357,14 @@ def dashboard(request):
     ]
     context = {
         "today": today,
-        "open_matters": Matter.objects.exclude(status=Matter.Status.CLOSED).count(),
-        "active_contacts": Contact.objects.exclude(
+        "firm_wide": firm_wide,
+        # Lists the figures link to, narrowed to the same people.
+        "owner_query": "" if firm_wide else "owner=mine",
+        "open_matters": matters.exclude(status=Matter.Status.CLOSED).count(),
+        "active_contacts": contacts.exclude(
             stage__in=[Contact.Stage.CLOSED, Contact.Stage.LOST]
         ).count(),
-        "overdue_count": WorkItem.objects.filter(
+        "overdue_count": work.filter(
             is_completed=False,
             scheduled_for__lt=timezone.now(),
         ).count(),
@@ -370,15 +380,24 @@ def dashboard(request):
 def contact_list(request):
     query = request.GET.get("q", "").strip()
     stage = request.GET.get("stage", "").strip()
+    owner = request.GET.get("owner", "all").strip()
     contacts = Contact.objects.select_related("assigned_to")
     if query:
         contacts = contacts.filter(words_match(query, CONTACT_SEARCH_FIELDS))
     if stage in Contact.Stage.values:
         contacts = contacts.filter(stage=stage)
+    if owner == "mine":
+        contacts = contacts.filter(assigned_to=request.user)
     return render(
         request,
         "crm/contact_list.html",
-        {"contacts": contacts[:250], "limit": 250, "query": query, "selected_stage": stage},
+        {
+            "contacts": contacts[:250],
+            "limit": 250,
+            "query": query,
+            "selected_stage": stage,
+            "owner": owner,
+        },
     )
 
 
@@ -511,6 +530,9 @@ def matter_list(request):
     case_type = request.GET.get("type", "").strip()
     if case_type in Matter.CaseType.values:
         matters = matters.filter(case_type=case_type)
+    owner = request.GET.get("owner", "all").strip()
+    if owner == "mine":
+        matters = matters.filter(assigned_to=request.user)
     return render(
         request,
         "crm/matter_list.html",
@@ -520,6 +542,7 @@ def matter_list(request):
             "query": query,
             "selected_status": status,
             "selected_type": case_type,
+            "owner": owner,
         },
     )
 

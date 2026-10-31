@@ -14,6 +14,8 @@ from crm.comms import system_email
 from crm.connect.models import Connection
 from crm.connect.services import disconnect
 from crm.models import Contact, FirmProfile, Matter, TimeEntry, WorkItem
+from crm.notifications.models import Notification
+from crm.notifications.services import display_name, notify, quietly
 from crm.roles import PRESET_ROLES
 
 
@@ -90,6 +92,10 @@ def status(person):
     return "Invited" if is_invited(person) else "Active"
 
 
+def counted(number, noun):
+    return f"{number} {noun}{'' if number == 1 else 's'}"
+
+
 def invite_days():
     return settings.PASSWORD_RESET_TIMEOUT // 86400
 
@@ -152,7 +158,7 @@ def deactivate(person, *, successor, actor):
     Records are saved one at a time so calendars and automations follow the change.
     """
     moved = {}
-    with transaction.atomic():
+    with transaction.atomic(), quietly():
         for name, records in open_assignments(person).items():
             moved[name] = 0
             for record in records:
@@ -166,4 +172,18 @@ def deactivate(person, *, successor, actor):
         person.save(update_fields=["is_active"])
     for connection in personal_connections(person):
         disconnect(connection, actor)
+    if successor and successor.pk != actor.pk and any(moved.values()):
+        handed = (
+            f"{display_name(actor)} handed you {display_name(person)}'s open work: "
+            f"{counted(moved['work'], 'work item')}, {counted(moved['matters'], 'matter')}, "
+            f"{counted(moved['contacts'], 'contact')}"
+        )
+        notify(
+            successor,
+            actor=actor,
+            kind=Notification.Kind.HANDED_OVER,
+            text=handed,
+            brief=handed,
+            url=reverse("work_list") + "?owner=mine",
+        )
     return moved

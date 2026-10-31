@@ -8,6 +8,7 @@
     {% csrf_token %}
     {% if form.errors %}<div class="message error" role="alert">Check the fields marked below.</div>{% endif %}
     <div class="form-grid">{% for field in form %}{% include "crm/includes/form_field.html" %}{% endfor %}</div>
+    <fieldset class="form-section"><legend>Notifications</legend><p class="muted">The CRM tells you, under the bell at the top, when someone else gives you work, a matter, or a contact.{% if not can_email %} Your firm has not connected an email delivery service, so no emails are sent yet.{% endif %}</p><div class="form-grid">{% for field in alerts %}{% include "crm/includes/form_field.html" %}{% endfor %}</div></fieldset>
     <div class="form-actions"><button class="button primary" type="submit">Save</button><a class="button" href="{% url 'dashboard' %}">Cancel</a></div>
   </form>
   <section class="panel"><div class="inline-actions"><a class="button" href="{% url 'password_change' %}">Change password</a><a class="button" href="{% url 'two_factor_settings' %}">Two-factor sign-in</a></div></section>

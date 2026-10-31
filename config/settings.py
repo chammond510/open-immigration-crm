@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     "crm.translations.apps.TranslationsConfig",
     "crm.imports.apps.ImportsConfig",
     "crm.shipments.apps.ShipmentsConfig",
+    "crm.notifications.apps.NotificationsConfig",
 ]
 
 MIDDLEWARE = [
@@ -117,6 +118,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "crm.notifications.services.RequestMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "crm.middleware.TwoFactorMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -146,6 +148,7 @@ TEMPLATES = [
                 "crm.context_processors.running_timer",
                 "crm.context_processors.nav_section",
                 "crm.ai.context_processors.ai_features",
+                "crm.notifications.views.unread_notifications",
             ],
         },
     }

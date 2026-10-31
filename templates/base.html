@@ -70,6 +70,7 @@
               <button class="button small" type="submit">Stop<span class="timer-word"> timer</span></button>
             </form>
           {% endif %}
+          <a class="notification-link" href="{% url 'notification_list' %}" {% if nav_section == 'notifications' %}aria-current="page"{% endif %}><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path d="M6 10a6 6 0 0 1 12 0v3.5l1.6 2.6a.6.6 0 0 1-.5.9H4.9a.6.6 0 0 1-.5-.9L6 13.5Z M9.8 19.5a2.3 2.3 0 0 0 4.4 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="sr-only">Notifications</span>{% if unread_notifications %}<span class="notification-count">{{ unread_notifications }}<span class="sr-only"> unread</span></span>{% endif %}</a>
           <details class="account-menu" data-account-menu>
             <summary aria-label="Account menu for {{ user.get_full_name|default:user.username }}">
               <span class="avatar" aria-hidden="true">{% if user.first_name %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% else %}{{ user.username|first|upper }}{% endif %}</span>

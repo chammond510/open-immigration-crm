@@ -437,6 +437,13 @@ td.wrap { white-space: normal; min-width: 220px; }
 
 .timer-chip { display: flex; align-items: center; gap: 8px; margin-left: auto; padding: 4px 4px 4px 12px; border: 1px solid #b7c6e6; border-radius: 999px; background: var(--accent-soft); }
 .timer-chip + .account-menu { margin-left: 0; }
+.notification-link { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; width: 38px; height: 38px; margin-left: auto; border: 1px solid transparent; border-radius: 999px; color: var(--ink-soft); }
+.notification-link:hover, .notification-link[aria-current="page"] { border-color: var(--line); background: var(--surface-strong); color: var(--ink); }
+.timer-chip + .notification-link, .notification-link + .account-menu { margin-left: 0; }
+.notification-count { position: absolute; top: -2px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border: 2px solid var(--paper); border-radius: 999px; background: var(--danger); color: white; font-size: 10.5px; font-weight: 750; line-height: 14px; text-align: center; }
+.overview-scope { margin: -8px 0 18px; }
+.notification-row.unread strong a { color: var(--ink); }
+.notification-row:not(.unread) strong { font-weight: 500; }
 .timer-chip .button { border-radius: 999px; }
 .timer-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 3px rgb(179 49 49 / 15%); animation: timer-pulse 2s ease-in-out infinite; }
 @keyframes timer-pulse { 50% { opacity: .45; } }

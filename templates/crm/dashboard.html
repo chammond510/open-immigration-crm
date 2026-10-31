@@ -3,14 +3,15 @@
 {% block title %}Overview · Open Immigration CRM{% endblock %}
 {% block content %}
 <div class="page-heading">
-  <div><p class="eyebrow">{{ today|date:"l, F j" }}</p><h1>Practice overview</h1><p>What needs attention across your active work.</p></div>
+  <div><p class="eyebrow">{{ today|date:"l, F j" }}</p><h1>Practice overview</h1><p>{% if firm_wide %}What needs attention across the firm.{% else %}What needs your attention: work, matters, and contacts assigned to you.{% endif %}</p></div>
   <div class="actions"><a class="button" href="{% url 'contact_create' %}">New contact</a><a class="button primary" href="{% url 'matter_create' %}">New matter</a></div>
 </div>
+<div class="actions segmented overview-scope" role="group" aria-label="Whose work"><a class="button{% if not firm_wide %} is-selected{% endif %}" href="{% url 'dashboard' %}" {% if not firm_wide %}aria-current="page"{% endif %}>My work</a><a class="button{% if firm_wide %} is-selected{% endif %}" href="{% url 'dashboard' %}?view=firm" {% if firm_wide %}aria-current="page"{% endif %}>Whole firm</a></div>
 {% connection_alert_banner %}
 <div class="metrics">
-  <a href="{% url 'matter_list' %}"><strong>{{ open_matters }}</strong><span>Open matters</span></a>
-  <a href="{% url 'contact_list' %}"><strong>{{ active_contacts }}</strong><span>Active contacts</span></a>
-  <a href="{% url 'work_list' %}"><strong class="{% if overdue_count %}danger-text{% endif %}">{{ overdue_count }}</strong><span>Overdue work items</span></a>
+  <a href="{% url 'matter_list' %}{% if owner_query %}?{{ owner_query }}{% endif %}"><strong>{{ open_matters }}</strong><span>Open matters</span></a>
+  <a href="{% url 'contact_list' %}{% if owner_query %}?{{ owner_query }}{% endif %}"><strong>{{ active_contacts }}</strong><span>Active contacts</span></a>
+  <a href="{% url 'work_list' %}{% if owner_query %}?{{ owner_query }}{% endif %}"><strong class="{% if overdue_count %}danger-text{% endif %}">{{ overdue_count }}</strong><span>Overdue work items</span></a>
 </div>
 <div class="dashboard-grid">
   <section class="panel span-two">
@@ -21,22 +22,22 @@
           <div class="record-row"><span class="kind-dot {{ item.kind }}" title="{{ item.get_kind_display }}"></span><div class="record-main"><strong><a href="{% url 'work_update' item.pk %}">{{ item.title }}</a></strong><span>{{ item.get_kind_display }}{% if item.matter %} · <a href="{% url 'matter_detail' item.matter.pk %}">{{ item.matter.matter_number }}</a> · {{ item.matter.primary_contact }}{% elif item.contact %} · <a href="{% url 'contact_detail' item.contact.pk %}">{{ item.contact }}</a>{% endif %}</span></div><div class="record-meta">{% if item.is_overdue %}<span class="badge overdue">Overdue</span> {% endif %}<time class="{% if item.is_overdue %}danger-text{% endif %}">{% if item.scheduled_for %}{{ item.scheduled_for|date:"M j · g:i a" }}{% else %}Not scheduled{% endif %}</time></div></div>
         {% endfor %}
       </div>
-    {% else %}<div class="empty-state"><h3>No open work</h3><p>Add a task, deadline, or appointment when you are ready.</p><a class="button" href="{% url 'work_create' %}">Add work</a></div>{% endif %}
+    {% elif firm_wide %}<div class="empty-state"><h3>No open work</h3><p>Add a task, deadline, or appointment when you are ready.</p><a class="button" href="{% url 'work_create' %}">Add work</a></div>{% else %}<div class="empty-state"><h3>No open work assigned to you</h3><p>Work someone gives you shows here.</p><a class="button" href="{% url 'dashboard' %}?view=firm">See the whole firm</a></div>{% endif %}
   </section>
   <section class="panel">
-    <div class="section-heading"><div><h2>Contact pipeline</h2><p>Current stage totals.</p></div><a href="{% url 'pipeline' %}">View board</a></div>
+    <div class="section-heading"><div><h2>Contact pipeline</h2><p>{% if firm_wide %}Current stage totals.{% else %}Your contacts by stage.{% endif %}</p></div><a href="{% url 'pipeline' %}">View board</a></div>
     <div class="pipeline-summary">
-      {% for stage in pipeline %}<a href="{% url 'contact_list' %}?stage={{ stage.key }}"><span>{{ stage.label }}</span><strong>{{ stage.count }}</strong></a>{% endfor %}
+      {% for stage in pipeline %}<a href="{% url 'contact_list' %}?stage={{ stage.key }}{% if owner_query %}&amp;{{ owner_query }}{% endif %}"><span>{{ stage.label }}</span><strong>{{ stage.count }}</strong></a>{% endfor %}
     </div>
   </section>
   {% task_suggestions_panel mine=True %}
   <section class="panel span-three">
-    <div class="section-heading"><div><h2>Recently updated matters</h2><p>The latest case activity.</p></div><a href="{% url 'matter_list' %}">All matters</a></div>
+    <div class="section-heading"><div><h2>Recently updated matters</h2><p>{% if firm_wide %}The latest case activity.{% else %}Your matters, latest activity first.{% endif %}</p></div><a href="{% url 'matter_list' %}{% if owner_query %}?{{ owner_query }}{% endif %}">{% if firm_wide %}All matters{% else %}All your matters{% endif %}</a></div>
     {% if recent_matters %}
       <div class="table-wrap"><table><thead><tr><th>Matter</th><th class="optional-column">Client</th><th>Status</th><th class="optional-column">Owner</th><th class="optional-column">Updated</th></tr></thead><tbody>
         {% for matter in recent_matters %}<tr><td class="title-cell"><a class="primary-link" href="{% url 'matter_detail' matter.pk %}">{{ matter.matter_number }}</a><small>{{ matter.title }}</small></td><td class="optional-column"><a href="{% url 'contact_detail' matter.primary_contact.pk %}">{{ matter.primary_contact }}</a></td><td><span class="badge {{ matter.status }}">{{ matter.get_status_display }}</span></td><td class="optional-column">{{ matter.assigned_to.get_full_name|default:matter.assigned_to|default:"Unassigned" }}</td><td class="optional-column">{{ matter.updated_at|date:"M j" }}</td></tr>{% endfor %}
       </tbody></table></div>
-    {% else %}<div class="empty-state"><h3>No matters yet</h3><p>Create a contact, then open their first matter.</p><a class="button" href="{% url 'contact_create' %}">New contact</a></div>{% endif %}
+    {% elif firm_wide %}<div class="empty-state"><h3>No matters yet</h3><p>Create a contact, then open their first matter.</p><a class="button" href="{% url 'contact_create' %}">New contact</a></div>{% else %}<div class="empty-state"><h3>No matters assigned to you</h3><p>Matters you own show here.</p><a class="button" href="{% url 'dashboard' %}?view=firm">See the whole firm</a></div>{% endif %}
   </section>
 </div>
 {% endblock %}

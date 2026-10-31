@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Notifications · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow">Account</p><h1>Notifications</h1><p>When someone else gives you work, a matter, or a contact. You can also get them by email; see <a href="{% url 'profile' %}">your profile</a>.</p></div>{% if unread_notifications %}<div class="actions"><form method="post" action="{% url 'notifications_read' %}">{% csrf_token %}<button class="button" type="submit">Mark all as read</button></form></div>{% endif %}</div>
+  <section class="panel">{% if notifications %}<div class="record-list">{% for notification in notifications %}<div class="record-row notification-row{% if not notification.read_at %} unread{% endif %}"><div class="record-main"><strong><a href="{% url 'notification_open' notification.pk %}">{{ notification.text }}</a></strong><span>{{ notification.get_kind_display }} · {{ notification.created_at|date:"M j · g:i a" }}</span></div>{% if not notification.read_at %}<span class="badge pending">New</span>{% endif %}</div>{% endfor %}</div>{% else %}<div class="empty-state"><h3>Nothing yet</h3><p>When someone else gives you work, a matter, or a contact, it shows here.</p></div>{% endif %}</section>
+</div>
+{% endblock %}

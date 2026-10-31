@@ -45,6 +45,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
 - `Document` stores metadata in the database and bytes in private file storage.
 - `IntakeForm` stores firm-created questions; `IntakeInvite` stores only a SHA-256 token hash; `IntakeSubmission` stores the received answers.
 - `AuditLog` records important user actions. It is not a complete forensic event stream.
+- `Notification` and `Preference` (in `crm/notifications/`) are alerts for one person and whether they also want them by email. Model signals on `Contact`, `Matter`, and `WorkItem` compare the assignee loaded with the one saved, and credit the change to the person whose request is running (`RequestMiddleware` keeps it in a context variable), so changes without a person behind them alert nobody. `quietly()` silences a bulk change such as an import.
 - `ExternalRef` (in `crm/connect/`) links a CRM record to the provider item it came from, for records with no provider-ID field of their own, such as appointments.
 - `Connection`, `OutboundRequest`, `SyncRun`, `WebhookEvent`, `WorkerHeartbeat`, and `ConnectorApp` (in `crm/connect/`) hold connected provider accounts, the outbound log, sync history, received provider events, and worker check-ins; see Connectors below.
 - `ApiSettings`, `ApiToken`, and `ApiRequestLog` (in `crm/api/`) hold the firm's API switches, scoped bearer tokens that act as one staff member (only a SHA-256 hash is stored), and a log row for every API request. See [API](API.md).

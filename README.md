@@ -8,7 +8,8 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 
 - Staff-only contacts and a simple contact pipeline
 - Matters, primary contacts, additional parties, status history, and notes
-- Tasks, deadlines, and appointments in one work queue
+- Tasks, deadlines, and appointments in one work queue, and an overview that opens on your own work, with the whole firm one click away
+- Notifications when someone else gives you work, a matter, or a contact, by email too if you ask
 - USCIS notices on each matter (receipts, appointments, RFEs, NOIDs, decisions), with response due dates and appointments added to the work queue, and a receipt-number status history
 - A communications log of calls, texts, emails, and meetings, with a per-contact texting opt-out. Records from connected services are matched to contacts by exact phone number or email, and anything unmatched waits in a Needs matching list
 - One-click time tracking against a matter or contact, with per-record totals

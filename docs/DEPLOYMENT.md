@@ -121,6 +121,14 @@ python manage.py changepassword <username>
 
 Upgrading creates the presets and changes nobody's access: existing staff have no role, and so only everyday work, until someone gives them one, and billing access granted to a person directly is kept.
 
+### Assignment alerts and the overview
+
+When someone gives a person a work item, matter, or contact (through a page, the API, or an AI assistant), the person gets a notification under the bell at the top of every page. Giving something to yourself, and changes the CRM makes on its own, such as appointments synced from a calendar, send none. Imports send none, and handing work over at deactivation sends one summary.
+
+Each person can also ask for these by email under **Profile**, once the firm connects an email delivery service. The worker sends them, and they name the kind of record and its matter number or due date, never the client.
+
+The overview opens on the signed-in person's own work, matters, and contacts. **Whole firm** shows everyone's, and the contact, matter, and work lists filter to **Mine** the same way.
+
 ## Sign-in lockout
 
 Repeated failed sign-ins lock the username and client address pair for a cooling-off period (default: five failures, fifteen minutes; tune with `AXES_FAILURE_LIMIT` and `AXES_COOLOFF_MINUTES`). Clear a lockout early with:

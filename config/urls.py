@@ -57,6 +57,7 @@ urlpatterns = [
     path("api/", include("crm.api.urls")),
     path("settings/api/", include("crm.api.page_urls")),
     path("settings/team/", include("crm.team.urls")),
+    path("notifications/", include("crm.notifications.urls")),
     path("accounts/profile/", team_views.profile, name="profile"),
     # Invitation and password reset links; see crm/team.
     path("accounts/welcome/done/", team_views.password_saved, name="welcome_done"),

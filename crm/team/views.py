@@ -9,6 +9,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from crm.comms import system_email
+from crm.notifications.forms import PreferenceForm
+from crm.notifications.models import Preference
 from crm.roles import MANAGE_STAFF, PERMISSIONS, is_staff, permission_required
 from crm.services import audit
 from crm.two_factor import confirmed_device, reset_two_factor
@@ -17,10 +20,6 @@ from . import reset, services
 from .forms import DeactivateForm, PasswordResetRequestForm, PersonForm, ProfileForm
 
 staff_required = user_passes_test(is_staff, login_url="login")
-
-
-def counted(number, noun):
-    return f"{number} {noun}{'' if number == 1 else 's'}"
 
 
 def person_or_404(pk):
@@ -180,9 +179,9 @@ def person_deactivate(request, pk):
         )
         handed = ", ".join(
             [
-                counted(moved["work"], "work item"),
-                counted(moved["matters"], "matter"),
-                counted(moved["contacts"], "contact"),
+                services.counted(moved["work"], "work item"),
+                services.counted(moved["matters"], "matter"),
+                services.counted(moved["contacts"], "contact"),
             ]
         )
         receiver = (successor.get_full_name() or successor.username) if successor else "nobody"
@@ -225,12 +224,20 @@ def person_reactivate(request, pk):
 @require_http_methods(["GET", "POST"])
 def profile(request):
     form = ProfileForm(request.POST or None, instance=request.user)
-    if form.is_valid():
+    alerts = PreferenceForm(
+        request.POST or None, instance=Preference.for_user(request.user), prefix="alerts"
+    )
+    if request.method == "POST" and form.is_valid() and alerts.is_valid():
         form.save()
+        alerts.save()
         audit(request, "user.profile_updated", request.user)
         messages.success(request, "Your profile is saved.")
         return redirect("profile")
-    return render(request, "team/profile.html", {"form": form})
+    return render(
+        request,
+        "team/profile.html",
+        {"form": form, "alerts": alerts, "can_email": system_email.sender() is not None},
+    )
 
 
 class ChoosePasswordView(PasswordResetConfirmView):

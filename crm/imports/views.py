@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from crm.notifications.services import quietly
 from crm.roles import IMPORT_RECORDS, permission_required
 from crm.services import audit
 from crm.views import csv_safe
@@ -136,7 +137,9 @@ def import_preview(request, pk):
         # Staff confirm the columns and how dates are written before any preview.
         return redirect("import_columns", pk=spreadsheet.pk)
     if request.method == "POST":
-        done = run_import(spreadsheet, request)
+        # One import can assign many records; it should not send an alert for each.
+        with quietly():
+            done = run_import(spreadsheet, request)
         messages.success(
             request,
             f"Imported {counted(done.contacts_created, 'contact')} and "
