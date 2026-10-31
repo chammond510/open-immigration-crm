@@ -239,6 +239,10 @@ class WhatsAppBusinessConnector(Connector):
     )
     outbound_actions = {"send_text": Capability.TEXTING, "send_template": Capability.TEXTING}
     reply_window = timedelta(hours=24)
+    sharing_limits = (
+        "Meta's terms for the WhatsApp Business Platform limit sharing WhatsApp data with "
+        "third parties, which may include AI and translation services."
+    )
     webhooks = WebhookSpec(
         capabilities=(Capability.TEXTING,),
         secret_source="credential",

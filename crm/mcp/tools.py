@@ -17,6 +17,7 @@ from crm.api.http import check_form
 from crm.billing.models import Invoice
 from crm.comms.forms import CommunicationForm
 from crm.comms.models import Communication
+from crm.comms.sharing import shareable
 from crm.events.context import event_origin
 from crm.forms import WorkItemForm
 from crm.models import Activity, Contact, Matter, TimeEntry, WorkItem
@@ -293,7 +294,9 @@ def get_contact(ctx, args):
             for m in contact.matters.select_related("primary_contact")[:20]
         ],
         "open_work": open_work(contact.work_items),
-        "recent_communications": [communication_brief(c) for c in contact.communications.all()[:5]],
+        "recent_communications": [
+            communication_brief(c) for c in shareable(contact.communications.all())[:5]
+        ],
         "recent_notes": [note_brief(n) for n in contact.activities.all()[:5]],
     }
 
@@ -314,7 +317,9 @@ def get_matter(ctx, args):
             serializers.status_check(check, ctx.request) for check in latest_statuses(matter)
         ],
         "recent_notes": [note_brief(n) for n in matter.activities.all()[:5]],
-        "recent_communications": [communication_brief(c) for c in matter.communications.all()[:5]],
+        "recent_communications": [
+            communication_brief(c) for c in shareable(matter.communications.all())[:5]
+        ],
         "saved_authorities": [
             {
                 "citation": authority.citation,
@@ -363,7 +368,7 @@ def list_notices(ctx, args):
 
 
 def list_communications(ctx, args):
-    items = Communication.objects.all()
+    items = shareable(Communication.objects.all())
     contact = record(args, "contact_id", Contact)
     matter = record(args, "matter_id", Matter)
     if contact:

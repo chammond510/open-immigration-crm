@@ -14,6 +14,7 @@ from datetime import timedelta
 from django.db.models import Q
 from django.utils import timezone
 
+from crm.comms.sharing import shareable
 from crm.models import Contact, WorkItem
 
 from . import features
@@ -124,7 +125,7 @@ def memo_records(appointment):
             .select_related("assigned_to")[:8]
         ],
         "recent_communications": [
-            communication_data(item) for item in contact.communications.all()[:8]
+            communication_data(item) for item in shareable(contact.communications.all())[:8]
         ],
         "recent_notes": [note_data(item) for item in contact.activities.all()[:8]],
     }

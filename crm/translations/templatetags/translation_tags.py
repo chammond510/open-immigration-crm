@@ -1,5 +1,7 @@
 from django import template
 
+from crm.comms.sharing import withheld_connections, withheld_reason
+
 from ..forms import TranslateForm
 from ..services import language_name
 
@@ -34,9 +36,20 @@ def translations(context, record, kind):
             (found, [(labels.get(key, key), text) for key, text in found.content.items()])
             for found in record.translations.all()
         ],
-        "form": form_for(context),
+        "form": (form := form_for(context)),
+        # A form needs a signed-in request, so the reason is only looked up with one.
+        "withheld": withheld_reason(record, withheld_for(request))
+        if form and kind == "communication"
+        else "",
         "next": request.get_full_path() if request else "",
     }
+
+
+def withheld_for(request):
+    """The connections whose messages are kept out of translation, looked up once a page."""
+    if not hasattr(request, "_withheld_connections"):
+        request._withheld_connections = withheld_connections()
+    return request._withheld_connections
 
 
 @register.filter

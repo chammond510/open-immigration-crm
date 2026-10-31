@@ -46,6 +46,11 @@ class Connection(models.Model):
         default=False,
         help_text="Only superusers can trigger outbound actions by hand.",
     )
+    ai_use_allowed = models.BooleanField(
+        default=False,
+        help_text="For connectors whose terms limit sharing: a superuser allowed AI features, "
+        "the MCP server, and translation to read this connection's communications.",
+    )
     data_flows_version = models.PositiveIntegerField(null=True, blank=True)
     data_flows_acknowledged_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

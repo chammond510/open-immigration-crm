@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from crm.comms.models import Communication
+from crm.comms.sharing import withheld_reason
 from crm.comms.texting import can_text_freely, send_template, send_text
 from crm.connect import http
 from crm.connect.base import ConnectorError
@@ -806,3 +807,11 @@ class WhatsAppWebhookTests(FakeMetaMixin, TestCase):
         self.post(event(messages=messages))
         self.assertEqual(sum(len(files) for files in kept.values()), 4)
         self.assertEqual(sum(c.attachments.count() for c in Communication.objects.all()), 4)
+
+    def test_messages_are_kept_out_of_ai_and_translation(self):
+        page = self.client.get(reverse("connection_detail", args=[self.connection.pk]))
+        self.assertContains(page, "kept out of AI features, the MCP server, and translation.")
+        self.assertContains(page, "Meta&#x27;s terms for the WhatsApp Business Platform limit")
+        self.post(event(messages=[text("Hola")]))
+        message = Communication.objects.get()
+        self.assertEqual(withheld_reason(message), WhatsAppBusinessConnector.sharing_limits)
