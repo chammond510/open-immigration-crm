@@ -1,0 +1,214 @@
+{
+  "name": "CRM: add a task when a USCIS case status changes",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crm-events",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "CRM event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Checks the CRM's Standard Webhooks signature against the exact bytes received,\n// before anything else runs. Paste the signing secret from the CRM's Webhooks\n// connection below. On n8n plans with Variables, use $vars.CRM_SIGNING_SECRET\n// instead, so exported copies of this workflow leave the secret out.\nconst secret = 'PASTE_THE_SIGNING_SECRET';\nconst crypto = require('crypto');\nif (!secret.startsWith('whsec_')) {\n  throw new Error(\"Paste the signing secret from the CRM's Webhooks connection.\");\n}\n\nconst { headers } = $input.first().json;\nconst body = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst id = headers['webhook-id'] || '';\nconst timestamp = headers['webhook-timestamp'] || '';\nconst key = Buffer.from(secret.slice('whsec_'.length), 'base64');\nconst hmac = crypto.createHmac('sha256', key).update(`${id}.${timestamp}.`).update(body);\nconst expected = Buffer.from(`v1,${hmac.digest('base64')}`);\nconst signed = (headers['webhook-signature'] || '').split(' ').some((candidate) => {\n  const given = Buffer.from(candidate);\n  return given.length === expected.length && crypto.timingSafeEqual(given, expected);\n});\nconst fresh = Math.abs(Date.now() / 1000 - Number(timestamp)) < 300;\nif (!signed || !fresh) {\n  return [{ json: { valid: false } }];\n}\n\nconst event = JSON.parse(body.toString('utf8'));\nreturn [{ json: { valid: true, id, type: event.type, data: event.data } }];\n"
+      },
+      "name": "Check signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6f1c2a52-6a0e-4a8e-9f0e-3a1b8f5d2c01",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Signed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "name": "Accept",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "name": "Refuse",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0b7d4e19-2f43-4c55-8d61-7c9e2a4f8b02",
+              "leftValue": "={{ $('Check signature').first().json.type }}",
+              "rightValue": "case_status.changed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Status change?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.example.test/api/v1/work-items/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"kind\": \"task\",\n  \"priority\": \"high\",\n  \"matter\": \"{{ $('Check signature').first().json.data.matter }}\",\n  \"title\": \"Tell the client about their new USCIS case status\",\n  \"description\": \"Added by n8n when the CRM recorded a new case status.\"\n}",
+        "options": {}
+      },
+      "name": "Add a task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "CRM event": {
+      "main": [
+        [
+          {
+            "node": "Check signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check signature": {
+      "main": [
+        [
+          {
+            "node": "Signed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signed?": {
+      "main": [
+        [
+          {
+            "node": "Accept",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refuse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Accept": {
+      "main": [
+        [
+          {
+            "node": "Status change?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status change?": {
+      "main": [
+        [
+          {
+            "node": "Add a task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

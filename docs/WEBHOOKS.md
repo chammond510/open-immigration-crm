@@ -1,12 +1,12 @@
 # Outbound webhooks
 
-The **Webhooks** connector sends signed events to an address the firm chooses when something happens in the CRM, such as a new contact, a matter status change, or a logged USCIS notice. Tools like n8n, Zapier, Make, and Power Automate can react to them instead of polling the [API](API.md).
+The **Webhooks** connector sends signed events to an address the firm chooses when something happens in the CRM, such as a new contact, a matter status change, or a logged USCIS notice. Tools like n8n, Zapier, Make, and Power Automate can react to them instead of polling the [API](API.md). Ready-made [automation recipes](recipes/README.md) for n8n, Zapier, and Make check the signature before acting.
 
 Deliveries follow the [Standard Webhooks](https://www.standardwebhooks.com/) specification, so its libraries for many languages can verify them.
 
 ## Set it up
 
-1. **Get an address.** In the automation tool, create a webhook trigger and copy its address. Examples are n8n's Webhook node, Zapier's "Catch Hook", and Make's "Custom webhook".
+1. **Get an address.** In the automation tool, create a webhook trigger and copy its address. Examples are n8n's Webhook node with its Raw Body option, Zapier's "Catch Raw Hook", and Make's "Custom webhook" with JSON pass-through. A signature can only be checked against the raw body, so avoid triggers that parse it first, such as Zapier's "Catch Hook".
 2. **Connect.** In the CRM, open **Connections → Automation → Webhooks**.
    - Paste the address.
    - Copy the signing secret the form proposes into the tool, if the tool checks signatures. The secret is shown only on this form.
