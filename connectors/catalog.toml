@@ -491,7 +491,7 @@ works_through = "oidc"
 key = "docketwise"
 name = "Docketwise"
 capabilities = ["migration"]
-description = "Move contacts and matters over from Docketwise."
+description = "Move contacts and matters over from Docketwise; for now, export them to a spreadsheet and use Import from a spreadsheet."
 docs_url = "https://docketwise.gitbook.io/docketwise-api-docs"
 api_access = "approval"
 
@@ -499,7 +499,7 @@ api_access = "approval"
 key = "inszoom"
 name = "INSZoom"
 capabilities = ["migration"]
-description = "Move contacts and matters over from INSZoom."
+description = "Move contacts and matters over from INSZoom; for now, export them to a spreadsheet and use Import from a spreadsheet."
 docs_url = "https://success.mitratech.com/INSZoom/Help_Articles/Support/Zoom_APIs"
 api_access = "partner"
 
@@ -507,7 +507,7 @@ api_access = "partner"
 key = "clio"
 name = "Clio"
 capabilities = ["migration"]
-description = "Move contacts and matters over from Clio Manage."
+description = "Move contacts and matters over from Clio Manage; for now, export them to a spreadsheet and use Import from a spreadsheet."
 docs_url = "https://docs.developers.clio.com/clio-manage/api-reference/"
 api_access = "open"
 
@@ -515,7 +515,7 @@ api_access = "open"
 key = "mycase"
 name = "MyCase"
 capabilities = ["migration"]
-description = "Move contacts and matters over from MyCase."
+description = "Move contacts and matters over from MyCase; for now, export them to a spreadsheet and use Import from a spreadsheet."
 docs_url = "https://mycaseapi.stoplight.io/"
 api_access = "approval"
 
@@ -523,6 +523,6 @@ api_access = "approval"
 key = "lawlogix"
 name = "LawLogix"
 capabilities = ["migration"]
-description = "Move contacts and matters over from LawLogix."
+description = "Move contacts and matters over from LawLogix; for now, export them to a spreadsheet and use Import from a spreadsheet."
 docs_url = "https://developer.lawlogix.com/"
 api_access = "none"

@@ -33,6 +33,7 @@ There is no Node build, SPA, Redis, Celery, message broker, AI provider, payment
   - One phase is in progress at a time.
   - A phase with due days puts a deadline in the work queue when it starts, and completing the phase completes that deadline.
   - A template can apply itself to new matters of one case type, through a `post_save` signal on `Matter`.
+- `SpreadsheetImport` (in `crm/imports/`) is one CSV of contacts and matters, from upload to import. `spreadsheet.py` reads the file, suggests a field for each column, and plans each row with the contact and matter forms, matching existing contacts by email or phone as `crm/matching.py` does; nothing is saved until a superuser confirms. The file is kept encrypted for a day, and the worker deletes it. See [SPREADSHEET_IMPORT.md](SPREADSHEET_IMPORT.md).
 - `CustomField` (in `crm/customfields/`) defines a firm's extra contact or matter fields. Values live on the record (`Contact.custom_fields`, `Matter.custom_fields`, a JSON object keyed by each field's fixed `key`).
   - `CustomFieldsMixin` adds the active fields to `ContactForm` and `MatterForm`, so the web pages and the API validate them the same way.
   - Values of inactive fields are kept.

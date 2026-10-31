@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Import from a spreadsheet · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Firm settings</p><h1>Import from a spreadsheet</h1><p>Bring in contacts and their matters from a spreadsheet saved as CSV, such as an export from another practice-management system. Each row is a contact, with a matter when the row has one. You choose which column fills which field, and see what will happen to every row before anything is saved.</p></div><div class="actions"><a class="button" href="{% url 'import_template' %}">Download the template</a></div></div>
+<div class="page-stack">
+  <section class="panel">
+    <div class="section-heading"><div><h2>Upload a file</h2><p>Up to 5 MB and {{ max_rows }} rows, with a header row naming each column. Save it from the spreadsheet app as CSV UTF-8.</p></div></div>
+    <form method="post" enctype="multipart/form-data" class="stacked-form">
+      {% csrf_token %}
+      {% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+      <div class="form-actions"><button class="button primary" type="submit">Upload and match columns</button></div>
+    </form>
+    <p class="fine-print">The file is kept encrypted for a day, for the preview and the list of skipped rows, and then deleted. Only superusers can import.</p>
+  </section>
+  <section class="panel flush-panel">
+    <div class="section-heading table-note"><div><h2>Imports</h2></div></div>
+    {% if imports %}<div class="table-wrap"><table><thead><tr><th>File</th><th>Uploaded</th><th>Status</th><th>Contacts</th><th>Matters</th><th>Skipped rows</th></tr></thead><tbody>
+      {% for item in imports %}<tr><td><a class="primary-link" href="{% if item.status == 'imported' %}{% url 'import_report' item.pk %}{% else %}{% url 'import_columns' item.pk %}{% endif %}">{{ item.filename }}</a><small>{{ item.row_count }} rows</small></td><td>{{ item.created_at|date:"M j, Y g:i a" }}{% if item.created_by %}<small>{{ item.created_by.get_full_name|default:item.created_by.username }}</small>{% endif %}</td><td><span class="badge {% if item.status == 'imported' %}active{% else %}pending{% endif %}">{{ item.get_status_display }}</span></td><td>{% if item.status == 'imported' %}{{ item.contacts_created }}{% endif %}</td><td>{% if item.status == 'imported' %}{{ item.matters_created }}{% endif %}</td><td>{% if item.status == 'imported' %}{{ item.skipped|length }}{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state compact"><p>No imports yet.</p></div>{% endif %}
+  </section>
+  <section class="panel flush-panel">
+    <div class="section-heading table-note"><div><h2>Columns</h2><p>The template has a column for each field. Your own file's headers can differ: you match its columns to fields after uploading.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Field</th><th>For</th><th>Accepts</th></tr></thead><tbody>
+      {% for column in guide %}<tr><td>{{ column.label }}</td><td>{{ column.record|capfirst }}</td><td>{{ column.accepts }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  <section class="panel prose">
+    <h2>How rows are matched</h2>
+    <ul>
+      <li>A row whose email or phone matches a contact already in the CRM, or one earlier in the file, does not add a contact or change the existing one. If the row has a matter, the matter is added to that contact; if not, the row is skipped.</li>
+      <li>A matter whose receipt number is already in the CRM, or earlier in the file, is skipped.</li>
+      <li>Rows are checked like the web pages' forms. A row that fails is skipped, with the reason, and you can download the skipped rows to fix and import again.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}

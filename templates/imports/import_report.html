@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ spreadsheet.filename }} · Import from a spreadsheet · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>{{ spreadsheet.filename }}</h1><p>Imported {{ spreadsheet.imported_at|date:"M j, Y g:i a" }}{% if spreadsheet.created_by %} by {{ spreadsheet.created_by.get_full_name|default:spreadsheet.created_by.username }}{% endif %}.</p></div><div class="actions"><a class="button" href="{% url 'import_list' %}">All imports</a></div></div>
+<div class="page-stack">
+  <div class="metrics">
+    <a href="{% url 'contact_list' %}"><strong>{{ spreadsheet.contacts_created }}</strong><span>Contacts added</span></a>
+    <a href="{% url 'matter_list' %}"><strong>{{ spreadsheet.matters_created }}</strong><span>Matters added</span></a>
+    <a href="#skipped"><strong>{{ spreadsheet.skipped|length }}</strong><span>Rows skipped</span></a>
+  </div>
+  <section class="panel flush-panel" id="skipped">
+    <div class="section-heading table-note"><div><h2>Skipped rows</h2>{% if spreadsheet.content is not None %}<p>The file is deleted a day after upload. Until then, download the skipped rows to fix them and import them again.</p>{% else %}<p>The uploaded file has been deleted; the row numbers and reasons are kept.</p>{% endif %}</div>{% if spreadsheet.skipped and spreadsheet.content is not None %}<div class="actions"><a class="button" href="{% url 'import_skipped' spreadsheet.pk %}">Download the skipped rows</a></div>{% endif %}</div>
+    {% if spreadsheet.skipped %}<div class="table-wrap"><table><thead><tr><th>Row</th><th>Reason</th></tr></thead><tbody>
+      {% for item in spreadsheet.skipped %}<tr><td>{{ item.row }}</td><td>{{ item.reason }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state compact"><p>Every row was imported.</p></div>{% endif %}
+  </section>
+  {% if spreadsheet.content is not None %}<form method="post" action="{% url 'import_discard' spreadsheet.pk %}" class="form-actions">{% csrf_token %}<button class="button" type="submit">Delete the uploaded file now</button></form>{% endif %}
+</div>
+{% endblock %}

@@ -32,6 +32,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
   Each figure is compared with the previous period.
 - Audit records for important actions
 - CSV and portable JSON export paths
+- Import of contacts and matters from a spreadsheet, with a preview and a report of every row skipped and why ([guide](docs/SPREADSHEET_IMPORT.md))
 - PostgreSQL production path and SQLite-only local evaluation path
 
 ## Core and connectors
