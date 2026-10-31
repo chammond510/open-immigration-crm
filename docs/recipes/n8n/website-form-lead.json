@@ -1,0 +1,95 @@
+{
+  "name": "CRM: send website form leads",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "website-form",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "name": "Website form",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signs each form submission for the CRM's Website form connection, the\n// Standard Webhooks way. Paste the connection's signing secret below. On n8n\n// plans with Variables, use $vars.CRM_FORM_SECRET instead, so exported copies\n// of this workflow leave the secret out.\nconst secret = 'PASTE_THE_SIGNING_SECRET';\nconst crypto = require('crypto');\nif (!secret.startsWith('whsec_')) {\n  throw new Error(\"Paste the signing secret from the CRM's Website form connection.\");\n}\nconst key = Buffer.from(secret.slice('whsec_'.length), 'base64');\n\nreturn $input.all().map((item) => {\n  const form = item.json.body || {};\n  // Change the names on the right to the field names your form sends.\n  const submission = {\n    name: form.name,\n    email: form.email,\n    phone: form.phone,\n    message: form.message,\n    form: form.form || 'Website form',\n    source: form.source || form.utm_source,\n    utm_campaign: form.utm_campaign,\n  };\n  // JSON.stringify leaves out fields the form did not send. The CRM checks the\n  // signature against these exact bytes, so send `payload` unchanged.\n  const payload = JSON.stringify(submission);\n  const id = `msg_${crypto.randomUUID()}`;\n  const timestamp = String(Math.floor(Date.now() / 1000));\n  const hmac = crypto.createHmac('sha256', key).update(`${id}.${timestamp}.${payload}`);\n  return { json: { payload, id, timestamp, signature: `v1,${hmac.digest('base64')}` } };\n});\n"
+      },
+      "name": "Sign for the CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.example.test/hooks/REPLACE-WITH-THE-CONNECTION-ADDRESS/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "webhook-id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "webhook-timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "name": "webhook-signature",
+              "value": "={{ $json.signature }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.payload }}",
+        "options": {}
+      },
+      "name": "Send to the CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Website form": {
+      "main": [
+        [
+          {
+            "node": "Sign for the CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign for the CRM": {
+      "main": [
+        [
+          {
+            "node": "Send to the CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none"
+  }
+}

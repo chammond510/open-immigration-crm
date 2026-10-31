@@ -1,6 +1,6 @@
 # REST API
 
-The CRM has a JSON API at `/api/v1/` for scripts and automation tools such as n8n, Zapier, and Make. It is built from plain Django views and uses the same validation as the web pages.
+The CRM has a JSON API at `/api/v1/` for scripts and automation tools such as n8n, Zapier, and Make. It is built from plain Django views and uses the same validation as the web pages. The [automation recipes](recipes/README.md) show it in use.
 
 The API is **off** on a new installation. A superuser turns it on under **API access** (in the sidebar's account links). Nothing can be deleted through the API.
 

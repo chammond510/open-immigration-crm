@@ -13,7 +13,7 @@ Turns submissions from the firm's website form into new leads. A new person beco
 
 1. In the CRM, a superuser opens **Connections > Website form**. Copy the **signing secret** it shows; it is not shown again. Review what the connection receives, and connect.
 2. On the connection's page, optionally choose the contact field to fill with the lead source. Then turn on webhooks and copy the address.
-3. Give the address and the secret to whatever sends the submissions: the website's own server, a small serverless function, or a tool such as n8n or Make. A browser cannot sign a submission without revealing the secret, so the signing must happen there, not in the web page.
+3. Give the address and the secret to whatever sends the submissions: the website's own server, a small serverless function, or a tool such as n8n or Make. A browser cannot sign a submission without revealing the secret, so the signing must happen there, not in the web page. The [automation recipes](../../docs/recipes/README.md) do this in n8n, Zapier, and Make.
 
 ## What to send
 

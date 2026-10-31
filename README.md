@@ -47,7 +47,7 @@ The **Connections** page lists the services the CRM can connect to; see the [con
 
 The connector framework, background worker, webhooks, and Connections page are in place. Connectors so far:
 
-- **Webhooks**, built in and vendor-neutral, sends signed CRM events to n8n, Zapier, Make, or any address the firm chooses.
+- **Webhooks**, built in and vendor-neutral, sends signed CRM events to n8n, Zapier, Make, or any address the firm chooses. [Automation recipes](docs/recipes/README.md) show how.
 - **USCIS Case Status API** (Beta) checks the receipt numbers of open matters once a day through the firm's own developer.uscis.gov app, and creates a review task when a status changes.
 - **Dialpad** (Beta) files calls, with recording links and Dialpad's AI recap, and texts on the right contact.
 - **Twilio** (Beta) files incoming texts and STOP replies, and can log the firm's Twilio calls on the right contact.
