@@ -49,6 +49,12 @@ from .models import (
     TwoFactorDevice,
     WorkItem,
 )
+from .roles import (
+    DELETE_RECORDS,
+    EXPORT_RECORDS,
+    MANAGE_FIRM_SETTINGS,
+    permission_required,
+)
 from .search import CONTACT_SEARCH_FIELDS, MATTER_SEARCH_FIELDS, words_match
 from .services import add_activity, audit
 from .two_factor import (
@@ -305,12 +311,6 @@ def first_run_setup(request):
         messages.success(request, "Administrator account created.")
         return redirect("dashboard")
     return render(request, "crm/first_run_setup.html", {"form": form})
-
-
-superuser_required = user_passes_test(
-    lambda user: user.is_active and user.is_superuser,
-    login_url="login",
-)
 
 
 # Most pressing first; the model's own ordering sorts priorities alphabetically.
@@ -634,7 +634,7 @@ def matter_add_party(request, pk):
     return redirect("matter_detail", pk=matter.pk)
 
 
-@superuser_required
+@permission_required(DELETE_RECORDS)
 @require_POST
 def matter_remove_party(request, pk):
     party = get_object_or_404(MatterParty, pk=pk)
@@ -838,7 +838,7 @@ def timer_stop(request):
     return redirect("dashboard")
 
 
-@superuser_required
+@permission_required(DELETE_RECORDS)
 @require_POST
 def time_entry_delete(request, pk):
     entry = get_object_or_404(TimeEntry, pk=pk)
@@ -940,7 +940,7 @@ def document_download(request, pk):
     return response
 
 
-@superuser_required
+@permission_required(DELETE_RECORDS)
 @require_POST
 def document_delete(request, pk):
     document = get_object_or_404(Document, pk=pk)
@@ -1150,7 +1150,7 @@ def intake_submission_review(request, pk):
     return redirect("intake_submission_detail", pk=submission.pk)
 
 
-@superuser_required
+@permission_required(MANAGE_FIRM_SETTINGS)
 @require_http_methods(["GET", "POST"])
 def firm_settings(request):
     profile = FirmProfile.load()
@@ -1188,7 +1188,7 @@ def search(request):
     )
 
 
-@superuser_required
+@permission_required(EXPORT_RECORDS)
 @require_GET
 def export_csv(request):
     response = HttpResponse(content_type="text/csv")

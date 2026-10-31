@@ -2,7 +2,7 @@
 
 The CRM includes a [Model Context Protocol](https://modelcontextprotocol.io/) server, so staff can add it to Claude or ChatGPT and work with contacts, matters, deadlines, and notices from their own assistant, on their own plan. The CRM never holds Claude or OpenAI credentials: the assistant does the AI work and calls the CRM's tools.
 
-The server is **off** on a new installation. A superuser turns it on under **Settings → AI assistants** in the sidebar.
+The server is **off** on a new installation. Someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) turns it on under **Settings → AI assistants** in the sidebar.
 
 ## How it works
 
@@ -14,11 +14,11 @@ The server is **off** on a new installation. A superuser turns it on under **Set
   - contact and matter summaries, including a matter's saved legal authorities;
   - upcoming work;
   - USCIS notices;
-  - communications, except messages from a connection whose provider's terms limit sharing them, such as WhatsApp Business, unless a superuser allows it on the connection's page;
+  - communications, except messages from a connection whose provider's terms limit sharing them, such as WhatsApp Business, unless someone who manages connections and AI allows it on the connection's page;
   - your time;
   - the operating summary;
   - invoices, for staff with billing access.
-- **Writing.** Write tools are off until a superuser allows them: create a task, add a note, log a communication, record a status check, and mark work done.
+- **Writing.** Write tools are off until someone who manages connections and AI allows them: create a task, add a note, log a communication, record a status check, and mark work done.
   - Each write tool is marked as not read-only, so Claude and ChatGPT ask the person before running it.
   - Nothing can be deleted through MCP.
   - Changes are audited as coming through MCP, with the assistant's name.

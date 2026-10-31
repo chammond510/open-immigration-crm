@@ -9,30 +9,29 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from crm.roles import MANAGE_CONNECTIONS, can, permission_required
 from crm.services import audit
 
 from .forms import ApiSettingsForm, ApiTokenForm
 from .models import ApiRequestLog, ApiSettings, ApiToken
 
 staff_required = user_passes_test(lambda user: user.is_active and user.is_staff, login_url="login")
-superuser_required = user_passes_test(
-    lambda user: user.is_active and user.is_superuser, login_url="login"
-)
 
 
 def can_create_tokens(user, api_settings):
-    return user.is_superuser or api_settings.staff_tokens_allowed
+    return can(user, MANAGE_CONNECTIONS) or api_settings.staff_tokens_allowed
 
 
 @staff_required
 @require_GET
 def api_access(request):
     api_settings = ApiSettings.load()
+    sees_all = can(request.user, MANAGE_CONNECTIONS)
     tokens = ApiToken.objects.select_related("user", "revoked_by")
-    if not request.user.is_superuser:
+    if not sees_all:
         tokens = tokens.filter(user=request.user)
     recent = ApiRequestLog.objects.select_related("token", "user")
-    if not request.user.is_superuser:
+    if not sees_all:
         recent = recent.filter(token__user=request.user)
     return render(
         request,
@@ -50,7 +49,7 @@ def api_access(request):
     )
 
 
-@superuser_required
+@permission_required(MANAGE_CONNECTIONS)
 @require_POST
 def api_settings_update(request):
     form = ApiSettingsForm(request.POST, instance=ApiSettings.load())
@@ -72,7 +71,9 @@ def api_settings_update(request):
 @require_http_methods(["GET", "POST"])
 def api_token_create(request):
     if not can_create_tokens(request.user, ApiSettings.load()):
-        messages.error(request, "Only superusers can create API tokens on this installation.")
+        messages.error(
+            request, "Only people who manage connections and AI can create API tokens here."
+        )
         return redirect("api_access")
     form = ApiTokenForm(request.POST or None)
     if form.is_valid():
@@ -101,7 +102,7 @@ def api_token_create(request):
 @require_POST
 def api_token_revoke(request, pk):
     token = get_object_or_404(ApiToken, pk=pk)
-    if token.user_id != request.user.pk and not request.user.is_superuser:
+    if token.user_id != request.user.pk and not can(request.user, MANAGE_CONNECTIONS):
         raise PermissionDenied
     if not token.revoked_at:
         token.revoked_at = timezone.now()

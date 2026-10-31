@@ -165,7 +165,9 @@ class ApiKeyConnectTests(TestCase):
 
     def test_staff_cannot_connect_firm_wide_services(self):
         self.client.force_login(make_user("paralegal", superuser=False))
-        self.assertContains(self.client.get(self.url), "Only a superuser can connect")
+        self.assertContains(
+            self.client.get(self.url), "Only people who manage connections and AI can connect"
+        )
         self.assertEqual(self.post(acknowledge=None).status_code, 403)
 
 
@@ -193,7 +195,7 @@ class OAuthConnectTests(TestCase):
     def test_app_registration_is_superuser_only_and_encrypted(self):
         self.client.force_login(self.staff)
         page = self.client.get(self.detail_url)
-        self.assertContains(page, "A superuser must register")
+        self.assertContains(page, "Someone who manages connections and AI must register")
         self.assertEqual(
             self.client.post(
                 reverse("connector_app", args=["example_oauth"]), {"client_id": "x"}
@@ -364,7 +366,7 @@ class ConnectionManagementTests(TestCase):
     def test_staff_can_view_but_not_manage_firm_connections(self):
         self.client.force_login(self.staff)
         page = self.client.get(self.url("connection_detail"))
-        self.assertContains(page, "A superuser must review")
+        self.assertContains(page, "Someone who manages connections and AI must review")
         self.assertNotContains(page, "Disconnect")
         for name in (
             "connection_test",

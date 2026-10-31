@@ -48,7 +48,7 @@ Everything else in `crm/` is the CRM's own and may change in any release. A conn
 
 ## Before firms use it
 
-- **Say exactly what moves.** `data_flows` is what a superuser reviews before the connection is used. Raise its `version` whenever it changes, so firms review it again.
+- **Say exactly what moves.** `data_flows` is what someone who manages connections and AI reviews before the connection is used. Raise its `version` whenever it changes, so firms review it again.
 - **Send through the policy.** Core calls `perform()` only through the outbound policy, which holds a new connection in preview mode, enforces the firm's limits, and records each attempt. Keep client details out of errors and logs.
 - **Fail closed.** Refuse a webhook that is unsigned or wrongly signed. If the provider cannot sign its webhooks, trust a delivery only as a hint and fetch the facts from the provider.
 - **Maturity.** A new connector is Beta. It can be marked Ready once it has passed a live check against a real account, run by hand on a non-production installation, and has a named maintainer in `maintainers`.

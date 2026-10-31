@@ -39,17 +39,18 @@ class Connection(models.Model):
     granted_scopes = models.JSONField(default=list, blank=True)
     preview_mode = models.BooleanField(
         default=True,
-        help_text="Outbound actions are recorded but not carried out until a superuser turns "
-        "this off.",
+        help_text="Outbound actions are recorded but not carried out until someone who manages "
+        "connections and AI turns this off.",
     )
     outbound_admin_only = models.BooleanField(
         default=False,
-        help_text="Only superusers can trigger outbound actions by hand.",
+        help_text="Only people who manage connections and AI can trigger outbound actions by hand.",
     )
     ai_use_allowed = models.BooleanField(
         default=False,
-        help_text="For connectors whose terms limit sharing: a superuser allowed AI features, "
-        "the MCP server, and translation to read this connection's communications.",
+        help_text="For connectors whose terms limit sharing: someone who manages connections "
+        "and AI allowed AI features, the MCP server, and translation to read this connection's "
+        "communications.",
     )
     data_flows_version = models.PositiveIntegerField(null=True, blank=True)
     data_flows_acknowledged_by = models.ForeignKey(
@@ -216,7 +217,7 @@ class WorkerHeartbeat(models.Model):
 
 
 class ConnectorApp(models.Model):
-    """The firm's own OAuth app registration for one provider, entered by a superuser."""
+    """The firm's own OAuth app registration for one provider, entered by a connections manager."""
 
     connector_key = models.CharField(max_length=41, unique=True)
     client_id = models.CharField(max_length=255)

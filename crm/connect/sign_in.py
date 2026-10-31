@@ -1,7 +1,7 @@
 """Staff sign-in through the firm's identity provider.
 
-Each active, firm-wide connection with the Sign-in capability, once a superuser
-has reviewed what it sends and receives, puts a button on the sign-in page. The
+Each active, firm-wide connection with the Sign-in capability, once someone who
+manages connections has reviewed what it sends and receives, puts a button on the sign-in page. The
 flow is OAuth's authorization code flow, with a one-time state, nonce, and S256
 PKCE verifier kept in the session for ten minutes. The connector checks the
 provider's answer and returns a ``StaffIdentity``.
@@ -135,8 +135,8 @@ def callback(request):
         record(request, "user.sign_in_refused", None, connection, "No matching staff account")
         messages.error(
             request,
-            f"No staff account matches that {connection.label} sign-in. Ask a superuser to "
-            "check that your account has the same email address, or sign in with your "
+            f"No staff account matches that {connection.label} sign-in. Ask whoever manages "
+            "staff to check that your account has the same email address, or sign in with your "
             "username and password.",
         )
         return redirect("login")

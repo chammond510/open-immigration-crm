@@ -23,7 +23,7 @@ Each staff member connects their own account; nobody else can send from it. To b
 - **Calendar to CRM.** Events on the primary calendar are pulled every 10 minutes, from 30 days back. An event with a contact among its attendees becomes an appointment on that contact. Personal events without contacts stay out of the CRM.
 - **CRM to calendar.** Appointments assigned to the staff member are put on their calendar, with the contact and matter in the description. The event has no attendees, and the CRM asks Google to email nobody. Moving the appointment moves the event, and moving the event moves the appointment. Deleting the appointment, or giving it to someone else, removes the event.
 - **Events from the calendar stay the calendar's.** An appointment that came from a calendar is updated from it, but never written back. Its attendees are never changed without notice.
-- **Preview mode applies.** Like every outbound action, calendar writes start in preview mode: recorded, not sent, until a superuser turns preview mode off on the connection.
+- **Preview mode applies.** Like every outbound action, calendar writes start in preview mode: recorded, not sent, until someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) turns preview mode off on the connection.
 
 ## Setting it up
 
@@ -36,7 +36,7 @@ Each staff member connects their own account; nobody else can send from it. To b
    - Internal matters. Gmail read access (`gmail.readonly`) is a restricted scope, and `gmail.send` and Calendar access are sensitive. Google does not require verification for an app used only inside the firm's own organization.
    - An external app in Testing gets sign-ins that expire after 7 days. Published, it would need Google's verification and security assessment.
 4. Under **Clients**, create an OAuth client of type **Web application**. As its redirect URI, add the address the CRM shows on the Google Workspace connector's page.
-5. In the CRM, a superuser enters the client ID and secret on the Google Workspace connector's page.
+5. In the CRM, someone who manages connections and AI enters the client ID and secret on the Google Workspace connector's page.
 
 Google notes that restricted Gmail scopes can need extra configuration by the organization's administrators. If staff see that the app is blocked, a Workspace admin can mark it as trusted in the Admin console's API controls.
 
@@ -44,7 +44,7 @@ Google notes that restricted Gmail scopes can need extra configuration by the or
 
 1. On **Connections**, open **Google Workspace** and connect, choosing mail, calendar, or both.
 2. Sign in with Google and allow everything asked for.
-3. A superuser reviews what the connection sends and receives. When the firm is ready, they turn preview mode off so sending and calendar writes go through.
+3. Someone who manages connections and AI reviews what the connection sends and receives. When the firm is ready, they turn preview mode off so sending and calendar writes go through.
 
 A staff member's sign-in stops working if they change their Google password, which ends Gmail access, or if it goes unused for six months. The connection then asks them to sign in again.
 

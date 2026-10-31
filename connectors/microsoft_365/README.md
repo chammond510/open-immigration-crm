@@ -46,7 +46,7 @@ Each staff member connects their own account; nobody else can send from it.
    - `offline_access`
 
    None needs admin consent by default. If the firm's consent settings let users consent only to low-impact permissions, grant consent for the organization on the same page.
-6. In the CRM, a superuser enters the application (client) ID, the client secret, and the **Directory (tenant) ID** on the Microsoft 365 connector's page. Find the tenant ID on the registration's overview page.
+6. In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) enters the application (client) ID, the client secret, and the **Directory (tenant) ID** on the Microsoft 365 connector's page. Find the tenant ID on the registration's overview page.
 
    A single-tenant app has to use its own tenant's sign-in address. Microsoft refuses the shared ones for apps registered this way.
 
@@ -55,7 +55,7 @@ Each staff member connects their own account; nobody else can send from it.
 1. On **Connections**, open **Microsoft 365** and connect, choosing mail, calendar, or both.
 2. Sign in with Microsoft and accept the permissions.
 3. To get changes as they happen, turn on webhooks on the connection's page. The CRM's `/hooks/` address must be reachable from Microsoft. It must answer Graph's validation check within 10 seconds and each notification within 3.
-4. A superuser reviews what the connection sends and receives. When the firm is ready, they turn preview mode off so sending and calendar writes go through.
+4. Someone who manages connections and AI reviews what the connection sends and receives. When the firm is ready, they turn preview mode off so sending and calendar writes go through.
 
 A sign-in stays valid while it is used. Microsoft ends it after 90 days without use, or when an administrator resets the person's password or revokes their sessions. The connection then asks them to sign in again.
 

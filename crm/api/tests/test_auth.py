@@ -81,6 +81,9 @@ class AuthenticationTests(ApiTestCase):
         _, staff_token = self.issue(user=staff)
         response = self.api("get", "/api/v1/", token=staff_token)
         self.assertEqual((response.status_code, error_code(response)), (403, "staff_tokens_off"))
+        # Whoever manages connections and AI may use a token while staff tokens are off.
+        _, partner_token = self.issue(user=make_user("partner", role="Managing partner"))
+        self.assertEqual(self.api("get", "/api/v1/", token=partner_token).status_code, 200)
         ApiSettings.objects.filter(pk=1).update(staff_tokens_allowed=True)
         self.assertEqual(self.api("get", "/api/v1/", token=staff_token).status_code, 200)
 

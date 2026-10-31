@@ -26,12 +26,12 @@
   </section>
 {% endif %}
 {% if connection.last_error and not disconnected %}<div class="message error">Last problem: {{ connection.last_error }}</div>{% endif %}
-{% if connector and not connection.data_flows_acknowledged and not disconnected %}<div class="privacy-note">{% if user.is_superuser %}Review what this connection sends and receives, then confirm below. Nothing is sent through it until you do.{% else %}A superuser must review what this connection sends and receives before it is used.{% endif %}</div>{% endif %}
+{% if connector and not connection.data_flows_acknowledged and not disconnected %}<div class="privacy-note">{% if perms.crm.manage_connections %}Review what this connection sends and receives, then confirm below. Nothing is sent through it until you do.{% else %}Someone who manages connections and AI must review what this connection sends and receives before it is used.{% endif %}</div>{% endif %}
 <div class="detail-grid">
   <div class="detail-main">
     {% if connector %}
       {% include "connect/includes/data_flows.html" with flows=connector.data_flows %}
-      {% if user.is_superuser and not connection.data_flows_acknowledged and not disconnected %}<form method="post" action="{% url 'connection_acknowledge' connection.pk %}" class="panel">{% csrf_token %}<button class="button primary" type="submit">I reviewed this, and the firm accepts it</button></form>{% endif %}
+      {% if perms.crm.manage_connections and not connection.data_flows_acknowledged and not disconnected %}<form method="post" action="{% url 'connection_acknowledge' connection.pk %}" class="panel">{% csrf_token %}<button class="button primary" type="submit">I reviewed this, and the firm accepts it</button></form>{% endif %}
     {% endif %}
     {% events_panel connection %}
     {% if config_form %}
@@ -53,7 +53,7 @@
     {% if not connector or connector.sync_capabilities or sync_runs %}<section class="panel"><div class="section-heading"><div><h2>Recent syncs</h2><p>Scheduled work: new records brought in, or documents copied out.</p></div></div>
       {% for run in sync_runs %}<div class="mini-record"><div><strong>{{ run.capability|capability_label }}</strong><span>{{ run.created_at|date:"M j, g:i a" }}{% if run.records_received %} · {{ run.records_received }} {% if run.capability == "storage" %}copied{% else %}record{{ run.records_received|pluralize }}{% endif %}{% endif %}{% if run.error %} · {{ run.error }}{% endif %}</span></div><span class="badge {{ run.status }}">{{ run.get_status_display }}</span></div>{% empty %}<p class="muted">No syncs yet.</p>{% endfor %}
     </section>{% endif %}
-    {% if "migration" in connection.enabled_capabilities and user.is_superuser %}<section class="panel"><div class="section-heading"><div><h2>Imports</h2><p>Each fetch brings the records not imported before, for you to review and confirm under <a class="primary-link" href="{% url 'import_list' %}">Import from a spreadsheet</a>. Nothing is saved until you do, and nothing changes at {{ connector.name|default:"the provider" }}.</p></div></div>
+    {% if "migration" in connection.enabled_capabilities and perms.crm.import_records %}<section class="panel"><div class="section-heading"><div><h2>Imports</h2><p>Each fetch brings the records not imported before, for you to review and confirm under <a class="primary-link" href="{% url 'import_list' %}">Import from a spreadsheet</a>. Nothing is saved until you do, and nothing changes at {{ connector.name|default:"the provider" }}.</p></div></div>
       {% for item in imports %}<div class="mini-record"><div><a class="primary-link" href="{% if item.status == 'imported' %}{% url 'import_report' item.pk %}{% else %}{% url 'import_preview' item.pk %}{% endif %}">{{ item.filename }}</a><span>{{ item.row_count }} row{{ item.row_count|pluralize }}{% if item.status == 'imported' %} · {{ item.contacts_created }} contact{{ item.contacts_created|pluralize }} and {{ item.matters_created }} matter{{ item.matters_created|pluralize }} added{% endif %}</span></div><span class="badge {% if item.status == 'imported' %}active{% else %}pending{% endif %}">{% if item.status == 'imported' %}Imported{% else %}Ready to review{% endif %}</span></div>{% empty %}<p class="muted">Nothing fetched yet. Use Fetch records to import above.</p>{% endfor %}
     </section>{% endif %}
     {% if not connector or connector.webhooks %}<section class="panel"><div class="section-heading"><div><h2>Recent webhook events</h2><p>Events the provider sent to this connection.</p></div></div>
@@ -72,7 +72,7 @@
       <dt>Reviewed</dt><dd>{% if connection.data_flows_acknowledged %}{{ connection.data_flows_acknowledged_by.get_full_name|default:connection.data_flows_acknowledged_by|default:"—" }} · {{ connection.data_flows_acknowledged_at|date:"M j, Y" }}{% else %}Not yet{% endif %}</dd>
       {% if connection.granted_scopes %}<dt>Permissions granted</dt><dd>{{ connection.granted_scopes|join:", " }}</dd>{% endif %}
     </dl></section>
-    {% if user.is_superuser and connector and not disconnected %}
+    {% if perms.crm.manage_connections and connector and not disconnected %}
       <form method="post" action="{% url 'connection_settings' connection.pk %}" class="panel stacked-form">
         {% csrf_token %}
         <div><h2>Outbound settings</h2><p class="muted">New connections start in preview mode: outbound actions are recorded but not sent.</p></div>
@@ -82,8 +82,8 @@
     {% endif %}
     {% if connector.sharing_limits and not disconnected %}
       <section class="panel stacked-form">
-        <div><h2>AI and translation</h2><p class="muted">{% if connection.ai_use_allowed %}A superuser allowed AI features, the MCP server, and translation to read this connection's messages.{% else %}This connection's messages are kept out of AI features, the MCP server, and translation.{% endif %} {{ connector.sharing_limits }}</p></div>
-        {% if user.is_superuser %}<form method="post" action="{% url 'connection_ai_use' connection.pk %}"{% if not connection.ai_use_allowed %} data-confirm="Let AI features, the MCP server, and translation read messages from {{ connection.label }}? Check the provider's terms with the firm's lawyer first."{% endif %}>{% csrf_token %}<input type="hidden" name="allowed" value="{% if connection.ai_use_allowed %}no{% else %}yes{% endif %}"><div class="form-actions"><button class="button" type="submit">{% if connection.ai_use_allowed %}Stop AI and translation access{% else %}Allow AI and translation{% endif %}</button></div></form>{% endif %}
+        <div><h2>AI and translation</h2><p class="muted">{% if connection.ai_use_allowed %}Someone who manages connections and AI allowed AI features, the MCP server, and translation to read this connection's messages.{% else %}This connection's messages are kept out of AI features, the MCP server, and translation.{% endif %} {{ connector.sharing_limits }}</p></div>
+        {% if perms.crm.manage_connections %}<form method="post" action="{% url 'connection_ai_use' connection.pk %}"{% if not connection.ai_use_allowed %} data-confirm="Let AI features, the MCP server, and translation read messages from {{ connection.label }}? Check the provider's terms with the firm's lawyer first."{% endif %}>{% csrf_token %}<input type="hidden" name="allowed" value="{% if connection.ai_use_allowed %}no{% else %}yes{% endif %}"><div class="form-actions"><button class="button" type="submit">{% if connection.ai_use_allowed %}Stop AI and translation access{% else %}Allow AI and translation{% endif %}</button></div></form>{% endif %}
       </section>
     {% endif %}
     {% if webhooks and can_manage and not disconnected %}

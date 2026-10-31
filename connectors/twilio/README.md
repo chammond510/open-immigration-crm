@@ -16,7 +16,7 @@ Texts and calls are separate capabilities on the connection; turn on either or b
 ## Setting it up
 
 1. In the Twilio Console, copy the **Account SID** and **Auth Token** from the account dashboard.
-2. In the CRM, open **Connections**, then **Twilio**. Paste both values, and tick **Texting and messaging**, **Phone**, or both. For texting, in **Send texts from**, enter the firm's Twilio number in `+12025550143` form, or a Messaging Service SID starting with `MG`. A superuser reviews what the connection sends and receives, then connects. The connection test checks the account and that the number or service belongs to it.
+2. In the CRM, open **Connections**, then **Twilio**. Paste both values, and tick **Texting and messaging**, **Phone**, or both. For texting, in **Send texts from**, enter the firm's Twilio number in `+12025550143` form, or a Messaging Service SID starting with `MG`. Someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) reviews what the connection sends and receives, then connects. The connection test checks the account and that the number or service belongs to it.
 3. On the connection's page, turn on webhooks. Leave **Set this address in Twilio** ticked to have the CRM set the address on the number, or on the Messaging Service. This replaces any address set there now. The CRM then asks for delivery updates on each text it sends.
 
    To set the address by hand instead, paste it into the number's (or Messaging Service's) incoming-message webhook, using HTTP POST. Texts sent from the CRM then show no delivery updates unless the Messaging Service has a status callback address too.

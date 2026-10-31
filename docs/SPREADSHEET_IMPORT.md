@@ -1,6 +1,6 @@
 # Importing from a spreadsheet
 
-Superusers can bring contacts and their matters into the CRM from a spreadsheet saved as CSV, such as an export from another practice-management system. Open **Settings → Import** in the sidebar.
+Staff whose role includes Import (which Managing partners and Office administrators have by default) can bring contacts and their matters into the CRM from a spreadsheet saved as CSV, such as an export from another practice-management system. Open **Settings → Import** in the sidebar.
 
 Each row is a contact, with a matter when the row has one. A client with two matters takes two rows.
 
@@ -16,7 +16,7 @@ Each row is a contact, with a matter when the row has one. A client with two mat
 
 ## From another system
 
-A migration connector, such as [Clio Manage](../connectors/clio/README.md), brings its records the same way. A superuser chooses **Fetch records to import** on the connection's page, and the records become an import listed there and here, ready to review. Its columns are already matched, and these rules differ:
+A migration connector, such as [Clio Manage](../connectors/clio/README.md), brings its records the same way. Someone who manages connections and AI chooses **Fetch records to import** on the connection's page, and the records become an import listed there and here, ready for someone whose role includes Import to review. Its columns are already matched, and these rules differ:
 
 - Each record is linked to its source when imported, and the next fetch leaves out what was imported before.
 - A contact already in the CRM is linked, not skipped, even with no matter to add.

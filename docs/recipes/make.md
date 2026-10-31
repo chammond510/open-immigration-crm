@@ -56,7 +56,7 @@ Don't route a bad signature into an error. Make turns off a scenario that starts
 ## Website form leads
 
 1. **Trigger:** the form app's own Make module, or a custom webhook that the website posts to.
-2. **In the CRM**, a superuser opens **Connections → Website form**, copies the signing secret, and connects. On the connection's page, turn on webhooks and copy the address.
+2. **In the CRM**, someone who manages connections and AI opens **Connections → Website form**, copies the signing secret, and connects. On the connection's page, turn on webhooks and copy the address.
 3. **JSON → Create JSON.** Build the submission from the form's fields: `name`, `email`, `phone`, `message`, `form`, and, if the form tracks it, `source`. Its output is the JSON text to sign. Call it `<json>` below.
 4. **Tools → Set multiple variables:**
    - `id`: `msg_` followed by Make's `uuid`.

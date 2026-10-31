@@ -13,7 +13,7 @@ TOKEN_PREFIX = "oic_"
 
 
 class ApiSettings(models.Model):
-    """Firm-wide API switches. The API is off until a superuser turns it on."""
+    """Firm-wide API switches. The API is off until someone who manages connections turns it on."""
 
     enabled = models.BooleanField(
         "Turn on the API",
@@ -23,7 +23,7 @@ class ApiSettings(models.Model):
     staff_tokens_allowed = models.BooleanField(
         "Let staff create their own tokens",
         default=False,
-        help_text="While off, only superusers' tokens are accepted.",
+        help_text="While off, only tokens of people who manage connections and AI are accepted.",
     )
     updated_at = models.DateTimeField(auto_now=True)
 

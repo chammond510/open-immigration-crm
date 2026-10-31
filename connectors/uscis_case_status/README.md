@@ -14,7 +14,7 @@ Checks the case status of the receipt numbers on open matters once a day, throug
 ## Setting it up
 
 1. Sign up at developer.uscis.gov and create an app with the **Case Status API** product. USCIS issues a sandbox client ID and secret.
-2. In the CRM, open **Connections**, then **USCIS Case Status API**. Paste the client ID and secret, and leave **Environment** on **Sandbox**. A superuser reviews what the connection sends and receives, then connects. The connection test gets an access token and checks one of USCIS's test receipt numbers.
+2. In the CRM, open **Connections**, then **USCIS Case Status API**. Paste the client ID and secret, and leave **Environment** on **Sandbox**. Someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) reviews what the connection sends and receives, then connects. The connection test gets an access token and checks one of USCIS's test receipt numbers.
 3. Make sure the worker is running (`python manage.py run_worker`).
 
 ## The sandbox

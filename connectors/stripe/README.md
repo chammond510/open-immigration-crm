@@ -22,7 +22,7 @@ A Stripe account pays out to one bank account, and **Stripe takes its fees out o
    - **Webhook Endpoints**: Write, only if the CRM should create the webhook endpoint for you
 
    The account's secret key (`sk_…`) is not accepted. Consider limiting the key to the CRM server's IP address in Stripe.
-2. In the CRM, a superuser opens **Connections > Stripe**, pastes the key, reviews what the connection sends and receives, and connects. A new connection starts in preview mode, so no link is made until preview mode is turned off.
+2. In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) opens **Connections > Stripe**, pastes the key, reviews what the connection sends and receives, and connects. A new connection starts in preview mode, so no link is made until preview mode is turned off.
 3. On the connection's page, set **This Stripe account pays out to**. Read the trust section above before choosing trust.
 4. Turn on webhooks with **Create the webhook endpoint in Stripe** ticked. The CRM creates the endpoint for the four events it needs and keeps the signing secret Stripe returns. Issuing a new address later replaces it; disconnecting deletes it.
 

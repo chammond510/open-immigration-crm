@@ -2,7 +2,7 @@
 
 The CRM has a JSON API at `/api/v1/` for scripts and automation tools such as n8n, Zapier, and Make. It is built from plain Django views and uses the same validation as the web pages. The [automation recipes](recipes/README.md) show it in use.
 
-The API is **off** on a new installation. A superuser turns it on under **API access**, in the menu under your name at the top right. Nothing can be deleted through the API.
+The API is **off** on a new installation. Someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) turns it on under **API access**, in the menu under your name at the top right. Nothing can be deleted through the API.
 
 ## Tokens
 
@@ -17,7 +17,7 @@ Create a token under **API access → Create a token**.
 - **Scopes.** A token can reach only the records its scopes allow. Write access includes read access.
 - **Shown once.** The token is displayed once. Only its SHA-256 hash is stored, so a lost token cannot be recovered. Revoke it and create another.
 - **Expiry.** Every token expires after 30, 90, or 180 days, or one year.
-- **Who can create tokens.** Only superusers, unless a superuser turns on **Let staff create their own tokens**. Turning that setting off again stops staff tokens from working.
+- **Who can create tokens.** Only people who manage connections and AI, unless one of them turns on **Let staff create their own tokens**. Turning that setting off again stops staff tokens from working.
 
 A token stops working at once when any of these happens:
 - it is revoked or expires;
@@ -140,6 +140,6 @@ Each token can make `API_HOURLY_LIMIT` requests an hour (default 1000).
 Every request is logged, including refused ones. The log records the token, user, method, path, status, duration, and client address.
 - It does not store query strings, because searches can contain client names.
 - Request bodies are not stored.
-- Superusers see the latest requests on the API access page; staff see their own. The full log is under Administration.
+- People who manage connections and AI see everyone's latest requests on the API access page; other staff see their own. The full log is under Administration.
 
 Responses are sent with `Cache-Control: no-store`. The API sends no CORS headers, so web pages on other sites cannot call it from a browser.

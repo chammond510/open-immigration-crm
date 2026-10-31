@@ -28,7 +28,7 @@
     {% if report.source_field %}
       {% if report.sources %}<div class="table-wrap"><table><thead><tr><th>{{ report.source_field.label }}</th><th class="numeric">Leads</th><th class="numeric">Retained</th></tr></thead><tbody>{% for row in report.sources %}<tr><td>{{ row.value }}</td><td class="numeric">{{ row.leads }}</td><td class="numeric">{{ row.retained }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="muted">No leads or retentions in this period.</p>{% endif %}
     {% else %}
-      <p class="muted">Add a contact custom field of the type "choice from a list", such as a referral source, to see leads and retentions by source.{% if user.is_superuser %} <a href="{% url 'custom_field_create' %}?for=contact">Add a field</a>.{% endif %}</p>
+      <p class="muted">Add a contact custom field of the type "choice from a list", such as a referral source, to see leads and retentions by source.{% if perms.crm.manage_firm_settings %} <a href="{% url 'custom_field_create' %}?for=contact">Add a field</a>.{% endif %}</p>
     {% endif %}
   </section>
 

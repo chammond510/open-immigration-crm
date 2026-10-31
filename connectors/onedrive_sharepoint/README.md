@@ -18,8 +18,8 @@ Every copy goes through the outbound policy. A new connection starts in preview 
 2. **Permissions.** Under **API permissions**, add the Microsoft Graph delegated permissions `offline_access` and `Files.ReadWrite.All`. They do not require an administrator, but the firm's consent settings may, so an administrator can grant consent for the firm.
 3. **The account to connect.** Copies are made by the account that signs in, and the permission lets that account's sign-in reach every file the account can reach. Use a dedicated Microsoft 365 account for the CRM that is a member, with edit rights, of only the SharePoint site for client documents.
 4. **The folder.** In that site's document library, make a folder for matter folders and copy its link with **Copy link**. Microsoft documents this kind of link for finding a folder; an address copied from the browser's address bar may not work.
-5. **Connect.** In the CRM, a superuser opens **Connections > OneDrive and SharePoint**, enters the app's client ID, secret, and directory (tenant) ID, pastes the folder's link, and signs in as the dedicated account. The CRM checks that the link leads to a folder. Graph cannot say ahead of time whether the account may add files there, so if it cannot, the first copy fails and says so on the connection's page.
-6. A superuser reviews what the connection sends and receives, and turns preview mode off.
+5. **Connect.** In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) opens **Connections > OneDrive and SharePoint**, enters the app's client ID, secret, and directory (tenant) ID, pastes the folder's link, and signs in as the dedicated account. The CRM checks that the link leads to a folder. Graph cannot say ahead of time whether the account may add files there, so if it cannot, the first copy fails and says so on the connection's page.
+6. Someone who manages connections and AI reviews what the connection sends and receives, and turns preview mode off.
 
 ## Why `Files.ReadWrite.All`
 

@@ -1,4 +1,5 @@
 from django import template
+from django.contrib.auth.context_processors import PermWrapper
 
 from crm.forms import ChecklistItemForm
 
@@ -26,6 +27,7 @@ def workflow_panel(context, matter):
     return {
         "matter": matter,
         "user": context["request"].user,
+        "perms": PermWrapper(context["request"].user),
         "csrf_token": context.get("csrf_token"),
         "workflow": workflow,
         "phases": phases,

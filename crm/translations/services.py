@@ -102,8 +102,9 @@ def run(translator, texts, language, *, actor, target):
     )
     if request.status == OutboundRequest.Status.PREVIEWED:
         raise TranslationUnavailable(
-            f"{connection.label} is in preview mode, so nothing was sent to translate. A "
-            "superuser can turn preview mode off on the connection's page."
+            f"{connection.label} is in preview mode, so nothing was sent to translate. "
+            "Someone who manages connections and AI can turn preview mode off on the "
+            "connection's page."
         )
     if request.status != OutboundRequest.Status.SENT:
         raise TranslationUnavailable(request.error or "The text was not sent to translate.")
@@ -136,7 +137,9 @@ def save(translator, language, results, keys, *, actor, **record):
 def translate_communication(communication, translator, language, *, actor):
     reason = withheld_reason(communication)
     if reason:
-        raise TranslationUnavailable(f"{reason} A superuser can allow it on the connection.")
+        raise TranslationUnavailable(
+            f"{reason} Someone who manages connections and AI can allow it on the connection."
+        )
     fields = [
         (name, getattr(communication, name).strip())
         for name in ("subject", "summary")

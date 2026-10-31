@@ -13,6 +13,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from crm.comms import system_email
 from crm.connect.models import OutboundRequest
 from crm.models import Contact, FirmProfile, Matter
+from crm.roles import BILLING, MANAGE_BILLING, can, require
 from crm.search import words_match
 
 from .forms import (
@@ -44,15 +45,10 @@ from .services import (
 
 
 def can_bill(user):
-    return user.is_active and user.is_staff and user.has_perm("billing.access_billing")
+    return can(user, BILLING)
 
 
 billing_required = user_passes_test(can_bill, login_url="login")
-
-
-def require_superuser(user):
-    if not user.is_superuser:
-        raise PermissionDenied
 
 
 def report_errors(request, exc):
@@ -247,7 +243,7 @@ def invoice_delete(request, pk):
 @billing_required
 @require_POST
 def invoice_void(request, pk):
-    require_superuser(request.user)
+    require(request.user, MANAGE_BILLING)
     invoice = get_object_or_404(Invoice, pk=pk)
     form = ReasonForm(request.POST)
     try:
@@ -327,8 +323,8 @@ def payment_links_create(request, pk):
         elif outbound.status == OutboundRequest.Status.PREVIEWED:
             messages.info(
                 request,
-                f"{connection.label} is in preview mode, so no link was made. A superuser can "
-                "turn preview mode off on the connection's page.",
+                f"{connection.label} is in preview mode, so no link was made. Someone who "
+                "manages connections and AI can turn preview mode off on the connection's page.",
             )
             break
         else:
@@ -339,7 +335,7 @@ def payment_links_create(request, pk):
 @billing_required
 @require_POST
 def payment_void(request, pk, payment_pk):
-    require_superuser(request.user)
+    require(request.user, MANAGE_BILLING)
     payment = get_object_or_404(Payment, pk=payment_pk, invoice_id=pk)
     try:
         void_payment(payment, request.user, ReasonForm(request.POST).data.get("reason", ""))
@@ -353,7 +349,7 @@ def payment_void(request, pk, payment_pk):
 @billing_required
 @require_http_methods(["GET", "POST"])
 def billing_settings(request):
-    require_superuser(request.user)
+    require(request.user, MANAGE_BILLING)
     billing = BillingSettings.load()
     form = BillingSettingsForm(request.POST or None, instance=billing)
     staff = get_user_model().objects.filter(is_active=True, is_staff=True).order_by("username")

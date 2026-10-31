@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from crm.models import AuditLog
+from crm.roles import IMPORT_RECORDS, MANAGE_CONNECTIONS, can, require
 
 from . import oauth, sign_in
 from .base import (
@@ -47,11 +48,6 @@ staff_required = user_passes_test(
     lambda user: user.is_active and user.is_staff,
     login_url="login",
 )
-
-
-def require_superuser(user):
-    if not user.is_superuser:
-        raise PermissionDenied
 
 
 def monogram(name):
@@ -192,7 +188,9 @@ def connector_detail(request, key):
     is_oauth = isinstance(cls.auth, SIGN_IN_TYPES)
     needs_app = isinstance(cls.auth, OAuthAuth)
     app = ConnectorApp.objects.filter(connector_key=key).first() if needs_app else None
-    may_connect = request.user.is_superuser or cls.connection_scope == ConnectionScope.USER
+    may_connect = (
+        can(request.user, MANAGE_CONNECTIONS) or cls.connection_scope == ConnectionScope.USER
+    )
     form = None
     if may_connect and (app or not needs_app):
         form = ConnectForm(request.POST or None, connector=cls, user=request.user)
@@ -247,7 +245,7 @@ def connector_detail(request, key):
 @staff_required
 @require_POST
 def connector_app(request, key):
-    require_superuser(request.user)
+    require(request.user, MANAGE_CONNECTIONS)
     _, cls = connector_or_404(key)
     if not isinstance(cls.auth, OAuthAuth):
         raise Http404
@@ -305,10 +303,10 @@ def connection_detail(request, pk):
         "config_form": (form := config_form(request, connection)),
         "settings": setting_values(connection, form),
         "sync_runs": connection.sync_runs.all()[:5],
-        # Imports made from a migration connection's records, for superusers to review.
+        # Imports made from a migration connection's records, for importers to review.
         "imports": (
             connection.imports.all()[:5]
-            if request.user.is_superuser and "migration" in connection.enabled_capabilities
+            if can(request.user, IMPORT_RECORDS) and "migration" in connection.enabled_capabilities
             else ()
         ),
         "webhook_events": connection.webhook_events.all()[:5],
@@ -324,7 +322,7 @@ def connection_detail(request, pk):
 @staff_required
 @require_POST
 def connection_acknowledge(request, pk):
-    require_superuser(request.user)
+    require(request.user, MANAGE_CONNECTIONS)
     connection = managed_connection_or_404(request, pk)
     acknowledge_data_flows(connection, request.user)
     messages.success(request, "Recorded your review of what this connection sends and receives.")
@@ -357,7 +355,7 @@ def connection_sync(request, pk):
 @staff_required
 @require_POST
 def connection_settings(request, pk):
-    require_superuser(request.user)
+    require(request.user, MANAGE_CONNECTIONS)
     connection = managed_connection_or_404(request, pk)
     form = ConnectionSettingsForm(request.POST)
     if form.is_valid():
@@ -379,7 +377,7 @@ def connection_settings(request, pk):
 @require_POST
 def connection_ai_use(request, pk):
     """Allow AI features and translation to read a connection's messages, or keep them out."""
-    require_superuser(request.user)
+    require(request.user, MANAGE_CONNECTIONS)
     connection = managed_connection_or_404(request, pk)
     cls = connection.connector_class
     if cls is None or not cls.sharing_limits:

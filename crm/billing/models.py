@@ -120,7 +120,10 @@ class Invoice(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        permissions = [("access_billing", "Can view and manage billing")]
+        permissions = [
+            ("access_billing", "Can view and manage billing"),
+            ("manage_billing", "Can void billing and set rates"),
+        ]
 
     def __str__(self):
         return self.number or f"Draft invoice for {self.contact}"

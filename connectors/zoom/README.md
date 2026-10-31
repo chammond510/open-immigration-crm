@@ -18,7 +18,7 @@ Every request goes through the outbound policy. A new connection starts in previ
 1. A Zoom account admin creates the firm's app in the Zoom App Marketplace (**Develop > Build App**): a **General app**, **user-managed**. Keep it unpublished, or publish it to **Users within my Zoom account** only. An unpublished app works only for members of the firm's own Zoom account.
 2. Under the app's OAuth settings, add the CRM's redirect URL, shown on the connector's page in the CRM: the CRM's own address followed by `/connections/oauth/callback/`.
 3. Under **Scopes**, add `meeting:read:meeting`, `meeting:write:meeting`, `meeting:update:meeting`, and `meeting:delete:meeting`.
-4. In the CRM, a superuser opens **Connections > Zoom** and enters the app's client ID and client secret.
-5. Each staff member then connects their own Zoom account from the same page and signs in to Zoom. A superuser reviews what the connection sends and receives, and turns preview mode off when the firm is ready.
+4. In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) opens **Connections > Zoom** and enters the app's client ID and client secret.
+5. Each staff member then connects their own Zoom account from the same page and signs in to Zoom. Someone who manages connections and AI reviews what the connection sends and receives, and turns preview mode off when the firm is ready.
 
 Zoom does not tell an unpublished app when someone removes it; the connection shows that it needs a new sign-in the next time the CRM uses it.

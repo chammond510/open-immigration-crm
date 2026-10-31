@@ -15,10 +15,10 @@ Sending goes through the outbound policy, like every other send. A new connectio
 ## Setting it up
 
 1. In Documenso, open the team's settings, then **API tokens**, and create a token for the CRM. It starts with `api_`. Tokens belong to a team and act with the role of the person who made them, so make it as a team admin or manager. If it is set to expire, note the date and connect again with a new token before then.
-2. In the CRM, a superuser opens **Connections > Documenso**, enters the token, and, for the firm's own Documenso, its address, such as `https://sign.example.test`. Plain HTTP is accepted only on this computer or the firm's network. The CRM checks the token.
+2. In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) opens **Connections > Documenso**, enters the token, and, for the firm's own Documenso, its address, such as `https://sign.example.test`. Plain HTTP is accepted only on this computer or the firm's network. The CRM checks the token.
 3. On the connection's page, turn on webhooks. Copy the address and the secret the CRM shows.
 4. In Documenso, open the team's settings, then **Webhooks**, add the address, paste the secret, and choose the events **Document signed**, **Document completed**, **Document rejected**, and **Document cancelled**. Webhooks are available for teams.
-5. A superuser reviews what the connection sends and receives, and turns preview mode off.
+5. Someone who manages connections and AI reviews what the connection sends and receives, and turns preview mode off.
 
 ## How deliveries are checked
 

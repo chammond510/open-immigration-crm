@@ -38,6 +38,15 @@ class FirmProfile(models.Model):
 
     class Meta:
         verbose_name = "firm profile"
+        # The firm's own permissions, which roles grant beyond everyday work (see crm.roles).
+        permissions = [
+            ("manage_staff", "Can manage staff"),
+            ("manage_firm_settings", "Can manage firm settings"),
+            ("manage_connections", "Can manage connections and AI"),
+            ("import_records", "Can import records"),
+            ("export_records", "Can export records"),
+            ("delete_records", "Can delete records"),
+        ]
 
     def save(self, *args, **kwargs):
         if self.pk and self.pk != 1:

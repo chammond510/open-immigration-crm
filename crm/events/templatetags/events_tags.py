@@ -1,4 +1,5 @@
 from django import template
+from django.contrib.auth.context_processors import PermWrapper
 
 from crm.connect.base import Capability
 
@@ -18,6 +19,7 @@ def events_panel(context, connection):
         "sends_events": sends,
         "connection": connection,
         "user": context["request"].user,
+        "perms": PermWrapper(context["request"].user),
         "csrf_token": context.get("csrf_token"),
         "groups": [
             {

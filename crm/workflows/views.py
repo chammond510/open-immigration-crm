@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from crm.models import Matter
+from crm.roles import DELETE_RECORDS, MANAGE_FIRM_SETTINGS, permission_required
 
 from .forms import ApplyWorkflowForm, WorkflowTemplateForm
 from .models import MatterPhase, WorkflowTemplate
@@ -19,16 +20,13 @@ from .services import (
 )
 
 staff_required = user_passes_test(lambda user: user.is_active and user.is_staff, login_url="login")
-superuser_required = user_passes_test(
-    lambda user: user.is_active and user.is_superuser, login_url="login"
-)
 
 
 def matter_checklist_url(matter):
     return reverse("matter_detail", args=[matter.pk]) + "#checklist"
 
 
-@superuser_required
+@permission_required(MANAGE_FIRM_SETTINGS)
 @require_GET
 def template_list(request):
     templates = WorkflowTemplate.objects.annotate(
@@ -39,7 +37,7 @@ def template_list(request):
     return render(request, "workflows/template_list.html", {"templates": templates})
 
 
-@superuser_required
+@permission_required(MANAGE_FIRM_SETTINGS)
 @require_http_methods(["GET", "POST"])
 def template_edit(request, pk=None):
     template = get_object_or_404(WorkflowTemplate, pk=pk) if pk else WorkflowTemplate()
@@ -95,7 +93,7 @@ def phase_finish(request, pk):
     return redirect(matter_checklist_url(phase.workflow.matter))
 
 
-@superuser_required
+@permission_required(DELETE_RECORDS)
 @require_POST
 def workflow_remove(request, matter_pk):
     matter = get_object_or_404(Matter, pk=matter_pk)

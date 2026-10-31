@@ -128,7 +128,7 @@ class ApiKeyAuth:
 class OAuthAuth:
     """Staff sign in at the provider; scopes are requested per enabled capability.
 
-    ``app_fields`` are non-secret values a superuser enters with the firm's app
+    ``app_fields`` are non-secret values a connections manager enters with the firm's app
     registration, such as a directory (tenant) ID. The URLs may name them in braces,
     such as ``https://login.example.test/{tenant}/authorize``.
     """
@@ -342,8 +342,8 @@ class Connector:
     reply_window: timedelta | None = None
     # For providers whose terms limit sharing what they bring in with other services: a
     # short note of why. Core then keeps the communications this connector brings in
-    # out of AI features, the MCP server, and translation, unless a superuser allows
-    # it for the connection.
+    # out of AI features, the MCP server, and translation, unless someone who manages
+    # connections allows it for the connection.
     sharing_limits = ""
     # For legal research: what a search can cover, as (value, label) pairs, the first
     # being the default. Core passes the chosen value as the search's ``scope``.

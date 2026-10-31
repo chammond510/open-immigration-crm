@@ -5,13 +5,13 @@ from urllib.parse import urlsplit
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from oauth2_provider.models import AccessToken, Application, RefreshToken
 
+from crm.roles import MANAGE_CONNECTIONS, can, require
 from crm.services import audit
 from crm.two_factor import confirmed_device, firm_requires_two_factor
 
@@ -125,9 +125,9 @@ def connections_for(refresh_tokens):
 def settings_page(request):
     mcp_settings = McpSettings.load()
     form = McpSettingsForm(request.POST or None, instance=mcp_settings)
+    manages = can(request.user, MANAGE_CONNECTIONS)
     if request.method == "POST":
-        if not request.user.is_superuser:
-            raise PermissionDenied
+        require(request.user, MANAGE_CONNECTIONS)
         if form.is_valid():
             mcp_settings = form.save()
             audit(
@@ -143,7 +143,7 @@ def settings_page(request):
         return redirect("mcp_settings")
     live = RefreshToken.objects.filter(revoked__isnull=True, user__isnull=False)
     calls = McpToolCall.objects.select_related("user", "application")
-    if not request.user.is_superuser:
+    if not manages:
         calls = calls.filter(user=request.user)
     return render(
         request,
@@ -154,7 +154,7 @@ def settings_page(request):
             "connector_url": resource_url(request),
             "own_connections": connections_for(live.filter(user=request.user)),
             "other_connections": connections_for(live.exclude(user=request.user))
-            if request.user.is_superuser
+            if manages
             else [],
             "recent_calls": calls[:50],
         },
@@ -164,8 +164,8 @@ def settings_page(request):
 @staff_required
 @require_POST
 def disconnect(request, application_pk, user_pk):
-    if user_pk != request.user.pk and not request.user.is_superuser:
-        raise PermissionDenied
+    if user_pk != request.user.pk:
+        require(request.user, MANAGE_CONNECTIONS)
     application = Application.objects.filter(pk=application_pk).first()
     if application:
         for token in RefreshToken.objects.filter(

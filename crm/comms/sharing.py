@@ -4,8 +4,9 @@ Some providers' terms limit sharing what they bring in with other services, such
 AI models and translation services. Their connectors say so in ``sharing_limits``.
 The communications such a connection brought in are then left out of everything that
 sends text to an AI model or a translation service: the MCP server and the matter
-assistant's tools, task suggestions, consult prep memos, and machine translation. A
-superuser may allow it for one connection, after the firm has weighed the terms.
+assistant's tools, task suggestions, consult prep memos, and machine translation.
+Someone who manages connections may allow it for one connection, after the firm has
+weighed the terms.
 """
 
 from crm.connect.models import Connection

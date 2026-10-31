@@ -144,7 +144,10 @@ def generate(
     """
     ai_settings = AISettings.load()
     if feature != features.CONNECTION_TEST and not ai_settings.feature_on(feature):
-        raise AIUnavailable("This AI feature is off. A superuser can turn it on in AI settings.")
+        raise AIUnavailable(
+            "This AI feature is off. Someone who manages connections and AI can turn it on "
+            "in AI features."
+        )
     if actor is None:
         connection = ai_settings.background_connection
         if connection is None or connection not in firm_ai_connections():
@@ -187,8 +190,9 @@ def generate(
     )
     if outbound.status == OutboundRequest.Status.PREVIEWED:
         raise AIUnavailable(
-            f"{connection.label} is in preview mode, so nothing was sent to the model. A "
-            "superuser can turn preview mode off on the connection's page."
+            f"{connection.label} is in preview mode, so nothing was sent to the model. "
+            "Someone who manages connections and AI can turn preview mode off on the "
+            "connection's page."
         )
     if outbound.status != OutboundRequest.Status.SENT:
         raise AIUnavailable(outbound.error or "The request was not sent.")

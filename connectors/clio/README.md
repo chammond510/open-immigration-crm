@@ -1,6 +1,6 @@
 # Clio Manage
 
-Moves the firm's contacts and matters over from Clio Manage. It only reads from Clio: nothing there is changed. Each fetch becomes an import a superuser reviews before anything is saved, and a later fetch brings only what is new. It is in Beta.
+Moves the firm's contacts and matters over from Clio Manage. It only reads from Clio: nothing there is changed. Each fetch becomes an import someone whose role includes Import reviews before anything is saved, and a later fetch brings only what is new. It is in Beta.
 
 ## What it brings
 
@@ -20,7 +20,7 @@ Only a matter's primary client is brought; Clio's other clients of a matter are 
    - Give it read permission for **Contacts** and **Matters**, and nothing else.
    - For the redirect URI, use the address the CRM shows on **Connections → Clio Manage**.
    - Clio does not review private apps. Registering one means accepting Clio's Developer Terms of Service; read them first, and decide whether they allow the firm's use. This guide is not legal advice.
-2. **In the CRM,** a superuser enters the app's ID and secret on **Connections → Clio Manage**, and chooses the region.
+2. **In the CRM,** someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) enters the app's ID and secret on **Connections → Clio Manage**, and chooses the region.
 3. **Connect and sign in** with a Clio user who can see every contact and matter to bring. Clio's contact visibility settings can hide some from some users.
 4. **Review what the connection receives,** then use **Test connection**.
 

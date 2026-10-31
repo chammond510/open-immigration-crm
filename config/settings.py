@@ -222,12 +222,13 @@ CONNECTOR_FLAGS = frozenset(
 )
 CONNECTOR_WEBHOOK_MAX_BYTES = int(os.environ.get("CONNECTOR_WEBHOOK_MAX_BYTES", str(1024 * 1024)))
 
-# REST API (/api/v1/). It stays off until a superuser turns it on under API access.
+# REST API (/api/v1/). It stays off until someone who manages connections and AI
+# turns it on under API access.
 API_HOURLY_LIMIT = int(os.environ.get("API_HOURLY_LIMIT", "1000"))
 
 # MCP server (/mcp) for Claude and ChatGPT, with django-oauth-toolkit as its
-# authorization server. It stays off until a superuser turns it on under AI
-# assistants. See docs/MCP.md.
+# authorization server. It stays off until someone who manages connections and AI
+# turns it on under AI assistants. See docs/MCP.md.
 MCP_HOURLY_LIMIT = int(os.environ.get("MCP_HOURLY_LIMIT", "1000"))
 # Phone numbers written without a country code are read as this region's (ISO 3166 code).
 PHONE_DEFAULT_REGION = os.environ.get("PHONE_DEFAULT_REGION", "US").upper()

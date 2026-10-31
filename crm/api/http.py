@@ -21,6 +21,7 @@ from crm.customfields.forms import PREFIX as CUSTOM_PREFIX
 from crm.customfields.forms import CustomFieldsMixin
 from crm.customfields.models import active_fields
 from crm.events.context import event_origin
+from crm.roles import BILLING, MANAGE_CONNECTIONS
 from crm.services import client_ip
 from crm.two_factor import confirmed_device, firm_requires_two_factor
 
@@ -54,7 +55,10 @@ def authenticate(request):
     api_settings = ApiSettings.load()
     if not api_settings.enabled:
         raise ApiError(
-            403, "api_disabled", "The API is turned off. A superuser can turn it on in API access."
+            403,
+            "api_disabled",
+            "The API is turned off. Someone who manages connections and AI can turn it on in "
+            "API access.",
         )
     scheme, _, raw_token = request.META.get("HTTP_AUTHORIZATION", "").partition(" ")
     raw_token = raw_token.strip()
@@ -77,8 +81,12 @@ def authenticate(request):
     user = token.user
     if not (user.is_active and user.is_staff):
         raise ApiError(401, "user_inactive", "The token's user can no longer sign in.")
-    if not user.is_superuser and not api_settings.staff_tokens_allowed:
-        raise ApiError(403, "staff_tokens_off", "Only superusers' tokens are accepted.")
+    if not user.has_perm(MANAGE_CONNECTIONS) and not api_settings.staff_tokens_allowed:
+        raise ApiError(
+            403,
+            "staff_tokens_off",
+            "Only tokens of people who manage connections and AI are accepted.",
+        )
     if firm_requires_two_factor() and confirmed_device(user) is None:
         raise ApiError(
             401,
@@ -93,7 +101,7 @@ def require_scope(token, resource, method):
     needed = api_scopes.scope(resource, access)
     if not token.has_scope(needed):
         raise ApiError(403, "missing_scope", f"The token does not have the {needed} scope.")
-    if resource == "billing" and not token.user.has_perm("billing.access_billing"):
+    if resource == "billing" and not token.user.has_perm(BILLING):
         raise ApiError(403, "no_billing_access", "The token's user does not have billing access.")
 
 

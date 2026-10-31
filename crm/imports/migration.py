@@ -2,7 +2,7 @@
 
 A sync of the migration capability brings every contact and matter the connection can
 read. Core leaves out what was imported from that connection before, and turns the
-rest into an import that a superuser reviews and confirms like a spreadsheet: the
+rest into an import that someone who imports reviews and confirms like a spreadsheet: the
 same matching, the same preview, the same report. A matter's row carries its client;
 contacts that are no matter's client get rows of their own. Each row's IDs at the
 provider are kept with the file, so the import can link what it saves, and the next

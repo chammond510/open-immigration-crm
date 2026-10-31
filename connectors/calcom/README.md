@@ -13,7 +13,7 @@ Files consultations booked through Cal.com, on cal.com or on the firm's own self
 ## Setting it up
 
 1. In Cal.com, the account whose event types take consultations creates an API key under **Settings > Developer > API keys**.
-2. In the CRM, a superuser opens **Connections > Cal.com**, pastes the key, reviews what the connection sends and receives, and connects.
+2. In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) opens **Connections > Cal.com**, pastes the key, reviews what the connection sends and receives, and connects.
 3. For a self-hosted Cal.com, set **API address** on the connection's page to the address of its API v2 service, such as `https://cal.example.test/api/v2`. Its API v2 service must be running. Plain HTTP is accepted only on this computer or the firm's own network.
 4. On the connection's page, tick the event types that are consultations, and save.
 5. Turn on webhooks with **Create the webhook in Cal.com** ticked. The CRM creates one webhook on the account for bookings, reschedules, and cancellations, signed with a new secret. Issuing a new address later replaces it, and disconnecting deletes it.

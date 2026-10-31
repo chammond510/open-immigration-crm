@@ -18,13 +18,13 @@ Sends clients payment links for an invoice and records LawPay payments and refun
 ## Setting it up
 
 1. In LawPay, a user with the Administrator or Developer role opens **Settings > Integrations > Add New Application > My Website** (or **Developers > Show Credentials**) and copies the live **secret key**.
-2. In the CRM, a superuser opens **Connections > LawPay**, pastes the secret key, reviews what the connection sends and receives, and connects.
+2. In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) opens **Connections > LawPay**, pastes the secret key, reviews what the connection sends and receives, and connects.
 3. In LawPay, on the **New Charge** page, choose the operating account, then **Actions > Show & Copy Page Link**. Do the same for the trust (IOLTA) account.
 4. On the connection's page, under **Settings**:
    - paste both page addresses;
    - tick which LawPay accounts are trust and which are operating;
    - save.
-5. When the firm is ready, a superuser turns off preview mode so links can be made.
+5. When the firm is ready, someone who manages connections and AI turns off preview mode so links can be made.
 
 ### Webhooks (optional)
 

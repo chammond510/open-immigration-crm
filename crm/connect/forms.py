@@ -1,5 +1,7 @@
 from django import forms
 
+from crm.roles import MANAGE_CONNECTIONS, can
+
 from .base import ApiKeyAuth, Capability, ConnectionScope, ConnectorError
 
 CREDENTIAL_PREFIX = "credential_"
@@ -54,9 +56,9 @@ class ConnectForm(forms.Form):
             self.fields[name].initial = setting.default
             if setting.validate:
                 self.fields[name].validators.append(setting.validate)
-        # Only a superuser can accept a connection's data flows for the firm, and
-        # the acknowledgment comes last, after everything being agreed to.
-        if user.is_superuser:
+        # Only someone who manages connections can accept a connection's data flows
+        # for the firm, and the acknowledgment comes last, after everything agreed to.
+        if can(user, MANAGE_CONNECTIONS):
             self.fields["acknowledge"] = self.fields.pop("acknowledge")
         else:
             del self.fields["acknowledge"]
@@ -158,7 +160,7 @@ class ConnectionSettingsForm(forms.Form):
     )
     outbound_admin_only = forms.BooleanField(
         required=False,
-        label="Only superusers can send through this connection by hand",
+        label="Only people who manage connections and AI can send through this connection by hand",
     )
 
 

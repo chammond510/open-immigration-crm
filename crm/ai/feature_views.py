@@ -35,7 +35,11 @@ def next_url(request, fallback):
 def feature_off(request, feature):
     if AISettings.load().feature_on(feature.key):
         return False
-    messages.error(request, f"{feature.label} is off. A superuser can turn it on in AI features.")
+    messages.error(
+        request,
+        f"{feature.label} is off. Someone who manages connections and AI can turn it on in "
+        "AI features.",
+    )
     return True
 
 

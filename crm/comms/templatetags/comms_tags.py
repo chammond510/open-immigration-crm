@@ -1,4 +1,5 @@
 from django import template
+from django.contrib.auth.context_processors import PermWrapper
 from django.utils import timezone
 
 from ..emailing import email_connections
@@ -64,6 +65,7 @@ def communications_panel(context, contact=None, matter=None):
     return {
         "request": context["request"],
         "user": context["user"],
+        "perms": PermWrapper(context["user"]),
         "contact": contact,
         "matter": matter,
         "communications": communications[:PANEL_LIMIT],

@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from crm.models import Matter
+from crm.roles import DELETE_RECORDS, permission_required
 from crm.search import words_match
 
 from .forms import CaseNoticeForm, StatusCheckForm
@@ -93,11 +94,9 @@ def notice_update(request, pk):
     )
 
 
-@staff_required
+@permission_required(DELETE_RECORDS)
 @require_POST
 def notice_delete(request, pk):
-    if not request.user.is_superuser:
-        raise PermissionDenied
     notice = get_object_or_404(CaseNotice.objects.select_related("matter"), pk=pk)
     matter = notice.matter
     delete_notice(notice, request.user)

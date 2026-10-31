@@ -1,19 +1,15 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
+from crm.roles import MANAGE_FIRM_SETTINGS, permission_required
 from crm.services import audit
 
 from .forms import CustomFieldForm
 from .models import CustomField
 
-superuser_required = user_passes_test(
-    lambda user: user.is_active and user.is_superuser, login_url="login"
-)
 
-
-@superuser_required
+@permission_required(MANAGE_FIRM_SETTINGS)
 @require_GET
 def field_list(request):
     fields = CustomField.objects.all()
@@ -24,7 +20,7 @@ def field_list(request):
     return render(request, "customfields/field_list.html", {"groups": groups})
 
 
-@superuser_required
+@permission_required(MANAGE_FIRM_SETTINGS)
 @require_http_methods(["GET", "POST"])
 def field_edit(request, pk=None):
     field = get_object_or_404(CustomField, pk=pk) if pk else CustomField()

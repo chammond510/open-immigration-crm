@@ -14,8 +14,8 @@ The system can hold names, contact information, birth dates, addresses, national
 - Two-factor sign-in with an authenticator app (TOTP), single-use recovery codes stored only as hashes, replay protection, and a lockout after repeated incorrect codes
 - A firm setting that requires two-factor sign-in for all staff; sessions that skip the second step are signed out
 - Encryption of stored secrets, such as two-factor keys, with keys kept outside the database and support for key rotation
-- Superuser restriction for exports, firm settings, and destructive record/file actions
-- Billing visible only to superusers and staff granted the "Can view and manage billing" permission; voiding invoices or payments and changing rates are superuser-only, and every billing change is audited
+- Roles that grant permissions beyond everyday work: billing, voids and rates, deleting records, imports, exports, firm settings, connections and AI, and managing staff. Four presets (Managing partner, Attorney, Paralegal, Office administrator) are created on install and can be changed in administration; superusers hold every permission (see [Staff and roles](DEPLOYMENT.md#staff-and-roles))
+- Billing visible only to staff whose role includes Billing; voiding invoices or payments and changing rates need Voids and rates, and every billing change is audited
 - CSRF protection on state-changing browser requests
 - Secure/HTTP-only/SameSite cookies and HTTPS redirect/HSTS when production settings are enabled
 - A restrictive content security policy and related browser headers
@@ -28,7 +28,7 @@ The system can hold names, contact information, birth dates, addresses, national
 
 ## Important limitations
 
-- **No tenant isolation.** One deployment is one firm. All staff can access all ordinary CRM records.
+- **No tenant isolation.** One deployment is one firm. All staff can access all ordinary CRM records. Roles limit settings, money, bulk data, deletion, and staff management, not which clients a person can see.
 - **Two-factor sign-in is off until enabled.** Require two-factor sign-in in Firm settings, or put the application behind an identity-aware proxy or VPN with MFA. Staff can also sign in through the firm's identity provider with the OpenID Connect connector; only existing staff accounts can, linked the first time by an email address the provider vouches for, and the CRM's own two-factor step still applies unless the connection is set to accept the provider's reported second factor. Keep a superuser with a password and the CRM's two-factor sign-in for when the provider cannot be reached.
 - **Client records are not encrypted at the field level.** Only stored secrets are. Use encrypted disks/volumes, encrypted database service storage, TLS to the database, and encrypted backups.
 - **The encryption key is only as safe as its storage.** Anyone with both the database and `FIELD_ENCRYPTION_KEYS` can read stored secrets. Keep the key in a secret manager, apart from database backups.
@@ -56,7 +56,7 @@ The system can hold names, contact information, birth dates, addresses, national
 ## Connectors
 
 The connector framework and Connections page are in place, with Beta connectors for USCIS Case Status, Twilio, Dialpad, Calendly, Google Workspace, Microsoft 365, and LawPay. Controls in place:
-- Only superusers can create firm-wide connections, acknowledge data flows, change outbound settings, or enter OAuth app credentials.
+- Only people who manage connections and AI (superusers and the Managing partner preset) can create firm-wide connections, acknowledge data flows, change outbound settings, or enter OAuth app credentials.
 - Staff manage only their own personal connections.
 - A personal connection, such as a staff member's own mailbox and calendar, sends only what its owner sends. The one thing it does on its own is keep the owner's records in step on the owner's account, such as putting their appointments on their calendar. It never runs the firm's automations or sends a message by itself.
 - OAuth sign-in uses PKCE and a single-use, expiring state value.
@@ -64,7 +64,7 @@ The connector framework and Connections page are in place, with Beta connectors 
 
 Connectors change the risk picture in these ways:
 
-- **Data leaves the installation.** Each connector sends data to a provider the firm chooses. The connect screen lists what is sent and received, and a superuser must acknowledge it. The firm remains responsible for evaluating each provider and its data-use terms. Consumer and business AI plans often have different terms.
+- **Data leaves the installation.** Each connector sends data to a provider the firm chooses. The connect screen lists what is sent and received, and someone who manages connections and AI must acknowledge it. The firm remains responsible for evaluating each provider and its data-use terms. Consumer and business AI plans often have different terms.
 - **Some features need public reachability.** Provider webhooks and the MCP endpoint must be reachable from the provider's network. Expose only those paths through the reverse proxy, use polling where a provider supports it, or leave those connectors off.
 - **More credentials to protect.** Connection credentials are stored encrypted, scoped to the capabilities the firm turns on, and deleted on disconnect. Where the provider supports it, disconnecting also revokes them there. They use the same `FIELD_ENCRYPTION_KEYS` encryption as two-factor keys.
 - **Outbound actions are gated.** Sending messages, taking payments, writing calendar events, calling AI models, legal research searches, and sending documents for signature pass an outbound policy and start in preview mode. Calendar events the CRM writes have no attendees, so no invitations go out. A research search sends only the words staff type, and the search box asks them to describe the legal issue rather than the client.
@@ -75,9 +75,9 @@ Connectors change the risk picture in these ways:
 ## AI features
 
 The CRM's own AI features send data to the AI model the firm connects, so they are guarded the same way as other outbound actions:
-- **Off by default.** AI, and each feature, stay off until a superuser turns them on.
+- **Off by default.** AI, and each feature, stay off until someone who manages connections and AI turns them on.
 - **Through the outbound policy.** Every request starts in preview mode on a new connection, is limited per hour, and is logged with the feature, the person, and the connection that paid. Prompts and answers are not logged.
-- **Personal connections stay personal.** A staff member's own AI connection runs only their own requests. Background work runs only through the firm-wide connection a superuser chooses.
+- **Personal connections stay personal.** A staff member's own AI connection runs only their own requests. Background work runs only through the firm-wide connection that someone who manages connections and AI chooses.
 - **No subscription credentials.** The Anthropic connector takes only Claude Console API keys and refuses anything else. Anthropic does not permit apps to use Claude.ai credentials. The ChatGPT plan connector is the one subscription path, behind a flag until OpenAI confirms this use. Each staff member signs in to their own plan, which runs only their own requests. The CRM checks the sign-in's ID token against OpenAI's published keys and accepts a pasted sign-in address only for the expected loopback address and a sign-in this CRM started in the last ten minutes.
 - **Less kept at providers.** OpenAI requests are sent with `store: false`. OpenRouter requests always deny data collection by the providers it routes to. A model the firm runs itself keeps everything local.
 - **Records are data.** Records hold text written by clients and other parties, which could try to instruct the model. Every feature's instructions say to treat records and tool results as data, and tool results are marked as untrusted.
@@ -87,7 +87,7 @@ The CRM's own AI features send data to the AI model the firm connects, so they a
 ## AI assistants (MCP)
 
 The MCP server gives an assistant the access of the staff member who approved it, so its defaults are cautious:
-- **Off by default.** The server and its write tools are off until a superuser turns them on.
+- **Off by default.** The server and its write tools are off until someone who manages connections and AI turns them on.
 - **Signing in.** Each person signs in with their own account, including the two-factor sign-in the firm requires, and approves each assistant on a consent page that names where it returns.
 - **Tokens.** Tokens are bound to `/mcp`, stored only as hashes, last an hour, and renew for up to 30 days. Each one can be disconnected at once.
 - **Writes.** Write tools are marked so Claude and ChatGPT ask before each one. Nothing can be deleted.
@@ -98,8 +98,8 @@ The assistant itself, and its vendor's data terms, are outside the CRM's control
 ## Outbound webhooks
 
 Automation events leave the installation, so the defaults are cautious:
-- **Nothing is sent until a superuser chooses events.** New connections start in preview mode, and every delivery passes the outbound policy.
-- **IDs and links by default.** Events carry IDs and links. Full records, which can include client details and intake answers, are sent only if a superuser chooses that.
+- **Nothing is sent until someone who manages connections and AI chooses events.** New connections start in preview mode, and every delivery passes the outbound policy.
+- **IDs and links by default.** Events carry IDs and links. Full records, which can include client details and intake answers, are sent only if someone who manages connections and AI chooses that.
 - **Signed.** Each delivery is signed with a per-connection secret, which is stored encrypted.
 - **Address rules.** Addresses must use HTTPS except for hosts on the firm's own network, and redirects are not followed.
 - **Payloads are deleted.** Queued payloads are encrypted and deleted once each delivery settles.
@@ -107,8 +107,8 @@ Automation events leave the installation, so the defaults are cautious:
 ## API tokens
 
 An API token is a bearer credential that acts as one staff member without two-factor sign-in, so the API's defaults are cautious:
-- **Off by default.** The API is off until a superuser turns it on.
-- **Superusers only by default.** Only superusers can create tokens unless a superuser allows staff tokens.
+- **Off by default.** The API is off until someone who manages connections and AI turns it on.
+- **Connection managers only by default.** Only people who manage connections and AI can create or use tokens unless one of them allows staff tokens.
 - **Limited.** Every token is scoped to the records it needs, expires within a year, and can be revoked at once.
 - **Hashed.** Only a SHA-256 hash of each token is stored.
 - **Logged.** Every request is logged, without query strings or bodies.

@@ -19,9 +19,10 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Private PDF, DOCX, PNG, and JPEG document storage
 - Blank intake-form builder with expiring, revocable, single-use links
 - Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff
-- A JSON API for scripts and automation tools, off until a superuser turns it on, with scoped, expiring, revocable tokens and a log of every request (see [API](docs/API.md))
+- Roles for a small firm's staff: Managing partner, Attorney, Paralegal, and Office administrator presets decide who handles billing, voids, deletion, imports, exports, firm settings, connections and AI, and staff, while everyone keeps everyday access to contacts, matters, and work (see [Staff and roles](docs/DEPLOYMENT.md#staff-and-roles))
+- A JSON API for scripts and automation tools, off until someone who manages connections and AI turns it on, with scoped, expiring, revocable tokens and a log of every request (see [API](docs/API.md))
 - Signed outbound webhooks for automation tools: the firm chooses which CRM events are sent, and each one is retried and recorded (see [Outbound webhooks](docs/WEBHOOKS.md))
-- An MCP server so staff can work with the CRM from Claude or ChatGPT on their own plans. It is off until a superuser turns it on. Each person signs in as themselves, read tools come first, and write tools need a superuser's approval and the person's confirmation (see [AI assistants](docs/MCP.md)).
+- An MCP server so staff can work with the CRM from Claude or ChatGPT on their own plans. It is off until someone who manages connections and AI turns it on. Each person signs in as themselves, read tools come first, and write tools must be turned on separately and need the person's confirmation (see [AI assistants](docs/MCP.md)).
 - An operating dashboard built only from CRM data:
   - intake by stage, with lead sources from a custom field;
   - matters by status, case type, and workflow phase;
@@ -44,7 +45,7 @@ The **Connections** page lists the services the CRM can connect to; see the [con
 
 - **Optional.** Nothing is connected on a new installation, and every feature keeps a manual path.
 - **Provider-neutral.** Core code talks to a capability such as "phone" or "payments", and each provider is an adapter in `connectors/`. Core never imports provider code; `scripts/check_scope.sh` enforces this.
-- **Explicit about data.** Each connector states what it sends and receives, and a superuser acknowledges that before turning it on.
+- **Explicit about data.** Each connector states what it sends and receives, and someone who manages connections and AI acknowledges that before turning it on.
 - **Cautious by default.** Anything a connector would send out starts in preview mode, and AI features are opt-in and off by default.
 
 The connector framework, background worker, webhooks, and Connections page are in place. Connectors so far:
@@ -55,7 +56,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **Twilio** (Beta) files incoming texts and STOP replies, and can log the firm's Twilio calls on the right contact.
 - **WhatsApp Business** (Beta) sends and receives WhatsApp messages through the firm's own WhatsApp Business Platform number, with the account's approved templates outside WhatsApp's 24-hour window (see [the setup guide](connectors/whatsapp_business/README.md)).
 - With Dialpad, Twilio, or WhatsApp Business connected, staff can send texts from contact and matter pages. Each text passes the outbound policy, and its delivery status is shown.
-- **AI models** (Beta): Anthropic, OpenAI, OpenRouter, or any OpenAI-compatible endpoint, including a model the firm runs itself. Behind a flag, staff can also use their own ChatGPT plan through Sign in with ChatGPT, until OpenAI confirms this use. They power consult prep memos, task suggestions that staff accept or dismiss, and a matter assistant whose changes wait for confirmation and whose drafts are never sent. AI features stay off until a superuser turns them on, and every request is logged with the connection that paid for it (see [AI features](docs/AI.md)).
+- **AI models** (Beta): Anthropic, OpenAI, OpenRouter, or any OpenAI-compatible endpoint, including a model the firm runs itself. Behind a flag, staff can also use their own ChatGPT plan through Sign in with ChatGPT, until OpenAI confirms this use. They power consult prep memos, task suggestions that staff accept or dismiss, and a matter assistant whose changes wait for confirmation and whose drafts are never sent. AI features stay off until someone who manages connections and AI turns them on, and every request is logged with the connection that paid for it (see [AI features](docs/AI.md)).
 - **LawPay** (Beta) makes payment links for invoices, with advances paid into trust and earned fees into operating, and records LawPay payments and refunds on the invoice.
 - **Stripe** (Beta) makes payment links for invoices and records payments and refunds. Each Stripe account pays into one account, operating by default, because Stripe takes its fees from each payment (see [the setup guide](connectors/stripe/README.md) before using one for trust).
 - **Calendly** (Beta) files consultations booked through Calendly: the contact is matched or created, the consult appointment is made, reschedules and cancellations follow, and the booking link's tracking can fill the lead source.
@@ -64,7 +65,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **DeepL** (Beta) translates client messages and intake answers when staff ask, kept beside the originals and labelled as machine translations. It needs a DeepL API Pro key, because DeepL's Free terms forbid personal data (see [the setup guide](connectors/deepl/README.md)). With AI features on, the firm's AI connection can translate too.
 - **USPS** (Beta) tracks filing packages sent by USPS and notes their delivery, or any problem, on the matter. USPS shares tracking only for packages labelled under the firm's own Mailer ID; others are updated by hand (see [the setup guide](connectors/usps/README.md)).
 - **UPS** and **FedEx** (Beta) track filing packages sent by UPS or FedEx the same way, with the firm's own developer app or project (see the [UPS](connectors/ups/README.md) and [FedEx](connectors/fedex/README.md) setup guides).
-- **Clio Manage** (Beta) moves contacts and matters over from Clio, read-only: each fetch becomes an import a superuser reviews before anything is saved, and a later fetch brings only what is new (see [the setup guide](connectors/clio/README.md)).
+- **Clio Manage** (Beta) moves contacts and matters over from Clio, read-only: each fetch becomes an import that someone whose role includes Import reviews before anything is saved, and a later fetch brings only what is new (see [the setup guide](connectors/clio/README.md)).
 - **BIA Edge** (Beta) searches immigration case law, unpublished decisions, statutes, and policy manuals from a matter, through the firm's own BIA Edge API key. Staff save the authorities that matter to the matter, with citations, source links, and a note. Without a research service, staff can add authorities by hand.
 - **CourtListener** (Beta) searches case law from the Free Law Project, including the federal courts of appeals, the Supreme Court, and the Board of Immigration Appeals. Each staff member connects their own CourtListener account, as its terms require.
 - **Google Workspace** and **Microsoft 365** (Beta) connect each staff member's Gmail and Google Calendar, or Outlook mail and calendar. Their email with clients is filed on the right contact, they can send email from contact pages, and their appointments are kept in step with their calendar.

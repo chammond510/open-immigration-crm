@@ -61,7 +61,7 @@ Zapier cannot keep a secret out of a Zap. The signing secret goes into a code st
 ## Website form leads
 
 1. **Trigger:** the form app's own Zapier trigger, such as a new form entry from the firm's WordPress form plugin.
-2. **In the CRM**, a superuser opens **Connections → Website form**, copies the signing secret, and connects. On the connection's page, turn on webhooks and copy the address.
+2. **In the CRM**, someone who manages connections and AI opens **Connections → Website form**, copies the signing secret, and connects. On the connection's page, turn on webhooks and copy the address.
 3. **Action: Code by Zapier → Run JavaScript.** Under **Input Data**:
    - Map `name`, `email`, `phone`, `message`, and, if the form tracks it, `source` from the form's fields.
    - Add `secret`, the signing secret, typed in.

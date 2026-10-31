@@ -44,7 +44,7 @@ The workflow keeps no copy of runs that succeed, because submissions carry clien
 
 Set it up:
 
-1. **In the CRM**, a superuser opens **Connections → Website form**, copies the signing secret, and connects. On the connection's page, turn on webhooks and copy the address.
+1. **In the CRM**, someone who manages connections and AI opens **Connections → Website form**, copies the signing secret, and connects. On the connection's page, turn on webhooks and copy the address.
 2. **In n8n,** set up the three nodes:
    - On **Website form**, create a **Header Auth** credential with a header name, such as `X-Form-Key`, and a long random value.
    - In **Sign for the CRM**, paste the secret in place of `PASTE_THE_SIGNING_SECRET`. Change the field names on the right of `submission` to the names the form sends.

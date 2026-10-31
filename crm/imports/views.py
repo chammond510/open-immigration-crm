@@ -6,8 +6,9 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from crm.roles import IMPORT_RECORDS, permission_required
 from crm.services import audit
-from crm.views import csv_safe, superuser_required
+from crm.views import csv_safe
 
 from .forms import ColumnsForm, UploadForm
 from .models import SpreadsheetImport
@@ -61,7 +62,7 @@ def preparing(request, pk):
     return spreadsheet, None
 
 
-@superuser_required
+@permission_required(IMPORT_RECORDS)
 @require_http_methods(["GET", "POST"])
 def import_list(request):
     purge_uploads()
@@ -93,7 +94,7 @@ def import_list(request):
     )
 
 
-@superuser_required
+@permission_required(IMPORT_RECORDS)
 @require_GET
 def import_template(request):
     response = csv_response("contacts-and-matters-template.csv")
@@ -101,7 +102,7 @@ def import_template(request):
     return response
 
 
-@superuser_required
+@permission_required(IMPORT_RECORDS)
 @require_http_methods(["GET", "POST"])
 def import_columns(request, pk):
     spreadsheet, elsewhere = preparing(request, pk)
@@ -125,7 +126,7 @@ def import_columns(request, pk):
     )
 
 
-@superuser_required
+@permission_required(IMPORT_RECORDS)
 @require_http_methods(["GET", "POST"])
 def import_preview(request, pk):
     spreadsheet, elsewhere = preparing(request, pk)
@@ -157,7 +158,7 @@ def import_preview(request, pk):
     )
 
 
-@superuser_required
+@permission_required(IMPORT_RECORDS)
 @require_GET
 def import_report(request, pk):
     spreadsheet = get_object_or_404(SpreadsheetImport.objects.select_related("created_by"), pk=pk)
@@ -166,7 +167,7 @@ def import_report(request, pk):
     return render(request, "imports/import_report.html", {"spreadsheet": spreadsheet})
 
 
-@superuser_required
+@permission_required(IMPORT_RECORDS)
 @require_GET
 def import_skipped(request, pk):
     """The skipped rows as they were in the file, with the reason for each, to fix and retry."""
@@ -189,7 +190,7 @@ def import_skipped(request, pk):
     return response
 
 
-@superuser_required
+@permission_required(IMPORT_RECORDS)
 @require_POST
 def import_discard(request, pk):
     """Delete an import that was never confirmed, or an imported one's file."""

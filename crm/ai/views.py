@@ -1,9 +1,9 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
+from crm.roles import MANAGE_CONNECTIONS, can, permission_required, require
 from crm.services import audit
 
 from . import features
@@ -20,9 +20,9 @@ TEST_PROMPT = "This is a connection check. Reply with the single word: ready."
 def settings_page(request):
     ai_settings = AISettings.load()
     form = AISettingsForm(request.POST or None, ai_settings=ai_settings)
+    manages = can(request.user, MANAGE_CONNECTIONS)
     if request.method == "POST":
-        if not request.user.is_superuser:
-            raise PermissionDenied
+        require(request.user, MANAGE_CONNECTIONS)
         if form.is_valid():
             ai_settings.enabled = form.cleaned_data["enabled"]
             ai_settings.background_connection = form.cleaned_data["background_connection"]
@@ -40,7 +40,7 @@ def settings_page(request):
             )
         return redirect("ai_settings")
     requests = AIRequest.objects.select_related("connection", "actor")
-    if not request.user.is_superuser:
+    if not manages:
         requests = requests.filter(actor=request.user)
     requests = list(requests[:50])
     for item in requests:
@@ -67,12 +67,10 @@ def settings_page(request):
     )
 
 
-@staff_required
+@permission_required(MANAGE_CONNECTIONS)
 @require_POST
 def connection_test(request):
     """Send a fixed prompt with no client data, to check a connection works."""
-    if not request.user.is_superuser:
-        raise PermissionDenied
     form = ConnectionTestForm(request.POST, user=request.user)
     if not form.is_valid():
         messages.error(request, "Choose an AI connection to test.")

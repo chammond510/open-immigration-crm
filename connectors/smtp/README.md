@@ -10,14 +10,14 @@ Lets the CRM email clients itself, through the firm's mail server or an email de
 - **The email.** Plain text, from the firm's address and name, with an optional Reply-To address. It is marked `Auto-Submitted: auto-generated`, so mail servers do not send automatic replies back.
 - **Security.** The connection always uses TLS, with the server's certificate checked: STARTTLS (usually port 587) or SSL from the start (usually port 465). Plain, unencrypted connections are not offered.
 
-Every email goes through the outbound policy, like every other send. A new connection starts in preview mode, so nothing is emailed until a superuser turns preview mode off.
+Every email goes through the outbound policy, like every other send. A new connection starts in preview mode, so nothing is emailed until someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) turns preview mode off.
 
 ## Setting it up
 
 1. In the email service, verify the address or domain the CRM will send from. Services refuse mail from addresses they have not verified.
 2. Create SMTP credentials for the CRM (see the table below).
 3. In the CRM, open **Connections > SMTP server**. Enter the sign-in name and password, the server, port and security, and the address to send from. Optionally, enter a sender name and the address replies should go to. The CRM signs in to the server to check the details.
-4. A superuser reviews what the connection sends and receives before it is used. Turn preview mode off when the firm is ready for the CRM to email clients.
+4. Someone who manages connections and AI reviews what the connection sends and receives before it is used. Turn preview mode off when the firm is ready for the CRM to email clients.
 
 The firm needs only one SMTP connection. If it has more than one, the oldest active one sends.
 

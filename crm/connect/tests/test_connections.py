@@ -169,6 +169,8 @@ class OutboundPolicyTests(TestCase):
         staff = make_user("paralegal", superuser=False)
         self.assertEqual(self.decide(actor=staff), Codes.ADMIN_ONLY)
         self.assertEqual(self.decide(actor=self.user), Codes.OK)
+        partner = make_user("partner", role="Managing partner")
+        self.assertEqual(self.decide(actor=partner), Codes.OK)
         self.assertEqual(self.decide(actor=None, is_automation=True), Codes.OK)
 
     @override_settings(CONNECTORS_OUTBOUND_HOURLY_LIMIT=1)

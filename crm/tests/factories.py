@@ -1,22 +1,27 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 
 from crm.models import Contact, Matter
 
 
-def make_user(username="attorney", *, superuser=True):
+def make_user(username="attorney", *, superuser=True, role=None):
+    """A superuser by default; staff with only everyday work, or with ``role``, otherwise."""
     User = get_user_model()
-    if superuser:
+    if superuser and role is None:
         return User.objects.create_superuser(
             username=username,
             email=f"{username}@example.test",
             password="Testing-Password-Only-42!",
         )
-    return User.objects.create_user(
+    user = User.objects.create_user(
         username=username,
         email=f"{username}@example.test",
         password="Testing-Password-Only-42!",
         is_staff=True,
     )
+    if role:
+        user.groups.add(Group.objects.get(name=role))
+    return user
 
 
 def make_contact(owner=None, *, first_name="Amina", last_name="Example", **kwargs):

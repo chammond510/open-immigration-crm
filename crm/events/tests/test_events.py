@@ -324,11 +324,10 @@ class EventSettingsTests(EventTestCase):
         staff = make_user("paralegal", superuser=False)
         self.client.force_login(staff)
         page = self.client.get(reverse("connection_detail", args=[self.connection.pk]))
-        self.assertContains(page, "Chosen by a superuser.")
+        self.assertContains(page, "Chosen by someone who manages connections and AI.")
         self.assertContains(page, "A matter&#x27;s status changes")
         response = self.client.post(reverse("connection_events", args=[self.connection.pk]))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/login/", response["Location"])
+        self.assertEqual(response.status_code, 403)
 
     def test_connections_without_automation_are_refused(self):
         self.connection.enabled_capabilities = []

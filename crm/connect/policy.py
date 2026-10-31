@@ -6,6 +6,8 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
+from crm.roles import MANAGE_CONNECTIONS
+
 from .base import Capability, ConnectorError
 from .models import Connection, OutboundRequest
 
@@ -61,7 +63,8 @@ def evaluate(connection, *, capability, actor=None, is_automation=False, target=
         return Decision(
             False,
             Codes.NOT_ACKNOWLEDGED,
-            "A superuser must review what this connection sends before it is used.",
+            "Someone who manages connections and AI must review what this connection sends "
+            "before it is used.",
         )
     is_owner = actor is not None and actor.pk == connection.owner_id
     if (
@@ -75,9 +78,15 @@ def evaluate(connection, *, capability, actor=None, is_automation=False, target=
             "A personal connection runs only its owner's own requests, and automations only "
             "to keep the owner's own records in step.",
         )
-    if connection.outbound_admin_only and not is_automation and not (actor and actor.is_superuser):
+    if (
+        connection.outbound_admin_only
+        and not is_automation
+        and not (actor and actor.has_perm(MANAGE_CONNECTIONS))
+    ):
         return Decision(
-            False, Codes.ADMIN_ONLY, "Only superusers can send through this connection."
+            False,
+            Codes.ADMIN_ONLY,
+            "Only people who manage connections and AI can send through this connection.",
         )
     if capability == Capability.TEXTING and texting_opted_out(target):
         return Decision(False, Codes.RECIPIENT_OPTED_OUT, "The recipient opted out of texts.")

@@ -16,8 +16,8 @@ Every copy goes through the outbound policy. A new connection starts in preview 
 1. **A Google Cloud app for the firm.** In the Google Cloud console, in a project owned by the firm's Google Workspace organization, enable the Google Drive API. Under **Google Auth Platform**, set the audience to **Internal** and add the scope `https://www.googleapis.com/auth/drive`. Create an **OAuth client ID** of type **Web application** with the redirect URI shown on the connector's page in the CRM.
 2. **The account to connect.** Copies are made by the account that signs in, and the `drive` scope lets that account's token reach everything that account can see in Drive. Use a dedicated Workspace account for the CRM that can see only the firm's shared drive for client documents, with the **Content manager** role there, which it needs to move copies to the trash.
 3. **The folder.** In that shared drive, make a folder for matter folders and copy its link.
-4. **Connect.** In the CRM, a superuser opens **Connections > Google Drive**, enters the app's client ID and secret, pastes the folder's link, and signs in as the dedicated account. The CRM checks that it can add files to the folder and move them to the trash.
-5. A superuser reviews what the connection sends and receives, and turns preview mode off.
+4. **Connect.** In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) opens **Connections > Google Drive**, enters the app's client ID and secret, pastes the folder's link, and signs in as the dedicated account. The CRM checks that it can add files to the folder and move them to the trash.
+5. Someone who manages connections and AI reviews what the connection sends and receives, and turns preview mode off.
 
 If the firm's Workspace admin limits which apps can use Google Drive, the admin marks the app as trusted, or allows trusted internal apps, in the Admin console.
 

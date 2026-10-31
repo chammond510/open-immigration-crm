@@ -2,7 +2,7 @@
 {% load billing_tags connect_tags %}
 {% block title %}Billing · Open Immigration CRM{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">Billing</p><h1>Invoices</h1><p>{{ outstanding|money:currency }} outstanding{% if overdue_count %} · <span class="danger-text">{{ overdue_count }} overdue</span>{% endif %}</p></div><div class="actions">{% if user.is_superuser %}<a class="button" href="{% url 'billing_settings' %}">Billing settings</a>{% endif %}<a class="button primary" href="{% url 'invoice_create' %}">New invoice</a></div></div>
+<div class="page-heading"><div><p class="eyebrow">Billing</p><h1>Invoices</h1><p>{{ outstanding|money:currency }} outstanding{% if overdue_count %} · <span class="danger-text">{{ overdue_count }} overdue</span>{% endif %}</p></div><div class="actions">{% if perms.billing.manage_billing %}<a class="button" href="{% url 'billing_settings' %}">Billing settings</a>{% endif %}<a class="button primary" href="{% url 'invoice_create' %}">New invoice</a></div></div>
 <div class="prompt-stack page-prompts">{% connect_prompt "payments" "to accept card and bank payments" %}</div>
 <form class="filter-bar" method="get">
   <label class="sr-only" for="invoice-q">Search invoices</label><input id="invoice-q" type="search" name="q" value="{{ query }}" placeholder="Invoice number, client, or matter">

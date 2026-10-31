@@ -18,7 +18,7 @@ Files consultations booked through the firm's Calendly organization. The contact
    - `event_types:read`
    - `scheduled_events:read`
    - `webhooks:write`
-3. In the CRM, a superuser opens **Connections > Calendly**, pastes the token, reviews what the connection sends and receives, and connects.
+3. In the CRM, someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) opens **Connections > Calendly**, pastes the token, reviews what the connection sends and receives, and connects.
 4. On the connection's page, under **Settings**, tick the event types that are consultations. Optionally choose the contact field to fill and which tracking value to use. Save.
 5. Turn on webhooks with **Create the organization webhook in Calendly** ticked. The CRM creates one organization webhook for bookings and cancellations, signed with a new secret. Issuing a new address later replaces it; disconnecting deletes it.
 

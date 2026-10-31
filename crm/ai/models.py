@@ -12,7 +12,7 @@ class AISettings(models.Model):
         default=False,
         help_text="While off, no AI feature runs and nothing is sent to an AI model.",
     )
-    # Feature key -> True when a superuser turned that feature on.
+    # Feature key -> True when someone who manages connections turned that feature on.
     features = models.JSONField(default=dict, blank=True)
     background_connection = models.ForeignKey(
         "connect.Connection",

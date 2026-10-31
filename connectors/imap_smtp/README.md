@@ -17,7 +17,7 @@ For Gmail or Outlook, use the **Google Workspace** or **Microsoft 365** connecto
 1. In your mail provider's security settings, create an **app password** for this CRM. Your usual password is not used, and two-step sign-in can stay on. Most providers that support IMAP offer app passwords; some call them app-specific or device passwords.
 2. Find your provider's IMAP and SMTP server names in its help pages. IMAP is usually port 993 with SSL. SMTP is usually port 465 with SSL, or port 587 with STARTTLS.
 3. In the CRM, open **Connections > IMAP and SMTP email**, enter your address, the app password, and the server details, and connect. The CRM signs in to both servers to check them.
-4. A superuser reviews what the connection sends and receives before it is used. A new connection starts in preview mode, so no email is sent until preview mode is turned off.
+4. Someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) reviews what the connection sends and receives before it is used. A new connection starts in preview mode, so no email is sent until preview mode is turned off.
 5. If your sent folder has an unusual name, enter it under **Sent folder**. Otherwise the folder your server marks as Sent is used.
 
 Each staff member connects their own mailbox; nobody else can send from it.

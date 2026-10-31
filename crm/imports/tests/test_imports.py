@@ -413,9 +413,9 @@ class SkippedRowsAndFilesTests(ImportCase):
         self.assertContains(page, "This is not a CSV file.")
         self.assertFalse(SpreadsheetImport.objects.exists())
 
-    def test_only_superusers_import(self):
+    def test_only_people_who_may_import_import(self):
         self.client.force_login(make_user("paralegal", superuser=False))
         for name in ("import_list", "import_template"):
-            answer = self.client.get(reverse(name))
-            self.assertEqual(answer.status_code, 302)
-            self.assertIn(reverse("login"), answer["Location"])
+            self.assertEqual(self.client.get(reverse(name)).status_code, 403)
+        self.client.force_login(make_user("office", role="Office administrator"))
+        self.assertEqual(self.client.get(reverse("import_list")).status_code, 200)

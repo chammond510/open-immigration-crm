@@ -101,7 +101,10 @@ def authorization_url(request, connection):
         raise ValidationError("This connection does not sign in with OAuth.")
     app = ConnectorApp.objects.filter(connector_key=cls.key).first()
     if app is None:
-        raise ValidationError(f"A superuser must first enter the firm's {cls.name} app details.")
+        raise ValidationError(
+            f"Someone who manages connections and AI must first enter the firm's {cls.name} "
+            "app details."
+        )
     state, challenge, _ = remember(request, connection)
     query = {
         "response_type": "code",

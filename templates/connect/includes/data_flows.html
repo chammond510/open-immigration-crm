@@ -1,5 +1,5 @@
 <section class="panel">
-  <div class="section-heading"><div><h2>What this connection sends and receives</h2><p>Version {{ flows.version }}. A superuser reviews this before the connection is used, and again whenever it changes.</p></div></div>
+  <div class="section-heading"><div><h2>What this connection sends and receives</h2><p>Version {{ flows.version }}. Someone who manages connections and AI reviews this before the connection is used, and again whenever it changes.</p></div></div>
   <div class="two-column flows">
     <div><h3>Sends from the CRM</h3>{% if flows.sends %}<ul>{% for item in flows.sends %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Nothing.</p>{% endif %}</div>
     <div><h3>Receives into the CRM</h3>{% if flows.receives %}<ul>{% for item in flows.receives %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">Nothing.</p>{% endif %}</div>

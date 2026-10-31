@@ -1,4 +1,4 @@
-"""Translation through an AI connection, when staff ask and a superuser has turned it on.
+"""Translation through an AI connection, when staff ask and it has been turned on.
 
 The model gets the texts as data, with the rule that nothing in them is an
 instruction, and returns one translation per text with the language it was in.

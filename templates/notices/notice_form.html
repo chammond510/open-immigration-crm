@@ -11,7 +11,7 @@
     </div>
     <div class="form-actions"><button class="button primary" type="submit">{% if notice %}Save notice{% else %}Log notice{% endif %}</button><a class="button" href="{% url 'matter_detail' matter.pk %}#notices">Cancel</a></div>
   </form>
-  {% if notice and user.is_superuser %}
+  {% if notice and perms.crm.delete_records %}
     <form method="post" action="{% url 'notice_delete' notice.pk %}" class="panel stacked-form" data-confirm="Delete this notice? Its open deadline and appointment will be removed too.">{% csrf_token %}
       <div><h2>Delete notice</h2><p class="muted">Completed work items are kept.</p></div>
       <div class="form-actions"><button class="button danger" type="submit">Delete notice</button></div>

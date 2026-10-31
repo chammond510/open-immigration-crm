@@ -79,6 +79,25 @@ python manage.py bootstrap_admin \
 
 Do not put the password in reusable shell history. Change it immediately if the platform logs command arguments.
 
+## Staff and roles
+
+Every active staff account sees and works with every contact, matter, and work item. A role adds what goes beyond that everyday work. Roles are Django groups, and the CRM creates four presets:
+
+| Permission | What it allows | Managing partner | Attorney | Paralegal | Office administrator |
+|---|---|:-:|:-:|:-:|:-:|
+| Billing | Invoices, payments, and payment plans | ✓ | ✓ | | ✓ |
+| Voids and rates | Void invoices and payments, and set billing rates | ✓ | | | ✓ |
+| Delete records | Delete documents, communications, notices, time entries, and matter parties, and remove a workflow from a matter | ✓ | ✓ | | ✓ |
+| Import | Import contacts and matters | ✓ | | | ✓ |
+| Export | Download every contact and matter as a spreadsheet | ✓ | | | |
+| Firm settings | Firm settings, workflows, and custom fields | ✓ | | | ✓ |
+| Connections and AI | Firm connections, AI features, AI assistants, and the API | ✓ | | | |
+| Manage staff | Add people, change their roles, and deactivate accounts | ✓ | | | ✓ |
+
+Superusers hold every permission, and only they see **Administration**. The first administrator is a superuser. A superuser gives someone a role under **Administration → Users → the user → Groups**. To change a preset or add a role of your own, edit it under **Administration → Groups**; the permissions are listed under "crm | firm profile" and "billing | invoice". Staff who open a page their role does not include see a page that says so.
+
+Upgrading creates the presets and changes nobody's access: existing staff have no role, and so only everyday work, until someone gives them one, and billing access granted to a person directly is kept.
+
 ## Sign-in lockout
 
 Repeated failed sign-ins lock the username and client address pair for a cooling-off period (default: five failures, fifteen minutes; tune with `AXES_FAILURE_LIMIT` and `AXES_COOLOFF_MINUTES`). Clear a lockout early with:
@@ -91,7 +110,7 @@ Lockout tracking uses the same proxy-aware client address as the audit log, so t
 
 ## Two-factor sign-in
 
-Each user can turn on two-factor sign-in under **Two-factor sign-in** in the sidebar, using any authenticator app. A superuser can require it for all staff in **Firm settings**; staff without it are then sent to set it up before they can use the CRM. Five incorrect codes in a row lock the second step for the same cooling-off period as a password lockout (tune with `TWO_FACTOR_FAILURE_LIMIT`).
+Each user can turn on two-factor sign-in under **Two-factor sign-in** in the sidebar, using any authenticator app. Someone who manages firm settings can require it for all staff in **Firm settings**; staff without it are then sent to set it up before they can use the CRM. Five incorrect codes in a row lock the second step for the same cooling-off period as a password lockout (tune with `TWO_FACTOR_FAILURE_LIMIT`).
 
 If someone loses their phone and their recovery codes, reset their two-factor sign-in from the console, or delete their entry under **Two-factor devices** in administration:
 
@@ -113,11 +132,11 @@ The Compose file runs it as the `worker` service, using the same image and envir
 
 ## Billing access
 
-Billing is visible to superusers and to staff given the **Can view and manage billing** permission (Administration → Users → the user → Permissions, or a group). Superusers set the firm default rate, staff rates, payment terms, and payment instructions under **Billing → Billing settings**.
+Billing is visible to staff whose role includes **Billing** (the "Can view and manage billing" permission), which the Managing partner, Attorney, and Office administrator presets do. Staff whose role includes **Voids and rates** void invoices and payments and set the firm default rate, staff rates, payment terms, and payment instructions under **Billing → Billing settings**.
 
 ## Connecting services
 
-Superusers connect firm-wide services on the **Connections** page; staff can connect services that are personal to them, such as their own calendar. For providers that use OAuth sign-in, a superuser first registers the firm's own app in the provider's developer console. The connector's page shows the exact redirect URI to enter there (`https://<your-host>/connections/oauth/callback/`); that URI must be reachable by staff browsers, not by the provider. The fictional example connectors appear in the catalog only when `CONNECTORS_SHOW_HIDDEN=true`, which defaults to on only with `DEBUG=true`. Beta connectors that wait on a provider's confirmation are offered only when their flag is listed in `CONNECTOR_FLAGS`, separated by commas: `CONNECTOR_FLAGS=chatgpt_plan` offers the ChatGPT plan connector (see [AI features](AI.md)). Removing a flag stops that connector's connections.
+Staff whose role includes **Connections and AI** connect firm-wide services on the **Connections** page; all staff can connect services that are personal to them, such as their own calendar. For providers that use OAuth sign-in, someone who manages connections and AI first registers the firm's own app in the provider's developer console. The connector's page shows the exact redirect URI to enter there (`https://<your-host>/connections/oauth/callback/`); that URI must be reachable by staff browsers, not by the provider. The fictional example connectors appear in the catalog only when `CONNECTORS_SHOW_HIDDEN=true`, which defaults to on only with `DEBUG=true`. Beta connectors that wait on a provider's confirmation are offered only when their flag is listed in `CONNECTOR_FLAGS`, separated by commas: `CONNECTOR_FLAGS=chatgpt_plan` offers the ChatGPT plan connector (see [AI features](AI.md)). Removing a flag stops that connector's connections.
 
 ## Provider webhooks
 
@@ -127,8 +146,8 @@ Keep the trailing slash when entering a webhook URL at a provider; a redirect wo
 
 ## API
 
-The JSON API at `/api/v1/` is off until a superuser turns it on under **API access**. While it is off, every request is refused. See [API](API.md).
-- **Tokens.** Each token acts as one staff member. Only superusers can create tokens unless a superuser turns on **Let staff create their own tokens**.
+The JSON API at `/api/v1/` is off until someone who manages connections and AI turns it on under **API access**. While it is off, every request is refused. See [API](API.md).
+- **Tokens.** Each token acts as one staff member. Only people who manage connections and AI can create tokens unless one of them turns on **Let staff create their own tokens**.
 - **Exposure.** Tools that run in the cloud, such as Zapier, must reach `/api/` over HTTPS. Expose that path at the reverse proxy only if the firm uses such a tool. Self-hosted tools like n8n can call the CRM on the private network instead.
 - **Limits.** Each token is limited to `API_HOURLY_LIMIT` requests an hour (default 1000). Bodies over 256 KB are refused.
 - **Request log.** Every request is logged. Old rows can be removed with `python manage.py prune_api_log --days 365`.
@@ -139,7 +158,7 @@ Phone numbers are matched in E.164 form. Numbers written without a country code 
 
 ## AI assistants (MCP)
 
-The MCP server lets staff use the CRM from Claude or ChatGPT; see [AI assistants](MCP.md). It is off until a superuser turns it on under **AI assistants**.
+The MCP server lets staff use the CRM from Claude or ChatGPT; see [AI assistants](MCP.md). It is off until someone who manages connections and AI turns it on under **AI assistants**.
 - **Reachability.** Claude and ChatGPT call it from their own servers. Make these paths reachable over HTTPS:
   - `/mcp`
   - `/.well-known/oauth-authorization-server`
@@ -153,7 +172,7 @@ The MCP server lets staff use the CRM from Claude or ChatGPT; see [AI assistants
 
 ## Outbound webhooks
 
-The **Webhooks** connector sends the CRM events a superuser chooses to an automation tool's address; see [Outbound webhooks](WEBHOOKS.md).
+The **Webhooks** connector sends the CRM events that someone who manages connections and AI chooses to an automation tool's address; see [Outbound webhooks](WEBHOOKS.md).
 - **Worker.** Deliveries need the worker running.
 - **Network.** The worker makes outbound HTTPS requests to that address. Allow them through any egress firewall.
 - **Self-hosted tools.** A tool on the firm's own network, such as n8n in the same Compose project, can be reached over plain `http://` by its service name.

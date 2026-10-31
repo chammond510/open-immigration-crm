@@ -20,7 +20,7 @@ Files the firm's Dialpad calls and texts on the right contact automatically, wit
    - `calls:list`, to catch up on calls;
    - `recordings_export`, for recording links;
    - `message_content_export:all`, for the text of messages.
-2. In the CRM, open **Connections**, then **Dialpad**. Paste the API key and choose the environment: production, or Dialpad's sandbox for a test account. To send all texts from one firm number, enter it in **Send texts from**; otherwise leave it blank. A superuser reviews what the connection sends and receives, then connects.
+2. In the CRM, open **Connections**, then **Dialpad**. Paste the API key and choose the environment: production, or Dialpad's sandbox for a test account. To send all texts from one firm number, enter it in **Send texts from**; otherwise leave it blank. Someone who manages connections and AI (the Connections and AI permission, which Managing partners have by default) reviews what the connection sends and receives, then connects.
 3. On the connection's page, turn on webhooks with **Create the webhook in Dialpad** ticked. The CRM creates a Dialpad webhook signed with a new secret, and company-wide subscriptions to ended calls, recordings, voicemails, AI recaps, and texts. Issuing a new address later replaces that webhook; disconnecting deletes it.
 4. Turn off preview mode on the connection when the firm is ready to send real texts.
 

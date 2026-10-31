@@ -37,13 +37,13 @@
           <a href="{% url 'connections' %}" {% if nav_section == 'connections' %}aria-current="page"{% endif %}>Connections</a>
           <a href="{% url 'ai_settings' %}" {% if nav_section == 'ai' %}aria-current="page"{% endif %}>AI features</a>
           <a href="{% url 'mcp_settings' %}" {% if nav_section == 'mcp' %}aria-current="page"{% endif %}>AI assistants</a>
-          {% if user.is_superuser %}
+          {% if perms.crm.manage_firm_settings %}
             <a href="{% url 'workflow_template_list' %}" {% if nav_section == 'workflows' %}aria-current="page"{% endif %}>Workflows</a>
             <a href="{% url 'custom_field_list' %}" {% if nav_section == 'custom_fields' %}aria-current="page"{% endif %}>Custom fields</a>
-            <a href="{% url 'import_list' %}" {% if nav_section == 'imports' %}aria-current="page"{% endif %}>Import</a>
-            <a href="{% url 'firm_settings' %}" {% if nav_section == 'firm' %}aria-current="page"{% endif %}>Firm settings</a>
-            <a href="{% url 'admin:index' %}">Administration</a>
           {% endif %}
+          {% if perms.crm.import_records %}<a href="{% url 'import_list' %}" {% if nav_section == 'imports' %}aria-current="page"{% endif %}>Import</a>{% endif %}
+          {% if perms.crm.manage_firm_settings %}<a href="{% url 'firm_settings' %}" {% if nav_section == 'firm' %}aria-current="page"{% endif %}>Firm settings</a>{% endif %}
+          {% if user.is_superuser %}<a href="{% url 'admin:index' %}">Administration</a>{% endif %}
         </nav>
         <a class="source-link" href="https://github.com/chammond510/open-immigration-crm">Source · AGPL-3.0 · No warranty</a>
       </aside>

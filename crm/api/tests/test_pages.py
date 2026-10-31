@@ -22,14 +22,14 @@ class ApiAccessPageTests(ApiTestCase):
         self.issue()
         self.client.force_login(self.staff)
         page = self.client.get(reverse("api_access"))
-        self.assertContains(page, "Only superusers can create tokens on this installation.")
+        self.assertContains(page, "Only people who manage connections and AI can create tokens")
         self.assertContains(page, mine.prefix)
         self.assertEqual(len(page.context["own_tokens"]), 1)
         self.assertEqual(page.context["other_tokens"], [])
         self.assertNotContains(page, "API settings</h2>")
         self.assertContains(page, 'href="/settings/api/"')
         response = self.client.get(reverse("api_token_create"), follow=True)
-        self.assertContains(response, "Only superusers can create API tokens")
+        self.assertContains(response, "Only people who manage connections and AI can create API")
 
     def test_create_shows_the_token_once(self):
         ApiSettings.objects.filter(pk=1).update(staff_tokens_allowed=True)
@@ -81,7 +81,7 @@ class ApiAccessPageTests(ApiTestCase):
         self.api("get", "/api/v1/", token=raw_token)
         self.client.force_login(self.staff)
         response = self.client.post(reverse("api_settings_update"), {"enabled": ""})
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
         self.assertTrue(ApiSettings.load().enabled)
         self.assertEqual(
             self.client.get(reverse("api_access")).context["recent_requests"].count(), 0

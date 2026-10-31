@@ -129,7 +129,7 @@ class SettingsPageTests(AITestCase):
     def test_staff_see_but_cannot_change_settings(self):
         self.client.force_login(self.staff)
         page = self.client.get(reverse("ai_settings"))
-        self.assertContains(page, "A superuser can turn them on.")
+        self.assertContains(page, "Someone who manages connections and AI can turn them on.")
         self.assertContains(page, "Paralegal&#x27;s model")
         self.assertEqual(
             self.client.post(reverse("ai_settings"), {"enabled": "on"}).status_code, 403

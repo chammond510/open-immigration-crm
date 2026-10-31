@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from crm.models import AuditLog
+from crm.roles import MANAGE_CONNECTIONS, can
 
 from .base import ApiKeyAuth, Capability, ConnectionScope, ConnectorError
 from .models import Connection
@@ -178,14 +179,16 @@ def enable_webhooks(connection, actor, provider_secret="", *, registering=False)
 
 
 def can_manage(user, connection):
-    """Superusers manage every connection; staff manage only their own personal ones."""
-    return user.is_superuser or (connection.owner_id is not None and connection.owner_id == user.pk)
+    """Who manages connections manages every one; other staff only their own personal ones."""
+    return can(user, MANAGE_CONNECTIONS) or (
+        connection.owner_id is not None and connection.owner_id == user.pk
+    )
 
 
 def visible_connections(user):
-    """Firm-wide connections plus the user's own; superusers see every connection."""
+    """Firm-wide connections plus the user's own; who manages connections sees every one."""
     connections = Connection.objects.select_related("owner")
-    if user.is_superuser:
+    if can(user, MANAGE_CONNECTIONS):
         return connections
     return connections.filter(Q(owner__isnull=True) | Q(owner=user))
 

@@ -153,7 +153,9 @@ class CustomFieldPageTests(TestCase):
         self.assertEqual((field.applies_to, field.field_type), ("matter", "choice"))
 
         self.client.force_login(make_user("paralegal", superuser=False))
-        self.assertEqual(self.client.get(reverse("custom_field_list")).status_code, 302)
+        self.assertEqual(self.client.get(reverse("custom_field_list")).status_code, 403)
+        self.client.force_login(make_user("office", role="Office administrator"))
+        self.assertEqual(self.client.get(reverse("custom_field_list")).status_code, 200)
 
     def test_values_show_on_record_pages(self):
         make_field("Referral source")

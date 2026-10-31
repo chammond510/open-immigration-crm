@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from django import template
 
+from crm.roles import BILLING
+
 from ..models import BillingSettings, Invoice, format_money
 from ..services import OPEN_STATUSES, unbilled_time
 
@@ -17,7 +19,7 @@ def money(value, currency="USD"):
 def billing_panel(context, contact=None, matter=None):
     """Invoices and unbilled time for a contact or matter, for staff who can bill."""
     user = context["request"].user
-    if not user.has_perm("billing.access_billing"):
+    if not user.has_perm(BILLING):
         return {"visible": False}
     invoices = Invoice.objects.prefetch_related("lines", "payments")
     invoices = invoices.filter(matter=matter) if matter else invoices.filter(contact=contact)

@@ -1,21 +1,17 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from crm.connect.base import Capability
 from crm.connect.models import Connection
 from crm.connect.services import record_audit
+from crm.roles import MANAGE_CONNECTIONS, permission_required
 
 from .catalog import EVENT_TYPES
 from .forms import EventSettingsForm
 
-superuser_required = user_passes_test(
-    lambda user: user.is_active and user.is_superuser, login_url="login"
-)
 
-
-@superuser_required
+@permission_required(MANAGE_CONNECTIONS)
 @require_POST
 def connection_events(request, pk):
     connection = get_object_or_404(

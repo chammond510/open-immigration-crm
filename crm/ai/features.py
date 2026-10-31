@@ -1,4 +1,4 @@
-"""The AI features the CRM offers, each off until a superuser turns it on."""
+"""The AI features the CRM offers, each off until someone who manages AI turns it on."""
 
 from dataclasses import dataclass
 

@@ -213,7 +213,7 @@ class WorkflowPageTests(TestCase):
 
         self.client.force_login(self.staff)
         response = self.client.get(reverse("workflow_template_list"))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 403)
 
     def test_staff_apply_and_advance_from_the_matter_page(self):
         template = make_template(self.admin)
@@ -250,7 +250,7 @@ class WorkflowPageTests(TestCase):
         )
         self.assertContains(response, "This matter already has a workflow.")
         self.assertEqual(
-            self.client.post(reverse("workflow_remove", args=[self.matter.pk])).status_code, 302
+            self.client.post(reverse("workflow_remove", args=[self.matter.pk])).status_code, 403
         )
         self.assertTrue(MatterWorkflow.objects.exists())
 

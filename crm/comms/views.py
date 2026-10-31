@@ -14,6 +14,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from crm.connect.base import ConnectorError
 from crm.connect.models import OutboundRequest
 from crm.models import Contact, Document, Matter
+from crm.roles import DELETE_RECORDS, permission_required
 from crm.search import words_match
 from crm.services import audit
 
@@ -224,7 +225,8 @@ def report(request, outbound, connection, noun):
         messages.info(
             request,
             f"{connection.label} is in preview mode, so the {noun} was recorded but not sent. "
-            "A superuser can turn preview mode off on the connection's page.",
+            "Someone who manages connections and AI can turn preview mode off on the "
+            "connection's page.",
         )
     elif outbound.status == OutboundRequest.Status.FAILED:
         messages.error(request, f"The {noun} was not sent: {outbound.error}")
@@ -326,11 +328,9 @@ def communication_send_email(request):
     )
 
 
-@staff_required
+@permission_required(DELETE_RECORDS)
 @require_POST
 def communication_delete(request, pk):
-    if not request.user.is_superuser:
-        raise PermissionDenied
     communication = get_object_or_404(Communication, pk=pk)
     audit(request, "communication.deleted", communication, communication.get_channel_display())
     communication.delete()

@@ -1,5 +1,5 @@
 {% if sends_events %}
-  {% if user.is_superuser and connection.status != "disconnected" %}
+  {% if perms.crm.manage_connections and connection.status != "disconnected" %}
     <form method="post" action="{% url 'connection_events' connection.pk %}" class="panel stacked-form">
       <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
       <div><h2>Events to send</h2><p class="muted">Nothing is sent until you choose events here{% if connection.preview_mode %}, and while preview mode is on, events are recorded but not sent{% endif %}. Each event is signed with this connection's secret.</p></div>
@@ -14,7 +14,7 @@
       <div class="form-actions"><button class="button primary" type="submit">Save events</button></div>
     </form>
   {% else %}
-    <section class="panel"><div class="section-heading"><div><h2>Events to send</h2><p>Chosen by a superuser.</p></div></div>
+    <section class="panel"><div class="section-heading"><div><h2>Events to send</h2><p>Chosen by someone who manages connections and AI.</p></div></div>
       {% if chosen_labels %}<ul class="plain-list">{% for label in chosen_labels %}<li>{{ label }}</li>{% endfor %}</ul>{% else %}<p class="muted">No events are selected.</p>{% endif %}
     </section>
   {% endif %}

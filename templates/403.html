@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Not available · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-content"><section class="panel"><div class="empty-state"><h1>This isn't open to you</h1><p>Your account can't open this page or take this action. If you need it, ask whoever manages staff at your firm.</p><a class="button" href="{% url 'dashboard' %}">Back to the overview</a></div></section></div>
+{% endblock %}
+{% block signed_out_content %}
+<div class="login-shell"><section class="login-panel"><div class="login-copy"><h1>This isn't open to you</h1><p>Sign in with an account that can open this page.</p><a class="button" href="{% url 'login' %}">Sign in</a></div></section></div>
+{% endblock %}

@@ -24,7 +24,7 @@
   <div class="detail-main">
     {% include "connect/includes/data_flows.html" with flows=connector.data_flows %}
     {% if needs_app %}
-      {% if user.is_superuser %}
+      {% if perms.crm.manage_connections %}
         <section class="panel">
           <div class="section-heading"><div><h2>{% if app %}The firm's {{ entry.name }} app{% else %}First, register the firm's {{ entry.name }} app{% endif %}</h2><p>{{ entry.name }} signs in through an OAuth app the firm registers in its developer console. Use this exact redirect URI there.</p></div></div>
           <div class="copy-field"><input id="callback-url" type="text" readonly value="{{ callback_url }}" aria-label="Redirect URI"><button class="button" type="button" data-copy-for="callback-url">Copy</button></div>
@@ -37,7 +37,7 @@
           </form>
         </section>
       {% elif not app %}
-        <section class="panel"><p class="muted">A superuser must register the firm's {{ entry.name }} app before anyone can connect it.</p></section>
+        <section class="panel"><p class="muted">Someone who manages connections and AI must register the firm's {{ entry.name }} app before anyone can connect it.</p></section>
       {% endif %}
     {% endif %}
     {% if sign_in_callback %}
@@ -65,7 +65,7 @@
         </form>
       </section>
     {% elif not may_connect %}
-      <section class="panel"><p class="muted">Only a superuser can connect {{ entry.name }} for the firm.</p></section>
+      <section class="panel"><p class="muted">Only people who manage connections and AI can connect {{ entry.name }} for the firm.</p></section>
     {% endif %}
   </div>
   <aside class="detail-aside">

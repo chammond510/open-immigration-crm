@@ -103,7 +103,9 @@ class SharingLimitTests(SharingLimitTestCase):
         self.assertContains(page, "<summary>Translate</summary>", count=2)
         answer = self.translate(self.kept_out, f"service:{self.service.pk}")
         self.assertContains(
-            answer, f"Not translated: {TERMS} A superuser can allow it on the connection."
+            answer,
+            f"Not translated: {TERMS} Someone who manages connections and AI can allow it on "
+            "the connection.",
         )
         self.assertFalse(Translation.objects.exists())
         with self.assertRaisesMessage(services.TranslationUnavailable, TERMS):
