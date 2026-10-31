@@ -52,7 +52,7 @@ Paths end with a slash.
 | `/api/v1/matters/` | GET, POST | matters | Filters: `q`, `status`, `case_type`, `contact` (primary contact or party), `assigned_to`, `updated_since` |
 | `/api/v1/matters/<id>/` | GET, PATCH | matters | Includes parties |
 | `/api/v1/work-items/` | GET, POST | work | Filters: `kind`, `completed`, `matter`, `contact`, `assigned_to`, `scheduled_after`, `scheduled_before`, `updated_since` |
-| `/api/v1/work-items/<id>/` | GET, PATCH | work | `is_completed` marks the item done |
+| `/api/v1/work-items/<id>/` | GET, PATCH | work | `is_completed` marks the item done; `meeting_url` is an appointment's video meeting link (HTTPS) |
 | `/api/v1/notes/` | GET, POST | notes | Filters: `matter`, `contact`, `kind` |
 | `/api/v1/notes/<id>/` | GET | notes | |
 | `/api/v1/communications/` | GET, POST | communications | Filters: `matter`, `contact`, `channel`, `updated_since` |

@@ -88,6 +88,8 @@ def manifest_problems(cls):
         named = set(re.findall(r"{(\w+)}", cls.auth.authorize_url + cls.auth.token_url))
         if not named <= {f.name for f in cls.auth.app_fields}:
             problems.append("OAuth URLs may name only the auth's app_fields")
+        if cls.auth.token_auth not in ("post", "basic"):
+            problems.append('OAuth token_auth must be "post" or "basic"')
     if cls.webhooks is not None and cls.webhooks.secret_source == "credential":
         names = {f.name for f in cls.auth.fields} if isinstance(cls.auth, ApiKeyAuth) else set()
         if cls.webhooks.secret_credential not in names:

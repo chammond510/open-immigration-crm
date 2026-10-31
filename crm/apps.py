@@ -10,7 +10,9 @@ class CrmConfig(AppConfig):
             appointments,
             checks,  # noqa: F401
             leads,
+            meetings,
         )
 
         appointments.connect()
         leads.connect()
+        meetings.connect()

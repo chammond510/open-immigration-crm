@@ -50,6 +50,8 @@ connectors/
 
    Calendar connectors that take the CRM's appointments declare `save_event` and `delete_event`. The `save_event` payload is `{"event_id": the provider's ID or "", "title", "starts_at", "ends_at" (ISO 8601), "time_zone", "description", "crm_id"}`, and it returns the event's ID; create the event when `event_id` is empty or no longer exists. Add no attendees and send no invitations. Core puts each appointment on its staff member's connected calendars and keeps it in step, and it only changes events it created (`ExternalRef.created_by_crm`). List both actions in `owner_sync_actions`, which lets them run automatically on a personal connection, but only for records assigned to its owner.
 
+   Video connectors declare `save_meeting` and `delete_meeting`, both in `owner_sync_actions`. The `save_meeting` payload is `{"meeting_id": the provider's ID or "", "title", "starts_at" (ISO 8601), "duration_minutes", "time_zone", "crm_id"}`, and it returns `{"id", "join_url"}` (an `https://` link); make a new meeting when `meeting_id` is empty or no longer exists. `delete_meeting` takes `{"meeting_id"}` and treats a meeting already gone as deleted. Return only what a guest joins with, never a host's start link, and send no invitations.
+
    A connector can declare a setting named `unmatched` with the choices `keep` and `skip`. With `skip`, core stores only records whose other party is a known contact, instead of sending the rest to Needs matching. Email between staff members is never stored.
 
    AI model connectors declare `generate`. Core's `crm/ai/client.py` describes the payload (system prompt, messages, function tools, and an optional JSON schema) and the reply. Return `raw`, the provider's own copy of the assistant's turn, so core can send it back unchanged in a tool loop. Reasoning that must be passed back exactly needs this.
@@ -64,7 +66,7 @@ connectors/
 
    Automation connectors (the `automation` capability) must declare a `deliver_event` outbound action. Its payload is `{"id": ..., "event": {...}}`; the ID stays the same across retries. Core builds events in `crm/events/` and sends them through the outbound policy from the worker.
 
-   An `OAuthAuth` can declare `app_fields`: non-secret values a superuser enters with the firm's app registration, such as Microsoft's directory (tenant) ID. The authorize and token URLs may name them in braces, such as `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize`; each value is validated and URL-encoded.
+   An `OAuthAuth` can declare `app_fields`: non-secret values a superuser enters with the firm's app registration, such as Microsoft's directory (tenant) ID. The authorize and token URLs may name them in braces, such as `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize`; each value is validated and URL-encoded. Set `token_auth="basic"` for a provider that wants the app's ID and secret in an HTTP Basic header at its token endpoint, as Zoom does, instead of in the form.
 
    A credential field can set `generate` to a function that proposes a value, such as a signing secret, which the connect form shows once for staff to copy to the provider.
 

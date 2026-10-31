@@ -224,6 +224,8 @@ def event_payload(item, event_id):
         lines.append(f"Contact: {item.contact}")
     if item.matter_id:
         lines.append(f"Matter: {item.matter.matter_number}")
+    if item.meeting_url:
+        lines.append(f"Video meeting: {item.meeting_url}")
     lines.append("From Open Immigration CRM.")
     return {
         "event_id": event_id,

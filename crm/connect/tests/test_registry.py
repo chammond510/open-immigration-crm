@@ -109,18 +109,22 @@ class ManifestTests(SimpleTestCase):
         self.assertEqual(manifest_problems(make_connector(webhooks=spec)), [])
 
     def test_oauth_urls_name_only_app_fields(self):
-        def oauth(app_fields=()):
+        def oauth(app_fields=(), token_auth="post"):
             return OAuthAuth(
                 authorize_url="https://login.example.test/{tenant}/authorize",
                 token_url="https://login.example.test/{tenant}/token",
                 scopes={Capability.PHONE: ("calls",)},
                 app_fields=app_fields,
+                token_auth=token_auth,
             )
 
         problems = " ".join(manifest_problems(make_connector(auth=oauth())))
         self.assertIn("OAuth URLs may name only", problems)
         tenant = (SettingField("tenant", "Tenant"),)
         self.assertEqual(manifest_problems(make_connector(auth=oauth(tenant))), [])
+        self.assertEqual(manifest_problems(make_connector(auth=oauth(tenant, "basic"))), [])
+        problems = manifest_problems(make_connector(auth=oauth(tenant, "header")))
+        self.assertEqual(problems, ['OAuth token_auth must be "post" or "basic"'])
 
     def test_settings_fields_are_checked(self):
         good = (

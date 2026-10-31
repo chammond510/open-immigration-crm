@@ -118,9 +118,9 @@ name = "Microsoft Bookings"
 capabilities = ["scheduling"]
 
 [[connector]]
-key = "zoom"
-name = "Zoom"
-capabilities = ["video", "scheduling"]
+key = "zoom_scheduler"
+name = "Zoom Scheduler"
+capabilities = ["scheduling"]
 
 [[connector]]
 key = "microsoft_teams"

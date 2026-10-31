@@ -118,6 +118,7 @@ def work_item(record, request):
         "matter": ref(record.matter_id),
         "assigned_to": record.assigned_to_id,
         "scheduled_for": iso(record.scheduled_for),
+        "meeting_url": record.meeting_url,
         "is_completed": record.is_completed,
         "completed_at": iso(record.completed_at),
         "created_at": iso(record.created_at),

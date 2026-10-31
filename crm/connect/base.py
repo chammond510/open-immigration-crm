@@ -135,6 +135,10 @@ class OAuthAuth:
     # Provider-specific authorize parameters, such as a request for offline access.
     extra_authorize_params: dict[str, str] = field(default_factory=dict)
     app_fields: tuple["SettingField", ...] = ()
+    # How the firm's app proves itself at the token endpoint: "post" sends the client
+    # ID and secret in the form, "basic" in an HTTP Basic header, as some providers
+    # require.
+    token_auth: str = "post"
 
 
 @dataclass(frozen=True)
