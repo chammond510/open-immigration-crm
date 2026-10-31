@@ -223,6 +223,33 @@ class LeadRecord(TypedRecord):
         return problems
 
 
+SIGNATURE_STATUSES = ("sent", "signed", "completed", "declined", "cancelled")
+
+
+@dataclass(frozen=True, kw_only=True)
+class SignatureRecord(TypedRecord):
+    """Where a document sent for signature stands. ``external_id`` is the provider's ID
+    for the document, the one ``send_for_signature`` returned; ``occurred_at`` is when
+    the provider said so.
+
+    ``signed`` means a signer signed and others have not; ``completed`` means everyone
+    signed, and ``signed_pdf`` then holds the signed PDF's bytes.
+    """
+
+    kind: str = "signature"
+    status: str
+    signer_email: str = ""  # Who signed or declined, when the provider says.
+    signed_pdf: bytes = b""
+
+    def problems(self):
+        problems = super().problems()
+        if self.status not in SIGNATURE_STATUSES:
+            problems.append(f"status must be one of {', '.join(SIGNATURE_STATUSES)}")
+        if self.status == "completed" and not self.signed_pdf.startswith(b"%PDF-"):
+            problems.append("a completed signature needs the signed PDF")
+        return problems
+
+
 RECORD_TYPES = {
     Capability.PHONE: (CallRecord,),
     Capability.TEXTING: (TextRecord,),
@@ -232,4 +259,5 @@ RECORD_TYPES = {
     Capability.PAYMENTS: (PaymentRecord,),
     Capability.CASE_STATUS: (CaseStatusRecord,),
     Capability.LEAD_CAPTURE: (LeadRecord,),
+    Capability.ESIGNATURE: (SignatureRecord,),
 }

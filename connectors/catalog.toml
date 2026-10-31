@@ -195,11 +195,6 @@ name = "Egnyte"
 capabilities = ["storage"]
 
 [[connector]]
-key = "documenso"
-name = "Documenso"
-capabilities = ["esignature"]
-
-[[connector]]
 key = "docusign"
 name = "DocuSign"
 capabilities = ["esignature"]
