@@ -2,7 +2,7 @@
 
 The CRM includes a [Model Context Protocol](https://modelcontextprotocol.io/) server, so staff can add it to Claude or ChatGPT and work with contacts, matters, deadlines, and notices from their own assistant, on their own plan. The CRM never holds Claude or OpenAI credentials: the assistant does the AI work and calls the CRM's tools.
 
-The server is **off** on a new installation. A superuser turns it on under **AI assistants** (in the sidebar's account links).
+The server is **off** on a new installation. A superuser turns it on under **Settings → AI assistants** in the sidebar.
 
 ## How it works
 

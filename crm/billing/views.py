@@ -5,7 +5,6 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -14,6 +13,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from crm.comms import system_email
 from crm.connect.models import OutboundRequest
 from crm.models import Contact, FirmProfile, Matter
+from crm.search import words_match
 
 from .forms import (
     BillingSettingsForm,
@@ -71,10 +71,10 @@ def invoice_list(request):
         invoices = invoices.filter(status=status)
     if query:
         invoices = invoices.filter(
-            Q(number__icontains=query)
-            | Q(contact__first_name__icontains=query)
-            | Q(contact__last_name__icontains=query)
-            | Q(matter__matter_number__icontains=query)
+            words_match(
+                query,
+                ("number", "contact__first_name", "contact__last_name", "matter__matter_number"),
+            )
         )
     open_invoices = Invoice.objects.filter(status__in=OPEN_STATUSES).prefetch_related(
         "lines", "payments"

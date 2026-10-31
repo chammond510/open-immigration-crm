@@ -20,6 +20,7 @@ from crm.notices.services import record_status, save_notice
 from crm.reports import periods
 from crm.reports.metrics import build_report
 from crm.reports.serializers import report_data
+from crm.search import CONTACT_SEARCH_FIELDS, MATTER_SEARCH_FIELDS, words_match
 from crm.services import add_activity, audit
 
 from . import serializers
@@ -173,13 +174,7 @@ def contacts(request):
     records = Contact.objects.all()
     query = request.GET.get("q", "").strip()
     if query:
-        records = records.filter(
-            Q(first_name__icontains=query)
-            | Q(last_name__icontains=query)
-            | Q(email__icontains=query)
-            | Q(phone__icontains=query)
-            | Q(a_number__icontains=query)
-        )
+        records = records.filter(words_match(query, CONTACT_SEARCH_FIELDS))
     for name, choices in (("status", Contact.Status.values), ("stage", Contact.Stage.values)):
         value = choice_param(request, name, choices)
         if value:
@@ -243,11 +238,7 @@ def matters(request):
     records = matter_records()
     query = request.GET.get("q", "").strip()
     if query:
-        records = records.filter(
-            Q(matter_number__icontains=query)
-            | Q(title__icontains=query)
-            | Q(receipt_number__icontains=query)
-        )
+        records = records.filter(words_match(query, MATTER_SEARCH_FIELDS))
     for name, choices in (("status", Matter.Status.values), ("case_type", Matter.CaseType.values)):
         value = choice_param(request, name, choices)
         if value:

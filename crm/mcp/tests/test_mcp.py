@@ -353,6 +353,17 @@ class ProtocolTests(McpTestCase):
         )
         self.assertEqual(batch.json()["error"]["code"], -32600)
 
+    def test_search_matches_every_word(self):
+        make_contact(first_name="Lena", last_name="Sample", email="ls@fictional.test")
+        found = self.call("search_contacts", {"query": "Lena Example"})["structuredContent"]
+        self.assertEqual([c["name"] for c in found["contacts"]], ["Lena Example"])
+        nobody = self.call("search_contacts", {"query": "Lena Nobody"})["structuredContent"]
+        self.assertEqual(nobody["contacts"], [])
+        matters = self.call("search_matters", {"query": "lena family"})["structuredContent"]
+        self.assertEqual(
+            [m["matter_number"] for m in matters["matters"]], [self.matter.matter_number]
+        )
+
     def test_read_tools(self):
         WorkItem.objects.create(
             title="Fictional deadline",

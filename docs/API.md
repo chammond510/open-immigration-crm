@@ -2,7 +2,7 @@
 
 The CRM has a JSON API at `/api/v1/` for scripts and automation tools such as n8n, Zapier, and Make. It is built from plain Django views and uses the same validation as the web pages. The [automation recipes](recipes/README.md) show it in use.
 
-The API is **off** on a new installation. A superuser turns it on under **API access** (in the sidebar's account links). Nothing can be deleted through the API.
+The API is **off** on a new installation. A superuser turns it on under **API access**, in the menu under your name at the top right. Nothing can be deleted through the API.
 
 ## Tokens
 
@@ -41,7 +41,7 @@ Tokens start with `oic_`, so secret scanners can find one that leaks. `scripts/c
 
 ## Endpoints
 
-Paths end with a slash.
+Paths end with a slash. The `q` filter matches every word it is given: for contacts, against names, email, phone, and A-number; for matters, against the matter number, title, receipt number, and client name. So `q=Ana Muestra` finds Ana Muestra.
 
 | Path | Methods | Scope | Notes |
 |---|---|---|---|

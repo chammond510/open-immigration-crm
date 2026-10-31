@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -27,6 +26,7 @@ from crm.notices.services import latest_statuses, record_status
 from crm.reports import periods
 from crm.reports.metrics import build_report
 from crm.reports.serializers import report_data
+from crm.search import CONTACT_SEARCH_FIELDS, MATTER_SEARCH_FIELDS, words_match
 from crm.services import audit
 
 MAX_LIMIT = 50
@@ -257,13 +257,7 @@ def open_work(queryset):
 def search_contacts(ctx, args):
     query = text(args, "query", required=True, limit=100)
     limit = number(args, "limit", default=10, low=1, high=MAX_LIMIT)
-    contacts = Contact.objects.filter(
-        Q(first_name__icontains=query)
-        | Q(last_name__icontains=query)
-        | Q(email__icontains=query)
-        | Q(phone__icontains=query)
-        | Q(a_number__icontains=query)
-    )[:limit]
+    contacts = Contact.objects.filter(words_match(query, CONTACT_SEARCH_FIELDS))[:limit]
     return {"contacts": [contact_brief(c, ctx.request) for c in contacts]}
 
 
@@ -273,13 +267,7 @@ def search_matters(ctx, args):
     limit = number(args, "limit", default=10, low=1, high=MAX_LIMIT)
     matters = Matter.objects.select_related("primary_contact")
     if query:
-        matters = matters.filter(
-            Q(matter_number__icontains=query)
-            | Q(title__icontains=query)
-            | Q(receipt_number__icontains=query)
-            | Q(primary_contact__first_name__icontains=query)
-            | Q(primary_contact__last_name__icontains=query)
-        )
+        matters = matters.filter(words_match(query, MATTER_SEARCH_FIELDS))
     if status:
         matters = matters.filter(status=status)
     return {"matters": [matter_brief(m, ctx.request) for m in matters[:limit]]}
@@ -553,7 +541,8 @@ TOOLS = [
     Tool(
         "search_contacts",
         "Search contacts",
-        "Find contacts by name, email, phone, or A-number.",
+        "Find contacts by full or partial name, email, phone, or A-number. Every word "
+        "must match, so a full name narrows the search.",
         search_contacts,
         {"query": {"type": "string", "description": "Text to search for."}, "limit": LIMIT},
         ("query",),
@@ -561,7 +550,8 @@ TOOLS = [
     Tool(
         "search_matters",
         "Search matters",
-        "Find matters by matter number, title, receipt number, or client name.",
+        "Find matters by matter number, title, receipt number, or client name. Every "
+        "word must match.",
         search_matters,
         {
             "query": {"type": "string"},
