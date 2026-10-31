@@ -12,15 +12,18 @@
       {% if text_to.texting_opted_out_at %}<p class="muted">{{ text_to }} opted out of texts, so none can be sent.</p>
       {% elif not text_to.phone_e164 %}<p class="muted">Add a valid mobile number for {{ text_to }} to send a text.</p>
       {% else %}
+      {% for window in text_windows %}<p class="muted">{% if window.open %}{{ window.connection.label }} allows free-form messages until {{ window.ends|date:"M j, g:i a" }}, {{ window.hours }} hours after {{ text_to }}'s last message.{% else %}{{ window.connection.label }} allows free-form messages only within {{ window.hours }} hours of {{ text_to }}'s last message{% if not window.ends %}, and {{ text_to }} has not written to it{% endif %}.{% endif %}</p>{% if window.templates %}<div class="form-actions"><a class="button{% if not window.open %} primary{% endif %}" href="{% url 'communication_send_template' %}?contact={{ text_to.pk }}&amp;connection={{ window.connection.pk }}{% if matter %}&amp;matter={{ matter.pk }}{% endif %}">Send an approved template{% if free_text_connections|length > 1 or text_windows|length > 1 %} through {{ window.connection.label }}{% endif %}</a></div>{% endif %}{% endfor %}
+      {% if free_text_connections %}
       <form method="post" action="{% url 'communication_send_text' %}" class="compact-form stacked-form">
         {% csrf_token %}<input type="hidden" name="contact" value="{{ text_to.pk }}">{% if matter %}<input type="hidden" name="matter" value="{{ matter.pk }}">{% endif %}<input type="hidden" name="next" value="{{ request.get_full_path }}#communications">
         <div class="form-grid">
-          {% if text_connections|length > 1 %}<div class="field full-field"><label for="text-connection-{{ text_to.pk }}">Send through</label><select id="text-connection-{{ text_to.pk }}" name="connection">{% for connection in text_connections %}<option value="{{ connection.pk }}">{{ connection.label }}{% if connection.owner_id %} (yours){% endif %}{% if connection.preview_mode %} · preview mode{% endif %}</option>{% endfor %}</select></div>
-          {% else %}<input type="hidden" name="connection" value="{{ text_connections.0.pk }}">{% endif %}
-          <div class="field full-field"><label for="text-body-{{ text_to.pk }}">Text to {{ text_to.phone_e164 }}</label><textarea id="text-body-{{ text_to.pk }}" name="body" rows="3" maxlength="{{ text_max_length }}" required></textarea><small>Sent through {% if text_connections|length > 1 %}the connection you choose{% else %}{{ text_connections.0.label }}{% if text_connections.0.preview_mode %}, which is in preview mode: the text is recorded but not sent{% endif %}{% endif %}. Long texts arrive in several parts.</small></div>
+          {% if free_text_connections|length > 1 %}<div class="field full-field"><label for="text-connection-{{ text_to.pk }}">Send through</label><select id="text-connection-{{ text_to.pk }}" name="connection">{% for connection in free_text_connections %}<option value="{{ connection.pk }}">{{ connection.label }}{% if connection.owner_id %} (yours){% endif %}{% if connection.preview_mode %} · preview mode{% endif %}</option>{% endfor %}</select></div>
+          {% else %}<input type="hidden" name="connection" value="{{ free_text_connections.0.pk }}">{% endif %}
+          <div class="field full-field"><label for="text-body-{{ text_to.pk }}">Text to {{ text_to.phone_e164 }}</label><textarea id="text-body-{{ text_to.pk }}" name="body" rows="3" maxlength="{{ text_max_length }}" required></textarea><small>Sent through {% if free_text_connections|length > 1 %}the connection you choose{% else %}{{ free_text_connections.0.label }}{% if free_text_connections.0.preview_mode %}, which is in preview mode: the text is recorded but not sent{% endif %}{% endif %}. Long texts arrive in several parts.</small></div>
         </div>
         <div class="form-actions"><button class="button primary" type="submit">Send text</button></div>
       </form>
+      {% endif %}
       {% endif %}
     </details>
   {% endif %}

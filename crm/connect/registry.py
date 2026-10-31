@@ -140,6 +140,14 @@ def manifest_problems(cls):
         and cls.outbound_actions.get("deliver_event") != Capability.AUTOMATION
     ):
         problems.append("automation connectors must declare the deliver_event outbound action")
+    if cls.reply_window is not None and (
+        not cls.reply_window
+        or cls.outbound_actions.get("send_template") != Capability.TEXTING
+        or cls.message_templates is Connector.message_templates
+    ):
+        problems.append(
+            "a reply window needs a send_template texting action and message_templates()"
+        )
     return problems
 
 

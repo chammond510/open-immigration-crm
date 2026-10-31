@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Send a template · Open Immigration CRM{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <div class="page-heading"><div><p class="eyebrow"><a href="{{ back }}#communications">{% if matter %}{{ matter }}{% else %}{{ contact }}{% endif %}</a></p><h1>Send an approved template to {{ contact }}</h1><p>{% if window_hours %}{% if window_open %}{{ connection.label }} allows free-form messages until {{ window_ends|date:"M j, g:i a" }}, {{ window_hours }} hours after {{ contact }}'s last message, so a text from the contact page works too.{% elif window_ends %}{{ connection.label }} allows free-form messages only within {{ window_hours }} hours of {{ contact }}'s last message, on {{ window_ends|date:"M j, g:i a" }}.{% else %}{{ contact }} has not written to {{ connection.label }}, so it allows only approved templates.{% endif %} {% endif %}A template can be sent at any time; a reply opens the window for free-form messages.</p></div></div>
+  {% if contact.texting_opted_out_at %}<div class="privacy-note">{{ contact }} opted out of texts, so no message can be sent.</div>
+  {% elif not contact.phone_e164 %}<div class="privacy-note">Add a valid mobile number for {{ contact }} to send a message.</div>
+  {% elif error %}<div class="privacy-note">The templates could not be loaded: {{ error }}</div>
+  {% else %}
+    {% for item in templates %}
+      <details class="panel inline-add"{% if item.chosen or templates|length == 1 %} open{% endif %}>
+        <summary>{{ item.template.name }}{% if item.template.category or item.template.language %} <span class="muted">· {{ item.template.category|capfirst }}{% if item.template.category and item.template.language %} · {% endif %}{{ item.template.language }}</span>{% endif %}</summary>
+        <p class="prose">{{ item.preview|linebreaksbr }}</p>
+        <form method="post" class="stacked-form">
+          {% csrf_token %}<input type="hidden" name="contact" value="{{ contact.pk }}">{% if matter %}<input type="hidden" name="matter" value="{{ matter.pk }}">{% endif %}<input type="hidden" name="connection" value="{{ connection.pk }}"><input type="hidden" name="template" value="{{ item.template.id }}">
+          {% if item.fields %}<div class="form-grid">{% for entry in item.fields %}<div class="field full-field"><label for="value-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">{{ entry.field.label }}</label><input id="value-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" name="value-{{ entry.field.key }}" value="{{ entry.value }}" maxlength="300" required{% if entry.field.example %} placeholder="For example: {{ entry.field.example }}"{% endif %}></div>{% endfor %}</div>{% endif %}
+          <div class="form-actions"><button class="button primary" type="submit">Send to {{ contact.phone_e164 }}</button></div>
+        </form>
+      </details>
+    {% empty %}
+      <section class="panel"><p class="muted">{{ connection.label }} has no approved templates yet. Templates are written and submitted for approval at the provider; once approved, they appear here.</p></section>
+    {% endfor %}
+    {% if connection.preview_mode %}<p class="muted">{{ connection.label }} is in preview mode: a message is recorded but not sent.</p>{% endif %}
+  {% endif %}
+</div>
+{% endblock %}

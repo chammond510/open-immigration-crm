@@ -34,7 +34,7 @@ When the CRM starts, the registry loads the connector through its entry point. I
 
 A connector package may import:
 
-- `crm.connect.base`: `Connector`, the auth and field types, `DataFlows`, `WebhookSpec`, `WebhookEnvelope`, `StaffIdentity`, `SyncBatch`, `ConnectorError`, `Capability`, `Maturity`, `ConnectionScope`, and `API_VERSION`;
+- `crm.connect.base`: `Connector`, the auth and field types, `DataFlows`, `WebhookSpec`, `WebhookEnvelope`, `StaffIdentity`, `MessageTemplate`, `TemplateField`, `SyncBatch`, `ConnectorError`, `Capability`, `Maturity`, `ConnectionScope`, and `API_VERSION`;
 - `crm.connect.records`: the typed records each capability reports;
 - `crm.connect.http`: `ProviderClient`, which adds timeouts, retries, size limits, and HTTPS checks, and `use_transport` for tests;
 - `crm.connect.testing`: `ConnectorContract`;

@@ -71,14 +71,6 @@ description = "Log calls made and taken in Microsoft Teams Phone."
 docs_url = "https://learn.microsoft.com/en-us/graph/api/resources/callrecords-api-overview"
 api_access = "open"
 
-[[connector]]
-key = "whatsapp_business"
-name = "WhatsApp Business"
-capabilities = ["texting"]
-description = "Send and receive WhatsApp messages with clients from contact pages."
-docs_url = "https://developers.facebook.com/documentation/business-messaging/whatsapp/about-the-platform"
-api_access = "approval"
-
 # Mailbox, calendar, and storage suites
 
 [[connector]]

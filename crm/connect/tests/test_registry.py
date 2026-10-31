@@ -1,4 +1,5 @@
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -108,6 +109,29 @@ class ManifestTests(SimpleTestCase):
             secret_credential="api_key",
         )
         self.assertEqual(manifest_problems(make_connector(webhooks=spec)), [])
+
+    def test_reply_windows_need_templates(self):
+        texting = {
+            "capabilities": frozenset({Capability.TEXTING}),
+            "outbound_actions": {
+                "send_text": Capability.TEXTING,
+                "send_template": Capability.TEXTING,
+            },
+        }
+        listed = {"message_templates": lambda self: []}
+        expected = "a reply window needs a send_template texting action and message_templates()"
+        for overrides in (
+            {**texting, "reply_window": timedelta(hours=24)},
+            {**texting, **listed, "reply_window": timedelta(0)},
+            {
+                **listed,
+                "reply_window": timedelta(hours=24),
+                "capabilities": texting["capabilities"],
+            },
+        ):
+            self.assertIn(expected, manifest_problems(make_connector(**overrides)))
+        good = make_connector(**texting, **listed, reply_window=timedelta(hours=24))
+        self.assertEqual(manifest_problems(good), [])
 
     def test_oauth_urls_name_only_app_fields(self):
         def oauth(app_fields=(), token_auth="post"):
