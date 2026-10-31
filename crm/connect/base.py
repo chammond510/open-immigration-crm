@@ -263,6 +263,38 @@ class StaffIdentity:
     two_factor: bool = False
 
 
+@dataclass(frozen=True)
+class TemplateField:
+    """One value a message template needs filled in, such as the client's first name."""
+
+    key: str
+    label: str
+    example: str = ""
+
+
+@dataclass(frozen=True)
+class MessageTemplate:
+    """A message the provider approved in advance, for texting outside its reply window.
+
+    ``id`` names the template to the ``send_template`` action. ``text`` is the message
+    as the contact will see it, with each field's place marked ``{{key}}``.
+    """
+
+    id: str
+    name: str
+    text: str
+    fields: tuple[TemplateField, ...] = ()
+    language: str = ""
+    category: str = ""
+
+    def render(self, values):
+        """The message with ``values`` (field key -> text) in place."""
+        text = self.text
+        for item in self.fields:
+            text = text.replace("{{" + item.key + "}}", str(values.get(item.key, "")))
+        return text
+
+
 class ConnectorError(Exception):
     """A provider failure. The message is stored and shown, so it must not contain client data.
 
@@ -304,6 +336,10 @@ class Connector:
     sync_capabilities: frozenset[str] = frozenset()
     sync_interval: timedelta | None = timedelta(minutes=15)
     webhooks: WebhookSpec | None = None
+    # For texting providers that allow free-form messages only for a time after the
+    # contact's last message, such as a 24-hour customer-service window: how long.
+    # Outside it, staff send one of ``message_templates()`` with ``send_template``.
+    reply_window: timedelta | None = None
     # For legal research: what a search can cover, as (value, label) pairs, the first
     # being the default. Core passes the chosen value as the search's ``scope``.
     search_scopes: tuple[tuple[str, str], ...] = ()
@@ -368,6 +404,14 @@ class Connector:
         """
         return ("operating", "trust")
 
+    def message_templates(self):
+        """For texting with a reply window: the provider's approved MessageTemplates.
+
+        The ``send_template`` payload is ``{"to": E.164 number, "template": its id,
+        "values": field key -> text, "staff_email": sender's email}``.
+        """
+        raise NotImplementedError
+
     def revoke(self):
         """Revoke the stored credentials at the provider, if it supports that."""
 
@@ -421,9 +465,18 @@ class Connector:
         """Answer a provider's check that the address is ours, before any verification.
 
         Return ``(status, text)`` to answer with plain text, or None for a normal
-        event. Echo only what the provider sent, and never act on it.
+        event. Echo only what the provider sent, and never act on it. A GET to the
+        address gets only this answer; without one it is refused.
         """
         return None
+
+    def webhook_details(self, url):
+        """Other values staff enter at the provider with the address ``url``.
+
+        Return ``(label, value)`` pairs, such as a verify token the provider sends back
+        when it checks the address. They are shown with the address, once.
+        """
+        return ()
 
     def register_webhook(self, url, secret):
         """Set ``url`` as the provider's delivery address for this connection.

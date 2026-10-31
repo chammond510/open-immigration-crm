@@ -17,6 +17,7 @@ from .base import (
     Capability,
     Connector,
     ConnectorError,
+    MessageTemplate,
     Record,
     StaffIdentity,
     SyncBatch,
@@ -136,6 +137,19 @@ class ConnectorContract:
             self.assertTrue(str(answer))
             if action == "search_authorities":
                 self.assert_research_results(answer)
+
+    def test_contract_message_templates(self):
+        if self.connector_class.reply_window is None:
+            return
+        templates = self.connector_class(self.make_connection()).message_templates()
+        self.assertTrue(templates, "Give an example with at least one approved template.")
+        self.assertEqual(len({t.id for t in templates}), len(templates), "Template ids repeat.")
+        for template in templates:
+            self.assertIsInstance(template, MessageTemplate)
+            self.assertTrue(template.id and template.name and template.text, template)
+            for item in template.fields:
+                self.assertIn("{{" + item.key + "}}", template.text, template)
+                self.assertTrue(item.label, template)
 
     def assert_research_results(self, answer):
         """A legal research answer in core's shape: results core can keep and link to."""

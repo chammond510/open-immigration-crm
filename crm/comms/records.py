@@ -73,7 +73,7 @@ def keep_stored_values(fields, existing):
     updates can arrive out of order.
     """
     del fields["occurred_at"]
-    for name in ("subject", "summary", "duration", "delivery_status"):
+    for name in ("counterpart", "subject", "summary", "duration", "delivery_status"):
         if name in fields and not fields[name]:
             del fields[name]
     status = fields.get("delivery_status")

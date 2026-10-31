@@ -446,6 +446,7 @@ def connection_webhooks(request, pk):
             "connector": cls,
             "webhook_url": webhook_url,
             "secret": "" if cls.webhooks.secret_source != "crm" else secret,
+            "details": connection.connector().webhook_details(webhook_url),
             "registered": registered,
             "register_error": register_error,
         },

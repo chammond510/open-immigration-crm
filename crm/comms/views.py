@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
+from crm.connect.base import ConnectorError
 from crm.connect.models import OutboundRequest
 from crm.models import Contact, Matter
 from crm.services import audit
@@ -18,7 +19,16 @@ from .emailing import email_connections, send_email
 from .forms import CommunicationForm
 from .models import Communication
 from .services import set_texting_opt_out
-from .texting import send_text, texting_connections
+from .texting import (
+    approved_templates,
+    can_text_freely,
+    reply_window,
+    reply_window_ends,
+    send_template,
+    send_text,
+    template_connections,
+    texting_connections,
+)
 
 staff_required = user_passes_test(
     lambda user: user.is_active and user.is_staff,
@@ -175,16 +185,16 @@ def communication_create(request):
     return render(request, "comms/communication_form.html", {"form": form})
 
 
-def send_from_page(request, connections, noun, send):
-    """Send a text or email to a contact from a contact or matter page, and say what happened."""
-    contact = get_object_or_404(Contact, pk=request.POST.get("contact"))
-    matter = Matter.objects.filter(pk=request.POST.get("matter") or None).first()
+def recipient(params, connections):
+    """The contact, matter, and chosen connection a message is for, and the page to return to."""
+    contact = get_object_or_404(Contact, pk=params.get("contact"))
+    matter = Matter.objects.filter(pk=params.get("matter") or None).first()
     fallback = (
         reverse("matter_detail", args=[matter.pk])
         if matter
         else reverse("contact_detail", args=[contact.pk])
     )
-    connection = {str(c.pk): c for c in connections}.get(request.POST.get("connection", ""))
+    connection = {str(c.pk): c for c in connections}.get(params.get("connection", ""))
     if connection is None:
         raise PermissionDenied
     if (
@@ -193,11 +203,23 @@ def send_from_page(request, connections, noun, send):
         and not matter.parties.filter(contact=contact).exists()
     ):
         raise PermissionDenied
+    return contact, matter, connection, fallback
+
+
+def send_from_page(request, connections, noun, send):
+    """Send a text or email to a contact from a contact or matter page, and say what happened."""
+    contact, matter, connection, fallback = recipient(request.POST, connections)
     try:
         outbound = send(connection, contact=contact, actor=request.user, matter=matter)
     except ValidationError as exc:
         messages.error(request, " ".join(exc.messages))
         return redirect(safe_next(request, fallback))
+    report(request, outbound, connection, noun)
+    return redirect(safe_next(request, fallback))
+
+
+def report(request, outbound, connection, noun):
+    """Say what happened to a message sent through the outbound policy."""
     if outbound.status == OutboundRequest.Status.SENT:
         messages.success(request, f"{noun.capitalize()} sent through {connection.label}.")
     elif outbound.status == OutboundRequest.Status.PREVIEWED:
@@ -210,7 +232,6 @@ def send_from_page(request, connections, noun, send):
         messages.error(request, f"The {noun} was not sent: {outbound.error}")
     else:
         messages.error(request, f"The {noun} was not sent. {outbound.error}")
-    return redirect(safe_next(request, fallback))
 
 
 @staff_required
@@ -222,6 +243,76 @@ def communication_send_text(request):
         texting_connections(request.user),
         "text",
         lambda connection, **kwargs: send_text(connection, body=body, **kwargs),
+    )
+
+
+def template_choices(templates, chosen, values):
+    """Each template with its text as a preview, and the values entered for the chosen one."""
+    choices = []
+    for template in templates:
+        kept = values if template == chosen else {}
+        choices.append(
+            {
+                "template": template,
+                "preview": template.render(
+                    {item.key: f"[{item.label}]" for item in template.fields}
+                ),
+                "chosen": template == chosen,
+                "fields": [
+                    {"field": item, "value": kept.get(item.key, "")} for item in template.fields
+                ],
+            }
+        )
+    return choices
+
+
+@staff_required
+@require_http_methods(["GET", "POST"])
+def communication_send_template(request):
+    """Choose one of a messaging service's approved templates for a contact, and send it."""
+    params = request.POST if request.method == "POST" else request.GET
+    contact, matter, connection, fallback = recipient(params, template_connections(request.user))
+    try:
+        templates = approved_templates(connection)
+        error = ""
+    except ConnectorError as exc:
+        templates, error = [], str(exc)
+    chosen, values = None, {}
+    if request.method == "POST":
+        chosen = next((t for t in templates if t.id == request.POST.get("template")), None)
+        if chosen is None:
+            messages.error(request, "That template is no longer approved. Choose another.")
+        else:
+            values = {item.key: request.POST.get(f"value-{item.key}", "") for item in chosen.fields}
+            try:
+                outbound = send_template(
+                    connection,
+                    contact=contact,
+                    template=chosen,
+                    values=values,
+                    actor=request.user,
+                    matter=matter,
+                )
+            except ValidationError as exc:
+                messages.error(request, " ".join(exc.messages))
+            else:
+                report(request, outbound, connection, "message")
+                return redirect(fallback + "#communications")
+    window = reply_window(connection)
+    return render(
+        request,
+        "comms/send_template.html",
+        {
+            "contact": contact,
+            "matter": matter,
+            "connection": connection,
+            "back": fallback,
+            "error": error,
+            "window_hours": int(window.total_seconds() // 3600) if window else None,
+            "window_ends": reply_window_ends(connection, contact),
+            "window_open": can_text_freely(connection, contact),
+            "templates": template_choices(templates, chosen, values),
+        },
     )
 
 

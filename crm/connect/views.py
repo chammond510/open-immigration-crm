@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods
 
 from .base import ConnectorError
 from .models import Connection, WebhookEvent
@@ -18,13 +18,14 @@ def plain(status, text):
 
 
 @csrf_exempt
-@require_POST
+@require_http_methods(["GET", "POST"])
 def receive_webhook(request, token):
     """Accept a provider event: verify, store minimized and encrypted, and queue it.
 
     Every failure answers without detail, and nothing is stored unless the
     signature verifies. Providers retry, so a repeated event is acknowledged
-    without being queued again.
+    without being queued again. A GET is only ever a provider checking the address,
+    which the connector's ``webhook_challenge()`` answers.
     """
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     connection = Connection.objects.filter(
@@ -40,6 +41,8 @@ def receive_webhook(request, token):
     challenge = connector.webhook_challenge(url, body, request.headers)
     if challenge is not None:
         return plain(*challenge)
+    if request.method != "POST":
+        return plain(405, "method not allowed")
     secret = connection.webhook_secret or ""
     if not secret or not connector.verify_webhook(body, request.headers, secret, url=url):
         return plain(401, "invalid signature")
