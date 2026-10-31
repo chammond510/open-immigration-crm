@@ -58,11 +58,25 @@ urlpatterns = [
     path("settings/api/", include("crm.api.page_urls")),
     path("settings/team/", include("crm.team.urls")),
     path("accounts/profile/", team_views.profile, name="profile"),
-    # Invitation links; see crm/team.
-    path("accounts/welcome/done/", team_views.welcome_done, name="welcome_done"),
+    # Invitation and password reset links; see crm/team.
+    path("accounts/welcome/done/", team_views.password_saved, name="welcome_done"),
+    path("accounts/password-reset/", team_views.password_reset, name="password_reset"),
     path(
-        "accounts/welcome/<uidb64>/<token>/", team_views.WelcomeView.as_view(), name="welcome"
+        "accounts/password-reset/sent/",
+        team_views.password_reset_sent,
+        name="password_reset_sent",
     ),
+    path(
+        "accounts/password-reset/done/",
+        team_views.password_saved,
+        name="password_reset_complete",
+    ),
+    path(
+        "accounts/password-reset/<uidb64>/<token>/",
+        team_views.ResetPasswordView.as_view(),
+        name="password_reset_confirm",
+    ),
+    path("accounts/welcome/<uidb64>/<token>/", team_views.WelcomeView.as_view(), name="welcome"),
     path("accounts/login/", FirstRunAwareLoginView.as_view(), name="login"),
     path("accounts/login/verify/", two_factor_verify, name="two_factor_verify"),
     path("accounts/sign-in/callback/", sign_in.callback, name="staff_sign_in_callback"),

@@ -109,6 +109,16 @@ Nobody can give a role with a permission they do not hold, or change someone who
 
 Each person edits their own name and email under **Profile** in the menu under their name. When their username is their email address, changing the email changes the username too.
 
+### Forgotten passwords
+
+Once the firm connects an email delivery service, the sign-in page offers **Forgot your password?**. Staff enter their email address, and the background worker emails each active staff account with that address a link to choose a new password. The link works once, for an hour. The page gives the same answer whether or not an account uses the address, and only a hash of the address is kept, in the audit log. Each client address may ask ten times an hour, and each email address gets at most three emails an hour. Choosing a new password signs the account out of its other sessions and clears its sign-in lockout.
+
+Without an email delivery service the link is not offered. A superuser sets a new password under **Administration → Users**, or from the console:
+
+```bash
+python manage.py changepassword <username>
+```
+
 Upgrading creates the presets and changes nobody's access: existing staff have no role, and so only everyday work, until someone gives them one, and billing access granted to a person directly is kept.
 
 ## Sign-in lockout

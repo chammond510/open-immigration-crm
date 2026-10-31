@@ -1,8 +1,10 @@
+from axes.utils import reset as reset_sign_in_lockout
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import PasswordResetConfirmView
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -11,8 +13,8 @@ from crm.roles import MANAGE_STAFF, PERMISSIONS, is_staff, permission_required
 from crm.services import audit
 from crm.two_factor import confirmed_device, reset_two_factor
 
-from . import services
-from .forms import DeactivateForm, PersonForm, ProfileForm
+from . import reset, services
+from .forms import DeactivateForm, PasswordResetRequestForm, PersonForm, ProfileForm
 
 staff_required = user_passes_test(is_staff, login_url="login")
 
@@ -231,13 +233,12 @@ def profile(request):
     return render(request, "team/profile.html", {"form": form})
 
 
-class WelcomeView(PasswordResetConfirmView):
-    """Where an invited person chooses their first password."""
+class ChoosePasswordView(PasswordResetConfirmView):
+    """Where someone chooses a password through a link the CRM made for them."""
 
-    token_generator = services.invite_tokens
-    template_name = "team/welcome.html"
-    success_url = reverse_lazy("welcome_done")
+    template_name = "team/choose_password.html"
     reset_url_token = "choose-password"
+    audit_action = ""
 
     def get_user(self, uidb64):
         person = super().get_user(uidb64)
@@ -247,9 +248,57 @@ class WelcomeView(PasswordResetConfirmView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        audit(self.request, "user.password_set_from_invitation", form.user)
+        audit(self.request, self.audit_action, form.user)
         return response
 
 
-def welcome_done(request):
-    return render(request, "team/welcome_done.html")
+class WelcomeView(ChoosePasswordView):
+    """Where an invited person chooses their first password."""
+
+    token_generator = services.invite_tokens
+    success_url = reverse_lazy("welcome_done")
+    audit_action = "user.password_set_from_invitation"
+    extra_context = {"eyebrow": "Welcome", "heading": "Choose a password"}
+
+
+class ResetPasswordView(ChoosePasswordView):
+    """Where someone who asked by email chooses a new password."""
+
+    token_generator = reset.reset_tokens
+    success_url = reverse_lazy("password_reset_complete")
+    audit_action = "user.password_reset"
+    extra_context = {"eyebrow": "Password reset", "heading": "Choose a new password"}
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # A sign-in lockout from guessing the old password should not outlast it.
+        reset_sign_in_lockout(username=form.user.get_username())
+        return response
+
+
+def password_saved(request):
+    return render(request, "team/password_saved.html")
+
+
+@require_http_methods(["GET", "POST"])
+def password_reset(request):
+    if not reset.offered():
+        return render(request, "team/password_reset_unavailable.html", status=404)
+    form = PasswordResetRequestForm(request.POST or None)
+    if form.is_valid():
+        key = reset.address_key(form.cleaned_data["email"])
+        client_limited, address_limited = reset.limits_reached(request, key)
+        if client_limited:
+            return render(request, "team/password_reset_limited.html", status=429)
+        audit(request, reset.REQUESTED, detail=key)
+        if not address_limited:
+            site_url = request.build_absolute_uri("/").rstrip("/")
+            transaction.on_commit(lambda: reset.send_links.enqueue(key, site_url))
+        return redirect("password_reset_sent")
+    return render(request, "team/password_reset.html", {"form": form})
+
+
+@require_GET
+def password_reset_sent(request):
+    minutes = int(reset.LINK_LIFETIME.total_seconds() // 60)
+    return render(request, "team/password_reset_sent.html", {"minutes": minutes})

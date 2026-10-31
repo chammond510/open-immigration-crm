@@ -87,3 +87,7 @@ class DeactivateForm(forms.Form):
             .order_by("first_name", "last_name", "username")
         )
         field.label_from_instance = lambda user: user.get_full_name() or user.username
+
+
+class PasswordResetRequestForm(forms.Form):
+    email = forms.EmailField(label="Email address", max_length=254)

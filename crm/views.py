@@ -121,7 +121,11 @@ class FirstRunAwareLoginView(LoginView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        return {**super().get_context_data(**kwargs), "sign_in_connections": sign_in_connections()}
+        return {
+            **super().get_context_data(**kwargs),
+            "sign_in_connections": sign_in_connections(),
+            "password_reset_offered": system_email.sender() is not None,
+        }
 
     def form_valid(self, form):
         """Hold enrolled users at the second step instead of signing them in."""

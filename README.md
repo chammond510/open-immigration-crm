@@ -18,7 +18,7 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 - Custom fields on contacts and matters (text, number, date, choice, yes or no), shown on forms and record pages and carried in exports, the API, and webhooks
 - Private PDF, DOCX, PNG, and JPEG document storage
 - Blank intake-form builder with expiring, revocable, single-use links
-- Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff
+- Optional two-factor sign-in with an authenticator app and recovery codes, which the firm can require for all staff, and a "Forgot your password?" link by email once the firm connects an email service
 - Roles for a small firm's staff: Managing partner, Attorney, Paralegal, and Office administrator presets decide who handles billing, voids, deletion, imports, exports, firm settings, connections and AI, and staff, while everyone keeps everyday access to contacts, matters, and work. A Team page adds people by invitation, changes roles, resets two-factor sign-in, and deactivates people who leave, handing their open work to a colleague (see [Staff and roles](docs/DEPLOYMENT.md#staff-and-roles))
 - A JSON API for scripts and automation tools, off until someone who manages connections and AI turns it on, with scoped, expiring, revocable tokens and a log of every request (see [API](docs/API.md))
 - Signed outbound webhooks for automation tools: the firm chooses which CRM events are sent, and each one is retried and recorded (see [Outbound webhooks](docs/WEBHOOKS.md))
