@@ -67,6 +67,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **OpenID Connect sign-in** (Beta) lets staff sign in with the firm's identity provider, such as Google Workspace or Microsoft Entra ID. Only existing staff accounts can sign in this way, linked the first time by an email address the provider vouches for; passwords and the CRM's own two-factor sign-in keep working (see [the setup guide](connectors/oidc/README.md)).
 - **Documenso** (Beta) sends a matter's PDF to the matter's contacts for signature, through Documenso's hosted service or the firm's own, shows where each request stands, and files the signed PDF on the matter (see [the setup guide](connectors/documenso/README.md)). Without it, staff upload the signed copy themselves.
 - **Google Drive** (Beta) copies each matter's documents, one way, into a folder for the matter on the firm's Drive, ideally a shared drive, renames the folder with the matter, and moves deleted documents' copies to the trash (see [the setup guide](connectors/google_drive/README.md)). The CRM stays the record; nothing is read back.
+- **OneDrive and SharePoint** (Beta) does the same through Microsoft Graph, into a folder in a SharePoint document library or OneDrive the firm chooses (see [the setup guide](connectors/onedrive_sharepoint/README.md)).
 
 The catalog lists the other providers people have asked for as Wanted.
 
