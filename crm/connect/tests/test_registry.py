@@ -19,6 +19,7 @@ from crm.connect.base import (
 )
 from crm.connect.checks import connector_load_check
 from crm.connect.registry import (
+    API_ACCESS,
     ConnectorRegistry,
     manifest_problems,
     read_catalog_file,
@@ -217,6 +218,13 @@ description = "A fictional mail service."
         self.addCleanup(bad_through.unlink)
         with self.assertRaises(ImproperlyConfigured):
             read_catalog_file(bad_through)
+        for extra in ('docs_url = "http://x.example.test"', 'api_access = "maybe"'):
+            bad = write_catalog(
+                f'[[connector]]\nkey = "x_y"\nname = "X"\ncapabilities = ["phone"]\n{extra}\n'
+            )
+            self.addCleanup(bad.unlink)
+            with self.subTest(extra=extra), self.assertRaises(ImproperlyConfigured):
+                read_catalog_file(bad)
 
     def test_shipped_catalog_is_valid_and_hides_the_example(self):
         entries = read_catalog_file(settings.CONNECTOR_CATALOG)
@@ -225,6 +233,24 @@ description = "A fictional mail service."
         self.assertFalse(any(entry.key == "example" for entry in registry.catalog()))
         self.assertIsNotNone(registry.get("example"))
         self.assertEqual(registry.load_errors, [])
+
+    def test_shipped_catalog_entries_are_complete_and_not_installed(self):
+        installed = {cls.key: cls for cls in registry.connectors(include_hidden=True)}
+        names = {cls.name.lower() for cls in installed.values() if not cls.flag}
+        for entry in read_catalog_file(settings.CONNECTOR_CATALOG):
+            with self.subTest(entry=entry.key):
+                self.assertTrue(entry.description.endswith("."), "a one-line description")
+                # Only a provider without a public API may have no documentation to link.
+                if entry.api_access not in ("partner", "none"):
+                    self.assertTrue(entry.docs_url.startswith("https://"))
+                self.assertIn(entry.api_access, API_ACCESS)
+                # A connector, once built, leaves the catalog; only a flagged one stays,
+                # to show as wanted while its flag is off.
+                if entry.key in installed:
+                    self.assertTrue(installed[entry.key].flag)
+                self.assertNotIn(entry.name.lower(), names)
+                if entry.works_through:
+                    self.assertIn(entry.works_through, installed)
 
     def test_load_records_errors_and_runs_once(self):
         good = make_connector(key="from_entry_point", name="From Entry Point")

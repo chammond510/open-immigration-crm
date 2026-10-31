@@ -2,357 +2,527 @@
 # the Connections catalog as "Wanted" until a connector with the same key is
 # installed. Keys and capabilities follow crm/connect/base.py. Listing a name
 # here identifies compatibility only and implies no affiliation or endorsement.
+# docs_url is the provider's developer documentation and api_access how its
+# API is opened up (open, approval, partner, or none), checked 2026-10-30.
 
 # Phone and texting
+
 [[connector]]
 key = "ringcentral"
 name = "RingCentral"
 capabilities = ["phone", "texting"]
+description = "Log calls and send and receive texts through the firm's RingCentral numbers."
+docs_url = "https://developers.ringcentral.com/"
+api_access = "open"
 
 [[connector]]
 key = "aircall"
 name = "Aircall"
 capabilities = ["phone"]
+description = "Log calls made and taken on the firm's Aircall lines, with recordings."
+docs_url = "https://developer.aircall.io/"
+api_access = "open"
 
 [[connector]]
 key = "zoom_phone"
 name = "Zoom Phone"
 capabilities = ["phone"]
+description = "Log calls on the firm's Zoom Phone numbers, with recordings."
+docs_url = "https://developers.zoom.us/docs/api/phone/"
+api_access = "open"
 
 [[connector]]
 key = "vonage"
 name = "Vonage"
 capabilities = ["phone", "texting"]
+description = "Log calls and send and receive texts through the firm's Vonage numbers."
+docs_url = "https://developer.vonage.com/en/vonage-business-cloud/overview"
+api_access = "approval"
 
 [[connector]]
 key = "eight_by_eight"
 name = "8x8"
 capabilities = ["phone"]
+description = "Log calls made and taken on the firm's 8x8 lines."
+docs_url = "https://developer.8x8.com/analytics"
+api_access = "open"
 
 [[connector]]
 key = "nextiva"
 name = "Nextiva"
 capabilities = ["phone"]
+description = "Log calls made and taken on the firm's Nextiva lines."
+docs_url = "https://developer.nextiva.com/"
+api_access = "partner"
 
 [[connector]]
 key = "telnyx"
 name = "Telnyx"
 capabilities = ["phone", "texting"]
+description = "Log calls and send and receive texts through the firm's Telnyx numbers."
+docs_url = "https://developers.telnyx.com/"
+api_access = "open"
 
 [[connector]]
 key = "teams_phone"
 name = "Microsoft Teams Phone"
 capabilities = ["phone"]
+description = "Log calls made and taken in Microsoft Teams Phone."
+docs_url = "https://learn.microsoft.com/en-us/graph/api/resources/callrecords-api-overview"
+api_access = "open"
 
 [[connector]]
 key = "whatsapp_business"
 name = "WhatsApp Business"
 capabilities = ["texting"]
+description = "Send and receive WhatsApp messages with clients from contact pages."
+docs_url = "https://developers.facebook.com/documentation/business-messaging/whatsapp/about-the-platform"
+api_access = "approval"
 
 # Mailbox, calendar, and storage suites
-[[connector]]
-key = "imap_smtp"
-name = "IMAP and SMTP mail"
-capabilities = ["mailbox"]
 
 [[connector]]
 key = "zoho_mail"
 name = "Zoho Mail"
 capabilities = ["mailbox"]
+description = "File email with clients from Zoho Mail; it works today over IMAP and SMTP."
+docs_url = "https://www.zoho.com/mail/help/api/"
+api_access = "open"
 works_through = "imap_smtp"
 
 [[connector]]
 key = "caldav"
 name = "CalDAV calendar"
 capabilities = ["calendar"]
+description = "Keep appointments in step with a CalDAV calendar, such as iCloud or Fastmail."
+docs_url = "https://datatracker.ietf.org/doc/html/rfc4791"
+api_access = "open"
 
 # System email
+
 [[connector]]
 key = "postmark"
 name = "Postmark"
 capabilities = ["system_email"]
+description = "Send the CRM's own email, such as intake links, through Postmark; it works today through the SMTP server connector."
+docs_url = "https://postmarkapp.com/developer"
+api_access = "open"
 works_through = "smtp"
 
 [[connector]]
 key = "amazon_ses"
 name = "Amazon SES"
 capabilities = ["system_email"]
+description = "Send the CRM's own email, such as intake links, through Amazon SES; it works today through the SMTP server connector."
+docs_url = "https://docs.aws.amazon.com/ses/"
+api_access = "open"
 works_through = "smtp"
 
 [[connector]]
 key = "sendgrid"
 name = "SendGrid"
 capabilities = ["system_email"]
+description = "Send the CRM's own email, such as intake links, through SendGrid; it works today through the SMTP server connector."
+docs_url = "https://www.twilio.com/docs/sendgrid"
+api_access = "open"
 works_through = "smtp"
 
 [[connector]]
 key = "mailgun"
 name = "Mailgun"
 capabilities = ["system_email"]
+description = "Send the CRM's own email, such as intake links, through Mailgun; it works today through the SMTP server connector."
+docs_url = "https://documentation.mailgun.com/"
+api_access = "open"
 works_through = "smtp"
 
 # Scheduling and video
-[[connector]]
-key = "cal_com"
-name = "Cal.com"
-capabilities = ["scheduling"]
 
 [[connector]]
 key = "acuity"
 name = "Acuity Scheduling"
 capabilities = ["scheduling"]
+description = "File consultations booked through Acuity Scheduling as contacts and appointments."
+docs_url = "https://developers.acuityscheduling.com/"
+api_access = "open"
 
 [[connector]]
 key = "microsoft_bookings"
 name = "Microsoft Bookings"
 capabilities = ["scheduling"]
+description = "File consultations booked through Microsoft Bookings as contacts and appointments."
+docs_url = "https://learn.microsoft.com/en-us/graph/api/resources/booking-api-overview"
+api_access = "open"
 
 [[connector]]
 key = "zoom_scheduler"
 name = "Zoom Scheduler"
 capabilities = ["scheduling"]
+description = "File consultations booked through Zoom Scheduler as contacts and appointments."
+docs_url = "https://developers.zoom.us/docs/api/scheduler/"
+api_access = "open"
 
 [[connector]]
 key = "microsoft_teams"
 name = "Microsoft Teams"
 capabilities = ["video"]
+description = "Make a Microsoft Teams meeting for each of a staff member's appointments."
+docs_url = "https://learn.microsoft.com/en-us/graph/api/resources/onlinemeeting"
+api_access = "open"
 
 [[connector]]
 key = "google_meet"
 name = "Google Meet"
 capabilities = ["video"]
+description = "Make a Google Meet for each of a staff member's appointments."
+docs_url = "https://developers.google.com/workspace/meet/api/guides/overview"
+api_access = "open"
 
 [[connector]]
 key = "jitsi"
 name = "Jitsi Meet"
 capabilities = ["video"]
+description = "Add a Jitsi Meet link to each appointment, on meet.jit.si or the firm's own server."
+docs_url = "https://jitsi.github.io/handbook/docs/dev-guide/dev-guide-iframe/"
+api_access = "open"
 
 # Payments and accounting
-[[connector]]
-key = "stripe"
-name = "Stripe"
-capabilities = ["payments"]
 
 [[connector]]
 key = "square"
 name = "Square"
 capabilities = ["payments"]
+description = "Make Square payment links for invoices and record the payments."
+docs_url = "https://developer.squareup.com/docs"
+api_access = "open"
 
 [[connector]]
 key = "paypal"
 name = "PayPal"
 capabilities = ["payments"]
+description = "Make PayPal payment links for invoices and record the payments."
+docs_url = "https://developer.paypal.com/api/rest/"
+api_access = "open"
 
 [[connector]]
 key = "headnote"
 name = "Headnote"
 capabilities = ["payments"]
+description = "Take payments through Headnote, keeping trust and operating money apart."
+docs_url = ""
+api_access = "partner"
 
 [[connector]]
 key = "confido_legal"
 name = "Confido Legal"
 capabilities = ["payments"]
+description = "Take payments through Confido Legal, keeping trust and operating money apart."
+docs_url = "https://docs.confidolegal.com/"
+api_access = "partner"
 
 [[connector]]
 key = "quickbooks_online"
 name = "QuickBooks Online"
 capabilities = ["accounting"]
+description = "Copy invoices and payments into QuickBooks Online."
+docs_url = "https://developer.intuit.com/app/developer/qbo/docs/get-started"
+api_access = "approval"
 
 [[connector]]
 key = "xero"
 name = "Xero"
 capabilities = ["accounting"]
+description = "Copy invoices and payments into Xero."
+docs_url = "https://developer.xero.com/documentation/"
+api_access = "open"
 
 [[connector]]
 key = "freshbooks"
 name = "FreshBooks"
 capabilities = ["accounting"]
+description = "Copy invoices and payments into FreshBooks."
+docs_url = "https://www.freshbooks.com/api/start"
+api_access = "open"
 
 # Document storage and e-signature
+
 [[connector]]
 key = "dropbox"
 name = "Dropbox"
 capabilities = ["storage"]
+description = "Copy each matter's documents into a folder for the matter in the firm's Dropbox."
+docs_url = "https://www.dropbox.com/developers/documentation"
+api_access = "open"
 
 [[connector]]
 key = "box"
 name = "Box"
 capabilities = ["storage"]
+description = "Copy each matter's documents into a folder for the matter in the firm's Box."
+docs_url = "https://developer.box.com/"
+api_access = "open"
 
 [[connector]]
 key = "egnyte"
 name = "Egnyte"
 capabilities = ["storage"]
+description = "Copy each matter's documents into a folder for the matter in the firm's Egnyte."
+docs_url = "https://developers.egnyte.com/docs"
+api_access = "approval"
 
 [[connector]]
 key = "docusign"
 name = "DocuSign"
 capabilities = ["esignature"]
+description = "Send matter documents for signature through DocuSign and file the signed copy."
+docs_url = "https://developers.docusign.com/docs/esign-rest-api/"
+api_access = "approval"
 
 [[connector]]
 key = "dropbox_sign"
 name = "Dropbox Sign"
 capabilities = ["esignature"]
+description = "Send matter documents for signature through Dropbox Sign and file the signed copy."
+docs_url = "https://developers.hellosign.com/"
+api_access = "open"
 
 [[connector]]
 key = "adobe_acrobat_sign"
 name = "Adobe Acrobat Sign"
 capabilities = ["esignature"]
+description = "Send matter documents for signature through Adobe Acrobat Sign and file the signed copy."
+docs_url = "https://developer.adobe.com/acrobat-sign/"
+api_access = "open"
 
 [[connector]]
 key = "boldsign"
 name = "BoldSign"
 capabilities = ["esignature"]
+description = "Send matter documents for signature through BoldSign and file the signed copy."
+docs_url = "https://developers.boldsign.com/"
+api_access = "open"
 
 # AI models and translation
+
 [[connector]]
 key = "chatgpt_plan"
 name = "ChatGPT plan (Sign in with ChatGPT)"
 capabilities = ["ai_models"]
+description = "Let staff use their own ChatGPT plan for AI features; offered only while its Beta flag is on."
+docs_url = "https://developers.openai.com/siwc"
+api_access = "approval"
 
 [[connector]]
 key = "azure_openai"
 name = "Azure OpenAI"
 capabilities = ["ai_models"]
+description = "Use models deployed in the firm's Azure OpenAI resource for AI features; it works today through the OpenAI-compatible endpoint connector."
+docs_url = "https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle"
+api_access = "open"
+works_through = "openai_compatible"
 
 [[connector]]
 key = "gemini"
 name = "Google Gemini API"
 capabilities = ["ai_models"]
+description = "Use Google's Gemini models for AI features; it works today through the OpenAI-compatible endpoint connector."
+docs_url = "https://ai.google.dev/gemini-api/docs/openai"
+api_access = "open"
+works_through = "openai_compatible"
 
 [[connector]]
 key = "aws_bedrock"
 name = "AWS Bedrock"
 capabilities = ["ai_models"]
+description = "Use models from Amazon Bedrock for AI features."
+docs_url = "https://docs.aws.amazon.com/bedrock/"
+api_access = "open"
 
 [[connector]]
 key = "vertex_ai"
 name = "Google Vertex AI"
 capabilities = ["ai_models"]
+description = "Use models on Google Vertex AI for AI features."
+docs_url = "https://docs.cloud.google.com/gemini-enterprise-agent-platform"
+api_access = "open"
 
 [[connector]]
 key = "deepl"
 name = "DeepL"
 capabilities = ["translation"]
+description = "Translate client messages and intake answers with DeepL."
+docs_url = "https://developers.deepl.com/docs"
+api_access = "open"
 
 [[connector]]
 key = "google_translation"
 name = "Google Cloud Translation"
 capabilities = ["translation"]
+description = "Translate client messages and intake answers with Google Cloud Translation."
+docs_url = "https://docs.cloud.google.com/translate/docs"
+api_access = "open"
 
 # Legal research and case status
-[[connector]]
-key = "bia_edge"
-name = "BIA Edge"
-capabilities = ["legal_research"]
-
-[[connector]]
-key = "courtlistener"
-name = "CourtListener"
-capabilities = ["legal_research"]
 
 [[connector]]
 key = "visa_bulletin"
 name = "Visa Bulletin"
 capabilities = ["case_status"]
+description = "Compare matters' priority dates with the State Department's monthly Visa Bulletin."
+docs_url = "https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin.html"
+api_access = "none"
 
 [[connector]]
 key = "uscis_processing_times"
 name = "USCIS processing times"
 capabilities = ["case_status"]
+description = "Show USCIS's posted processing times for each matter's form and office."
+docs_url = "https://egov.uscis.gov/processing-times/"
+api_access = "none"
 
 # Shipping
+
 [[connector]]
 key = "usps"
 name = "USPS"
 capabilities = ["shipping"]
+description = "Track filing packages sent by USPS and note their delivery on the matter."
+docs_url = "https://developers.usps.com/trackingv3r2"
+api_access = "open"
 
 [[connector]]
 key = "fedex"
 name = "FedEx"
 capabilities = ["shipping"]
+description = "Track filing packages sent by FedEx and note their delivery on the matter."
+docs_url = "https://developer.fedex.com/api/en-us/catalog/track/v1/docs.html"
+api_access = "open"
 
 [[connector]]
 key = "ups"
 name = "UPS"
 capabilities = ["shipping"]
+description = "Track filing packages sent by UPS and note their delivery on the matter."
+docs_url = "https://developer.ups.com/tag/Tracking?loc=en_US"
+api_access = "open"
 
 # Leads and marketing
-[[connector]]
-key = "website_form"
-name = "Website form (signed webhook)"
-capabilities = ["lead_capture"]
 
 [[connector]]
 key = "wordpress_forms"
 name = "WordPress form plugins"
 capabilities = ["lead_capture"]
+description = "Turn WordPress form submissions into leads; it works today through the Website form connector, with a tool such as n8n signing them."
+docs_url = "https://docs.gravityforms.com/category/add-ons-gravity-forms/webhooks-add-on/"
+api_access = "open"
+works_through = "website_form"
 
 [[connector]]
 key = "google_lead_forms"
 name = "Google Ads lead forms"
 capabilities = ["lead_capture"]
+description = "Turn Google Ads lead form submissions into leads, with the campaign as the lead source."
+docs_url = "https://developers.google.com/google-ads/webhook/docs/overview"
+api_access = "open"
 
 [[connector]]
 key = "meta_lead_ads"
 name = "Meta lead ads"
 capabilities = ["lead_capture"]
+description = "Turn Facebook and Instagram lead ad submissions into leads."
+docs_url = "https://developers.facebook.com/docs/marketing-api/guides/lead-ads/"
+api_access = "approval"
 
 [[connector]]
 key = "google_local_services"
 name = "Google Local Services Ads"
 capabilities = ["lead_capture"]
+description = "Turn Google Local Services Ads leads into contacts."
+docs_url = "https://developers.google.com/google-ads/api/docs/campaigns/local-service-campaigns"
+api_access = "approval"
 
 [[connector]]
 key = "google_ads"
 name = "Google Ads"
 capabilities = ["marketing"]
+description = "Report ad spend and leads by campaign from Google Ads."
+docs_url = "https://developers.google.com/google-ads/api/docs/start"
+api_access = "approval"
 
 [[connector]]
 key = "google_analytics"
 name = "Google Analytics 4"
 capabilities = ["marketing"]
+description = "Report website visits and form conversions from Google Analytics 4."
+docs_url = "https://developers.google.com/analytics/devguides/reporting/data/v1"
+api_access = "open"
 
 [[connector]]
 key = "meta_ads"
 name = "Meta Ads"
 capabilities = ["marketing"]
+description = "Report ad spend and leads by campaign from Meta's ads."
+docs_url = "https://developers.facebook.com/docs/marketing-api/insights"
+api_access = "approval"
 
 # Sign-in
+
 [[connector]]
 key = "okta"
 name = "Okta"
 capabilities = ["sign_in"]
+description = "Sign staff in with Okta; it works today through the OpenID Connect connector."
+docs_url = "https://developer.okta.com/docs/guides/sign-into-web-app-redirect/"
+api_access = "open"
 works_through = "oidc"
 
 [[connector]]
 key = "jumpcloud"
 name = "JumpCloud"
 capabilities = ["sign_in"]
+description = "Sign staff in with JumpCloud; it works today through the OpenID Connect connector."
+docs_url = "https://jumpcloud.com/support/sso-with-oidc"
+api_access = "open"
 works_through = "oidc"
 
 # Migration from other practice-management systems
+
 [[connector]]
 key = "docketwise"
 name = "Docketwise"
 capabilities = ["migration"]
+description = "Move contacts and matters over from Docketwise."
+docs_url = "https://docketwise.gitbook.io/docketwise-api-docs"
+api_access = "approval"
 
 [[connector]]
 key = "inszoom"
 name = "INSZoom"
 capabilities = ["migration"]
+description = "Move contacts and matters over from INSZoom."
+docs_url = "https://success.mitratech.com/INSZoom/Help_Articles/Support/Zoom_APIs"
+api_access = "partner"
 
 [[connector]]
 key = "clio"
 name = "Clio"
 capabilities = ["migration"]
+description = "Move contacts and matters over from Clio Manage."
+docs_url = "https://docs.developers.clio.com/clio-manage/api-reference/"
+api_access = "open"
 
 [[connector]]
 key = "mycase"
 name = "MyCase"
 capabilities = ["migration"]
+description = "Move contacts and matters over from MyCase."
+docs_url = "https://mycaseapi.stoplight.io/"
+api_access = "approval"
 
 [[connector]]
 key = "lawlogix"
 name = "LawLogix"
 capabilities = ["migration"]
+description = "Move contacts and matters over from LawLogix."
+docs_url = "https://developer.lawlogix.com/"
+api_access = "none"
