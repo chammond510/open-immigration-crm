@@ -3,8 +3,9 @@
 Connectors return these from ``sync()`` and ``handle_webhook()``. Core features
 store them: calls, texts, and emails become communications, calendar events and
 bookings become appointments, payments are recorded on invoices, case status
-readings are recorded on matters, leads become contacts, and contacts and matters
-from a previous practice system become an import staff review and confirm.
+readings are recorded on matters, leads become contacts, tracking readings are
+recorded on a matter's shipments, and contacts and matters from a previous practice
+system become an import staff review and confirm.
 ``problems()`` lists what is wrong with a record; the contract tests require it to
 be empty.
 """
@@ -323,6 +324,50 @@ class MatterRecord(TypedRecord):
         return problems
 
 
+SHIPMENT_STATUSES = ("sent", "in_transit", "out_for_delivery", "delivered", "problem", "returned")
+# Why a carrier could not give a tracking number's status. NOT_SHARED: the carrier
+# keeps this package's tracking from the firm's account, such as one labelled under
+# someone else's mailer account.
+NOT_SHARED = "not_shared"
+SHIPMENT_PROBLEMS = (NOT_FOUND, UNAVAILABLE, NOT_SHARED)
+
+
+@dataclass(frozen=True, kw_only=True)
+class ShipmentRecord(TypedRecord):
+    """Where a tracked package stands. ``occurred_at`` is when it was checked.
+
+    ``carrier`` is the carrier's key, such as ``usps``. ``detail`` is the latest
+    tracking event in the carrier's words, and ``delivered_at`` when it was
+    delivered. When the carrier could not say, ``problem`` says why and ``status``
+    is empty.
+    """
+
+    kind: str = "shipment"
+    carrier: str
+    tracking_number: str
+    status: str = ""
+    detail: str = ""
+    delivered_at: object = None
+    expected_on: object = None
+    problem: str = ""
+
+    def problems(self):
+        problems = super().problems()
+        if not (self.carrier and self.tracking_number):
+            problems.append("carrier and tracking_number are required")
+        if self.problem and self.problem not in SHIPMENT_PROBLEMS:
+            problems.append(f"problem must be one of {', '.join(SHIPMENT_PROBLEMS)}")
+        if bool(self.problem) == bool(self.status):
+            problems.append("give either a status or a problem")
+        if self.status and self.status not in SHIPMENT_STATUSES:
+            problems.append(f"status must be one of {', '.join(SHIPMENT_STATUSES)}")
+        if self.delivered_at is not None and not aware(self.delivered_at):
+            problems.append("delivered_at must be a timezone-aware datetime")
+        if self.expected_on is not None and not isinstance(self.expected_on, date):
+            problems.append("expected_on must be a date")
+        return problems
+
+
 RECORD_TYPES = {
     Capability.PHONE: (CallRecord,),
     Capability.TEXTING: (TextRecord,),
@@ -334,4 +379,5 @@ RECORD_TYPES = {
     Capability.LEAD_CAPTURE: (LeadRecord,),
     Capability.ESIGNATURE: (SignatureRecord,),
     Capability.MIGRATION: (ContactRecord, MatterRecord),
+    Capability.SHIPPING: (ShipmentRecord,),
 }

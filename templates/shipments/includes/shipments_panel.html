@@ -1,0 +1,11 @@
+{% load connect_tags %}
+<section class="panel" id="shipments">
+  <div class="section-heading"><div><h2>Shipments</h2><p>Packages sent for this matter, such as filings to USCIS, and whether they arrived.</p></div></div>
+  {% for shipment in shipments %}
+    <div class="mini-record"><div><strong><span class="badge {% if shipment.status == 'delivered' %}active{% elif shipment.status == 'problem' or shipment.status == 'returned' %}denied{% else %}pending{% endif %}">{{ shipment.get_status_display }}</span> {{ shipment.description }}</strong><span>{{ shipment.get_carrier_display }}{% if shipment.tracking_number %} <span class="mono">{{ shipment.tracking_number }}</span>{% endif %} · sent {{ shipment.sent_on|date:"M j, Y" }}{% if shipment.sent_to %} to {{ shipment.sent_to }}{% endif %}{% if shipment.delivered_at %} · delivered {{ shipment.delivered_at|date:"M j, Y" }}{% elif shipment.expected_on %} · expected {{ shipment.expected_on|date:"M j, Y" }}{% endif %}</span>{% if shipment.status_detail %}<small>{{ shipment.status_detail }}</small>{% endif %}{% if shipment.tracking_problem %}<small class="danger-text">{{ shipment.tracking_problem }}</small>{% endif %}{% if shipment.checked_at %}<small class="muted">Tracking checked {{ shipment.checked_at|date:"M j, g:i a" }}</small>{% endif %}</div><a class="text-button" href="{% url 'shipment_update' shipment.pk %}">Edit</a></div>
+  {% empty %}<p class="muted">No shipments recorded.</p>{% endfor %}
+  <details class="inline-add"><summary>Add a shipment</summary>
+    <form method="post" action="{% url 'shipment_create' matter.pk %}" class="stacked-form compact-form">{% csrf_token %}{{ form.as_div }}<button class="button primary" type="submit">Add shipment</button></form>
+  </details>
+  <div class="prompt-stack">{% connect_prompt "shipping" "to track packages automatically" %}</div>
+</section>

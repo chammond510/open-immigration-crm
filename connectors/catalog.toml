@@ -375,14 +375,6 @@ api_access = "none"
 # Shipping
 
 [[connector]]
-key = "usps"
-name = "USPS"
-capabilities = ["shipping"]
-description = "Track filing packages sent by USPS and note their delivery on the matter."
-docs_url = "https://developers.usps.com/trackingv3r2"
-api_access = "open"
-
-[[connector]]
 key = "fedex"
 name = "FedEx"
 capabilities = ["shipping"]
