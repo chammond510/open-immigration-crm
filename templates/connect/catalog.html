@@ -6,24 +6,24 @@
 {% if connections %}
   <div class="section-heading"><div><h2>Your connections</h2></div></div>
   <section class="panel flush-panel catalog-connections"><div class="table-wrap"><table><thead><tr><th>Connection</th><th>Service</th><th>Status</th><th>Used by</th><th>Last success</th></tr></thead><tbody>
-    {% for connection in connections %}<tr><td><a class="primary-link" href="{% url 'connection_detail' connection.pk %}">{{ connection.label }}</a>{% if connection.preview_mode %}<small>Preview mode</small>{% endif %}</td><td>{{ connection.connector_class.name|default:connection.connector_key }}</td><td><span class="badge {{ connection.status }}">{{ connection.get_status_display }}</span></td><td>{% if connection.owner %}{{ connection.owner }}{% else %}Whole firm{% endif %}</td><td>{{ connection.last_success_at|date:"M j, g:i a"|default:"—" }}</td></tr>{% endfor %}
+    {% for connection in connections %}<tr><td><a class="primary-link" href="{% url 'connection_detail' connection.pk %}">{{ connection.label }}</a>{% if connection.preview_mode %}<small>Preview mode</small>{% endif %}</td><td>{{ connection.connector_class.name|default:connection.connector_key }}</td><td><span class="badge {{ connection.status }}">{{ connection.get_status_display }}</span></td><td>{% if connection.owner %}{{ connection.owner.get_full_name|default:connection.owner }}{% else %}Whole firm{% endif %}</td><td>{{ connection.last_success_at|date:"M j, g:i a"|default:"—" }}</td></tr>{% endfor %}
   </tbody></table></div></section>
 {% endif %}
 <form class="filter-bar" method="get">
   <label class="sr-only" for="catalog-q">Search services</label><input id="catalog-q" type="search" name="q" value="{{ query }}" placeholder="Search services">
   <label class="sr-only" for="catalog-capability">Capability</label><select id="catalog-capability" name="capability"><option value="">All capabilities</option>{% for key, label in capabilities %}<option value="{{ key }}" {% if selected_capability == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-  <label class="sr-only" for="catalog-maturity">Status</label><select id="catalog-maturity" name="maturity"><option value="">Ready, Beta, and Wanted</option>{% for key, label in maturities %}<option value="{{ key }}" {% if selected_maturity == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <label class="sr-only" for="catalog-maturity">Status</label><select id="catalog-maturity" name="maturity"><option value="">All statuses</option>{% for key, label in maturities %}<option value="{{ key }}" {% if selected_maturity == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
   <button class="button" type="submit">Filter</button>
 </form>
 {% for group in groups %}
   <section class="catalog-group" aria-labelledby="group-{{ group.key }}">
     <h2 id="group-{{ group.key }}">{{ group.label }}</h2>
     <div class="catalog-grid">
-      {% for tile in group.tiles %}<a class="catalog-tile" href="{% url 'connector_detail' tile.entry.key %}"><span class="monogram" aria-hidden="true">{{ tile.monogram }}</span><span class="tile-body"><strong>{{ tile.entry.name }}</strong><span>{% if tile.entry.connector %}{{ tile.auth }}{% elif tile.works_through %}Works through {{ tile.works_through.name }}{% else %}Not built yet{% endif %}</span></span><span class="tile-badges">{% if tile.connected %}<span class="badge active">Connected</span>{% endif %}{% if tile.test_only %}<span class="badge">Test only</span>{% endif %}<span class="badge maturity-{{ tile.entry.maturity }}">{{ tile.maturity_label }}</span></span></a>{% endfor %}
+      {% for tile in group.tiles %}<a class="catalog-tile{% if not tile.entry.connector and not tile.works_through %} is-wanted{% endif %}" href="{% url 'connector_detail' tile.entry.key %}"><span class="monogram" aria-hidden="true">{{ tile.monogram }}</span><span class="tile-body"><strong>{{ tile.entry.name }}</strong><span>{% if tile.entry.connector %}{{ tile.auth }}{% elif tile.works_through %}Works through {{ tile.works_through.name }}{% else %}Not built yet{% endif %}</span></span><span class="tile-badges">{% if tile.connected %}<span class="badge active">Connected</span>{% endif %}{% if tile.test_only %}<span class="badge">Test only</span>{% endif %}<span class="badge maturity-{{ tile.entry.maturity }}">{{ tile.maturity_label }}</span></span></a>{% endfor %}
     </div>
   </section>
 {% empty %}
-  <section class="panel"><div class="empty-state"><h3>No services match</h3><p>Clear the filter to see every service.</p></div></section>
+  <section class="panel"><div class="empty-state"><h2>No services match</h2><p>Clear the filter to see every service.</p></div></section>
 {% endfor %}
 <p class="fine-print catalog-note">Ready connectors have a named maintainer and pass the shared connector tests. Beta connectors work but are newer. Wanted services have no connector yet. Service names identify compatibility only; Open Immigration CRM is not affiliated with or endorsed by these providers.</p>
 {% endblock %}

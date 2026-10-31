@@ -144,6 +144,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "crm.context_processors.firm_profile",
                 "crm.context_processors.running_timer",
+                "crm.context_processors.nav_section",
                 "crm.ai.context_processors.ai_features",
             ],
         },

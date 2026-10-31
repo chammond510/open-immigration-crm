@@ -39,6 +39,6 @@
   </details>
   {% if searches %}
     <h3 class="subheading">Recent searches</h3>
-    {% for search in searches %}<div class="mini-record"><div><a href="{% url 'research_search_detail' search.pk %}"><strong>{{ search.query }}</strong></a><span>{{ search.created_at|date:"M j, g:i a" }} · {{ search.searched_by|default:"—" }} · {% if search.status == "done" %}{{ search.results|length }} result{{ search.results|length|pluralize }}{% else %}{{ search.get_status_display }}{% endif %}</span></div></div>{% endfor %}
+    {% for search in searches %}<div class="mini-record"><div><a href="{% url 'research_search_detail' search.pk %}"><strong>{{ search.query }}</strong></a><span>{{ search.created_at|date:"M j, g:i a" }} · {{ search.searched_by.get_full_name|default:search.searched_by|default:"—" }} · {% if search.status == "done" %}{{ search.results|length }} result{{ search.results|length|pluralize }}{% else %}{{ search.get_status_display }}{% endif %}</span></div></div>{% endfor %}
   {% endif %}
 </section>

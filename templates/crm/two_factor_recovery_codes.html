@@ -7,7 +7,9 @@
     <ul class="recovery-codes">
       {% for code in codes %}<li>{{ code }}</li>{% endfor %}
     </ul>
-    <div class="form-actions"><a class="button primary" href="{% url 'dashboard' %}">I saved my recovery codes</a></div>
+    <label class="sr-only" for="recovery-codes-text">Recovery codes</label><textarea class="sr-only" id="recovery-codes-text" readonly tabindex="-1">{% for code in codes %}{{ code }}
+{% endfor %}</textarea>
+    <div class="form-actions"><a class="button primary" href="{% url 'dashboard' %}">I saved my recovery codes</a><button class="button" type="button" data-copy-for="recovery-codes-text">Copy codes</button><button class="button" type="button" data-print>Print</button></div>
   </section>
 </div>
 {% endblock %}

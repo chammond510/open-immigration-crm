@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ spreadsheet.filename }} · Import from a spreadsheet · Open Immigration CRM{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>{{ spreadsheet.filename }}</h1><p>Imported {{ spreadsheet.imported_at|date:"M j, Y, g:i A" }}{% if spreadsheet.created_by %} by {{ spreadsheet.created_by.get_full_name|default:spreadsheet.created_by.username }}{% endif %}.</p></div><div class="actions"><a class="button" href="{% url 'import_list' %}">All imports</a></div></div>
+<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>{{ spreadsheet.filename }}</h1><p>Imported {{ spreadsheet.imported_at|date:"M j, Y · g:i a" }}{% if spreadsheet.created_by %} by {{ spreadsheet.created_by.get_full_name|default:spreadsheet.created_by.username }}{% endif %}.</p></div><div class="actions"><a class="button" href="{% url 'import_list' %}">All imports</a></div></div>
 <div class="page-stack">
   <div class="metrics">
     <a href="{% url 'contact_list' %}"><strong>{{ spreadsheet.contacts_created }}</strong><span>Contacts added</span></a>
@@ -15,6 +15,6 @@
       {% for item in spreadsheet.skipped %}<tr><td>{{ item.row }}</td><td>{{ item.reason }}</td></tr>{% endfor %}
     </tbody></table></div>{% else %}<div class="empty-state compact"><p>Every row was imported.</p></div>{% endif %}
   </section>
-  {% if spreadsheet.content is not None %}<form method="post" action="{% url 'import_discard' spreadsheet.pk %}" class="form-actions">{% csrf_token %}<button class="button" type="submit">Delete the uploaded file now</button></form>{% endif %}
+  {% if spreadsheet.content is not None %}<form method="post" action="{% url 'import_discard' spreadsheet.pk %}" class="form-actions" data-confirm="Delete the uploaded file now? The skipped rows can no longer be downloaded.">{% csrf_token %}<button class="button danger" type="submit">Delete the uploaded file now</button></form>{% endif %}
 </div>
 {% endblock %}

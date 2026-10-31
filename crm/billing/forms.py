@@ -54,7 +54,18 @@ class PaymentForm(forms.ModelForm):
         model = Payment
         fields = ["received_on", "amount", "method", "deposit_account", "reference", "note"]
         labels = {"received_on": "Received", "deposit_account": "Deposited to"}
-        widgets = {"received_on": forms.DateInput(attrs={"type": "date"})}
+        widgets = {
+            "received_on": forms.DateInput(attrs={"type": "date"}),
+            "amount": forms.NumberInput(attrs={"inputmode": "decimal"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["method"].choices = [("", "Choose a method"), *Payment.Method.choices]
+        self.fields["deposit_account"].choices = [
+            ("", "Choose an account"),
+            *Payment.Account.choices,
+        ]
 
 
 class ReasonForm(forms.Form):

@@ -44,7 +44,13 @@ def shipment_update(request, pk):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": f"Shipment: {shipment}", "submit_label": "Save shipment"},
+        {
+            "form": form,
+            "title": f"Shipment: {shipment}",
+            "submit_label": "Save shipment",
+            "eyebrow": shipment.matter.matter_number,
+            "cancel_url": matter_shipments(shipment.matter),
+        },
     )
 
 

@@ -7,7 +7,7 @@
     <div class="section-heading"><div><h2>Upload a file</h2><p>Up to 5 MB and {{ max_rows }} rows, with a header row naming each column. Save it from the spreadsheet app as CSV UTF-8.</p></div></div>
     <form method="post" enctype="multipart/form-data" class="stacked-form">
       {% csrf_token %}
-      {% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+      {% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>{% endif %}{% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>{% endif %}</div>{% endfor %}
       <div class="form-actions"><button class="button primary" type="submit">Upload and match columns</button></div>
     </form>
     <p class="fine-print">The file is kept encrypted for a day, for the preview and the list of skipped rows, and then deleted. Only superusers can import.</p>
@@ -15,7 +15,7 @@
   <section class="panel flush-panel">
     <div class="section-heading table-note"><div><h2>Imports</h2></div></div>
     {% if imports %}<div class="table-wrap"><table><thead><tr><th>File</th><th>Uploaded</th><th>Status</th><th>Contacts</th><th>Matters</th><th>Skipped rows</th></tr></thead><tbody>
-      {% for item in imports %}<tr><td><a class="primary-link" href="{% if item.status == 'imported' %}{% url 'import_report' item.pk %}{% else %}{% url 'import_columns' item.pk %}{% endif %}">{{ item.filename }}</a><small>{{ item.row_count }} rows{% if item.connection %} from {{ item.source }}{% endif %}</small></td><td>{{ item.created_at|date:"M j, Y, g:i A" }}{% if item.created_by %}<small>{{ item.created_by.get_full_name|default:item.created_by.username }}</small>{% endif %}</td><td><span class="badge {% if item.status == 'imported' %}active{% else %}pending{% endif %}">{{ item.get_status_display }}</span></td><td>{% if item.status == 'imported' %}{{ item.contacts_created }}{% endif %}</td><td>{% if item.status == 'imported' %}{{ item.matters_created }}{% endif %}</td><td>{% if item.status == 'imported' %}{{ item.skipped|length }}{% endif %}</td></tr>{% endfor %}
+      {% for item in imports %}<tr><td><a class="primary-link" href="{% if item.status == 'imported' %}{% url 'import_report' item.pk %}{% else %}{% url 'import_columns' item.pk %}{% endif %}">{{ item.filename }}</a><small>{{ item.row_count }} row{{ item.row_count|pluralize }}{% if item.connection %} from {{ item.source }}{% endif %}</small></td><td>{{ item.created_at|date:"M j, Y · g:i a" }}{% if item.created_by %}<small>{{ item.created_by.get_full_name|default:item.created_by.username }}</small>{% endif %}</td><td><span class="badge {% if item.status == 'imported' %}active{% else %}pending{% endif %}">{{ item.get_status_display }}</span></td><td>{% if item.status == 'imported' %}{{ item.contacts_created }}{% endif %}</td><td>{% if item.status == 'imported' %}{{ item.matters_created }}{% endif %}</td><td>{% if item.status == 'imported' %}{{ item.skipped|length }}{% endif %}</td></tr>{% endfor %}
     </tbody></table></div>{% else %}<div class="empty-state compact"><p>No imports yet.</p></div>{% endif %}
   </section>
   <section class="panel flush-panel">

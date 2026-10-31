@@ -7,11 +7,11 @@
     {% csrf_token %}
     {% for error in form.non_field_errors %}<div class="message error">{{ error }}</div>{% endfor %}
     <div class="form-grid">
-      {% for field in form %}{% if field.name != "scopes" %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endif %}{% endfor %}
+      {% for field in form %}{% if field.name != "scopes" %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>{% endif %}{% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>{% endif %}</div>{% endif %}{% endfor %}
     </div>
     <fieldset class="scope-picker">
       <legend>Access</legend>
-      {% for error in form.scopes.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+      {% if form.scopes.errors %}<div class="field-error" id="{{ form.scopes.auto_id }}_error">{{ form.scopes.errors|join:" " }}</div>{% endif %}
       <div class="table-wrap"><table><thead><tr><th>Records</th><th>Read</th><th>Read and write</th></tr></thead><tbody>
         {% for row in form.scope_rows %}<tr>
           <td>{{ row.label }}</td>

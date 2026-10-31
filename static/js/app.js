@@ -1,10 +1,49 @@
 const menuButton = document.querySelector("[data-menu-toggle]");
 const sidebar = document.querySelector("#sidebar");
+const backdrop = document.querySelector("[data-menu-close]");
 
 if (menuButton && sidebar) {
-  menuButton.addEventListener("click", () => {
-    const open = sidebar.classList.toggle("is-open");
+  const setOpen = (open) => {
+    sidebar.classList.toggle("is-open", open);
     menuButton.setAttribute("aria-expanded", String(open));
+    if (backdrop) backdrop.hidden = !open;
+  };
+  menuButton.addEventListener("click", () => setOpen(!sidebar.classList.contains("is-open")));
+  if (backdrop) backdrop.addEventListener("click", () => setOpen(false));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && sidebar.classList.contains("is-open")) {
+      setOpen(false);
+      menuButton.focus();
+    }
+  });
+}
+
+// The account menu closes when you click elsewhere or press Escape.
+const accountMenu = document.querySelector("[data-account-menu]");
+
+if (accountMenu) {
+  document.addEventListener("click", (event) => {
+    if (accountMenu.open && !accountMenu.contains(event.target)) accountMenu.open = false;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && accountMenu.open) {
+      accountMenu.open = false;
+      accountMenu.querySelector("summary").focus();
+    }
+  });
+}
+
+// Press / to search, unless you are already typing somewhere.
+const searchInput = document.querySelector("[data-search-input]");
+
+if (searchInput) {
+  document.addEventListener("keydown", (event) => {
+    const typing = event.target.closest("input, textarea, select, [contenteditable]");
+    if (event.key === "/" && !typing && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
   });
 }
 document.querySelectorAll("form[data-confirm]").forEach((form) => {
@@ -13,6 +52,30 @@ document.querySelectorAll("form[data-confirm]").forEach((form) => {
       event.preventDefault();
     }
   });
+});
+
+// A second click while a form is sending would send it twice, so the button waits.
+document.addEventListener("submit", (event) => {
+  const form = event.target;
+  if (event.defaultPrevented || form.method.toLowerCase() !== "post") return;
+  const button = event.submitter;
+  if (!button) return;
+  // Disable after the browser has read the button's name and value.
+  setTimeout(() => {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  }, 0);
+  setTimeout(() => {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }, 8000);
+});
+
+// Remember whether the person has typed into a form, so background work never
+// reloads the page over an unsent draft.
+let formsEdited = false;
+document.addEventListener("input", (event) => {
+  if (event.target.closest("form:not([role=search]):not(.filter-bar)")) formsEdited = true;
 });
 
 const timerElapsed = document.querySelector("[data-timer-started]");
@@ -30,31 +93,34 @@ if (timerElapsed) {
   setInterval(renderElapsed, 1000);
 }
 
+// Copy buttons say what happened, then go back to their label.
+const copyText = async (button, source, fallback) => {
+  const label = button.dataset.label || button.textContent;
+  button.dataset.label = label;
+  try {
+    await navigator.clipboard.writeText(source.value);
+    button.textContent = "Copied";
+  } catch {
+    source.select();
+    button.textContent = fallback;
+  }
+  button.setAttribute("aria-live", "polite");
+  clearTimeout(button.resetTimer);
+  button.resetTimer = setTimeout(() => {
+    button.textContent = label;
+  }, 2500);
+};
+
 const copyButton = document.querySelector("[data-copy-button]");
 const copySource = document.querySelector("[data-copy-source]");
 
 if (copyButton && copySource) {
-  copyButton.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(copySource.value);
-      copyButton.textContent = "Copied";
-    } catch {
-      copySource.select();
-      copyButton.textContent = "Link selected — copy it";
-    }
-  });
+  copyButton.addEventListener("click", () => copyText(copyButton, copySource, "Link selected — copy it"));
 }
 
 document.querySelectorAll("[data-copy-for]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    const source = document.getElementById(button.dataset.copyFor);
-    try {
-      await navigator.clipboard.writeText(source.value);
-      button.textContent = "Copied";
-    } catch {
-      source.select();
-      button.textContent = "Selected — copy it";
-    }
+  button.addEventListener("click", () => {
+    copyText(button, document.getElementById(button.dataset.copyFor), "Selected — copy it");
   });
 });
 
@@ -66,6 +132,7 @@ document.querySelectorAll("[data-print]").forEach((button) => {
 const pending = document.querySelector("[data-poll-url]");
 
 if (pending) {
+  const note = pending.matches("p") ? pending : pending.querySelector("p") || pending;
   const startedAt = Date.now();
   const check = async () => {
     try {
@@ -74,7 +141,11 @@ if (pending) {
         credentials: "same-origin",
       });
       if (response.ok && (await response.json()).done) {
-        window.location.reload();
+        if (!formsEdited) {
+          window.location.reload();
+          return;
+        }
+        note.textContent = "Done. Reload the page to see it once you have saved your changes.";
         return;
       }
     } catch {
@@ -82,6 +153,8 @@ if (pending) {
     }
     if (Date.now() - startedAt < 10 * 60 * 1000) {
       setTimeout(check, 3000);
+    } else {
+      note.textContent = "Still working. Reload the page later to check.";
     }
   };
   setTimeout(check, 3000);

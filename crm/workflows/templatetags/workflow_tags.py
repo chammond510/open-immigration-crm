@@ -35,5 +35,5 @@ def workflow_panel(context, matter):
         "done_count": sum(item.is_completed for item in items),
         "item_count": len(items),
         "apply_form": ApplyWorkflowForm(templates=templates) if templates else None,
-        "checklist_form": ChecklistItemForm(),
+        "checklist_form": ChecklistItemForm(auto_id="checklist_%s"),
     }

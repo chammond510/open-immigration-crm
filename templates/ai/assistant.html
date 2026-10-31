@@ -5,7 +5,7 @@
 <div class="page-heading"><div><p class="eyebrow">AI features</p><h1>Assistant</h1><p>Ask about clients, matters, deadlines, and the practice. The assistant looks things up in the CRM as you. Each change it proposes waits for you to confirm it, and it drafts emails and texts but never sends them. Its answers are AI drafts for attorney review.</p></div></div>
 <div class="page-stack">
   {% if not on %}
-    <div class="privacy-note">The assistant is off. {% if user.is_superuser %}Turn it on in <a href="{% url 'ai_settings' %}">AI features</a>.{% else %}A superuser can turn it on in AI features.{% endif %}</div>
+    <div class="privacy-note note-neutral">The assistant is off. {% if user.is_superuser %}Turn it on in <a href="{% url 'ai_settings' %}">AI features</a>.{% else %}A superuser can turn it on in AI features.{% endif %}</div>
   {% elif connections %}
     <form method="post" action="{% url 'ai_assistant_start' %}" class="panel stacked-form">
       {% csrf_token %}

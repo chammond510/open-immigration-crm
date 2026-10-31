@@ -9,11 +9,11 @@
     {% if invoice.is_draft %}<form method="post" action="{% url 'invoice_delete' invoice.pk %}" data-confirm="Delete this draft invoice?">{% csrf_token %}<button class="button danger" type="submit">Delete draft</button></form><form method="post" action="{% url 'invoice_issue' invoice.pk %}" data-confirm="Issue this invoice? Its lines can't be changed afterward.">{% csrf_token %}<button class="button primary" type="submit">Issue invoice</button></form>{% endif %}
   </div>
 </div>
-{% if invoice.status == "void" %}<div class="privacy-note">Void: {{ invoice.void_reason }}</div>{% elif invoice.is_overdue %}<div class="message error">Overdue since {{ invoice.due_date|date:"M j, Y" }}.</div>{% endif %}
+{% if invoice.status == "void" %}<div class="privacy-note note-neutral">Void: {{ invoice.void_reason }}</div>{% elif invoice.is_overdue %}<div class="message error">Overdue since {{ invoice.due_date|date:"M j, Y" }}.</div>{% endif %}
 <div class="detail-grid">
   <div class="detail-main">
     <section class="panel flush-panel"><div class="table-wrap"><table class="invoice-lines"><thead><tr><th>Description</th><th>Funds</th><th class="numeric">Qty</th><th class="numeric">Unit price</th><th class="numeric">Amount</th>{% if invoice.is_draft %}<th><span class="sr-only">Remove</span></th>{% endif %}</tr></thead><tbody>
-      {% for line in lines %}<tr><td class="wrap">{{ line.description }}<small>{{ line.get_kind_display }}</small></td><td><span class="badge funds-{{ line.funds }}">{% if line.funds == "advance" %}Trust{% else %}Operating{% endif %}</span></td><td class="numeric">{{ line.quantity }}</td><td class="numeric">{{ line.unit_price|money:currency }}</td><td class="numeric">{{ line.amount|money:currency }}</td>{% if invoice.is_draft %}<td><form method="post" action="{% url 'invoice_line_delete' invoice.pk line.pk %}">{% csrf_token %}<button class="text-button danger-text" type="submit">Remove</button></form></td>{% endif %}</tr>{% empty %}<tr><td colspan="6" class="muted">No lines yet.</td></tr>{% endfor %}
+      {% for line in lines %}<tr><td class="wrap">{{ line.description }}{% if line.get_kind_display|lower != line.description|lower %}<small>{{ line.get_kind_display }}</small>{% endif %}</td><td><span class="badge funds-{{ line.funds }}">{% if line.funds == "advance" %}Trust{% else %}Operating{% endif %}</span></td><td class="numeric">{{ line.quantity }}</td><td class="numeric">{{ line.unit_price|money:currency }}</td><td class="numeric">{{ line.amount|money:currency }}</td>{% if invoice.is_draft %}<td><form method="post" action="{% url 'invoice_line_delete' invoice.pk line.pk %}" data-confirm="Remove the line “{{ line.description }}”?">{% csrf_token %}<button class="text-button danger-text" type="submit">Remove</button></form></td>{% endif %}</tr>{% empty %}<tr><td colspan="6" class="muted">No lines yet.</td></tr>{% endfor %}
     </tbody></table></div>
       <dl class="invoice-totals">
         {% if advance_total %}<dt>Earned fees (operating)</dt><dd>{{ earned_total|money:currency }}</dd><dt>Advances (trust)</dt><dd>{{ advance_total|money:currency }}</dd>{% endif %}
@@ -32,14 +32,14 @@
       <section class="panel">
         <div class="section-heading"><div><h2>Unbilled time</h2><p>Each entry becomes a line at the staff member's rate, rounded up to the firm's billing increment.</p></div></div>
         {% if unbilled %}<form method="post" action="{% url 'invoice_time_add' invoice.pk %}" class="stacked-form">{% csrf_token %}
-          <div class="choice-list"><div>{% for entry in unbilled %}<label for="entry-{{ entry.pk }}"><input type="checkbox" id="entry-{{ entry.pk }}" name="entries" value="{{ entry.pk }}" checked> {{ entry.started_at|date:"M j" }} · {{ entry.duration_display }} · {{ entry.user }}{% if entry.note %} · {{ entry.note }}{% endif %}</label>{% endfor %}</div></div>
+          <div class="choice-list"><div>{% for entry in unbilled %}<label for="entry-{{ entry.pk }}"><input type="checkbox" id="entry-{{ entry.pk }}" name="entries" value="{{ entry.pk }}" checked> {{ entry.started_at|date:"M j" }} · {{ entry.duration_display }} · {{ entry.user.get_full_name|default:entry.user }}{% if entry.note %} · {{ entry.note }}{% endif %}</label>{% endfor %}</div></div>
           <div class="form-actions"><button class="button" type="submit">Add selected time</button></div>
         </form>{% else %}<p class="muted">No unbilled time for this {% if invoice.matter %}matter{% else %}contact{% endif %}.</p>{% endif %}
       </section>
     {% else %}
       <section class="panel">
         <div class="section-heading"><div><h2>Payments</h2><p>Record each payment and the account it was deposited to.</p></div></div>
-        {% for payment in payments %}<div class="mini-record"><div><strong>{{ payment.amount|money:currency }} · {{ payment.get_method_display }}{% if payment.voided_at %} · void{% endif %}</strong><span>{{ payment.received_on|date:"M j, Y" }} · {{ payment.get_deposit_account_display }}{% if payment.reference %} · {{ payment.reference }}{% endif %} · {% if payment.source_connection %}via {{ payment.source_connection }}{% else %}{{ payment.recorded_by|default:"—" }}{% endif %}{% if payment.voided_at %} · voided: {{ payment.void_reason }}{% endif %}</span></div>{% if user.is_superuser and not payment.voided_at %}<form method="post" action="{% url 'payment_void' invoice.pk payment.pk %}" class="inline-reason">{% csrf_token %}<label class="sr-only" for="void-{{ payment.pk }}">Reason</label><input id="void-{{ payment.pk }}" name="reason" placeholder="Reason" required><button class="text-button danger-text" type="submit">Void</button></form>{% endif %}</div>{% empty %}<p class="muted">No payments recorded.</p>{% endfor %}
+        {% for payment in payments %}<div class="mini-record"><div><strong>{{ payment.amount|money:currency }} · {{ payment.get_method_display }}{% if payment.voided_at %} · void{% endif %}</strong><span>{{ payment.received_on|date:"M j, Y" }} · {{ payment.get_deposit_account_display }}{% if payment.reference %} · {{ payment.reference }}{% endif %} · {% if payment.source_connection %}via {{ payment.source_connection }}{% else %}{{ payment.recorded_by.get_full_name|default:payment.recorded_by|default:"—" }}{% endif %}{% if payment.voided_at %} · voided: {{ payment.void_reason }}{% endif %}</span></div>{% if user.is_superuser and not payment.voided_at %}<details class="inline-void"><summary>Void</summary><form method="post" action="{% url 'payment_void' invoice.pk payment.pk %}" class="inline-reason" data-confirm="Void this payment of {{ payment.amount|money:currency }}?">{% csrf_token %}<label class="sr-only" for="void-{{ payment.pk }}">Reason for voiding</label><input id="void-{{ payment.pk }}" name="reason" placeholder="Reason" required><button class="button small danger" type="submit">Void payment</button></form></details>{% endif %}</div>{% empty %}<p class="muted">No payments recorded.</p>{% endfor %}
         {% if can_take_payment %}
           <form method="post" action="{% url 'payment_record' invoice.pk %}" class="compact-form stacked-form">{% csrf_token %}
             <div class="form-grid">{% for field in payment_form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}</div>{% endfor %}</div>
@@ -62,12 +62,12 @@
           </div>
         {% endif %}
       </section>
-      {% if invoice.status != "void" and invoice.status != "draft" %}
+      {% if invoice.status != "void" and invoice.status != "draft" and plan or invoice.status != "void" and invoice.status != "draft" and can_take_payment %}
       <section class="panel" id="payment-plan">
         <div class="section-heading"><div><h2>Payment plan</h2><p>{% if plan %}{{ plan.get_frequency_display }} installments · {{ plan.get_status_display }}. Payments apply to the earliest installment first.{% if plan.email_reminders %} The client is emailed each reminder too.{% endif %}{% else %}Split the balance into scheduled installments. Each one gets a staff reminder in Work.{% endif %}</p></div></div>
         {% if plan %}
           <div class="table-wrap"><table><thead><tr><th>#</th><th>Due</th><th class="numeric">Amount</th><th class="numeric">Paid</th><th>Status</th><th>Reminder</th></tr></thead><tbody>
-            {% for row in schedule %}<tr><td>{{ row.installment.sequence }}</td><td>{{ row.installment.due_date|date:"M j, Y" }}</td><td class="numeric">{{ row.installment.amount|money:currency }}</td><td class="numeric">{{ row.applied|money:currency }}</td><td><span class="badge {% if row.state == 'paid' %}paid{% elif row.state == 'overdue' %}failed{% elif row.state == 'partially_paid' %}partially_paid{% endif %}">{% if row.state == 'paid' %}Paid{% elif row.state == 'overdue' %}Overdue{% elif row.state == 'partially_paid' %}Partly paid{% else %}Due{% endif %}</span></td><td>{% if row.installment.reminder %}{{ row.installment.reminder.scheduled_for|date:"M j" }}{% if row.installment.reminder.is_completed %} · done{% endif %}{% else %}—{% endif %}{% if row.installment.reminder_emailed_at %} · {% if row.installment.reminder_email_error %}<span title="{{ row.installment.reminder_email_error }}">email not sent</span>{% else %}emailed{% endif %}{% endif %}</td></tr>{% endfor %}
+            {% for row in schedule %}<tr><td>{{ row.installment.sequence }}</td><td>{{ row.installment.due_date|date:"M j, Y" }}</td><td class="numeric">{{ row.installment.amount|money:currency }}</td><td class="numeric">{{ row.applied|money:currency }}</td><td><span class="badge {% if row.state == 'paid' %}paid{% elif row.state == 'overdue' %}failed{% elif row.state == 'partially_paid' %}partially_paid{% endif %}">{% if row.state == 'paid' %}Paid{% elif row.state == 'overdue' %}Overdue{% elif row.state == 'partially_paid' %}Partially paid{% else %}Due{% endif %}</span></td><td>{% if row.installment.reminder %}{{ row.installment.reminder.scheduled_for|date:"M j" }}{% if row.installment.reminder.is_completed %} · done{% endif %}{% else %}—{% endif %}{% if row.installment.reminder_emailed_at %} · {% if row.installment.reminder_email_error %}email not sent: {{ row.installment.reminder_email_error }}{% else %}emailed{% endif %}{% endif %}</td></tr>{% endfor %}
           </tbody></table></div>
           {% if plan.status == "active" %}<div class="form-actions">{% if plan.email_reminders or can_email %}<form method="post" action="{% url 'plan_email_reminders' invoice.pk %}">{% csrf_token %}<input type="hidden" name="on" value="{% if plan.email_reminders %}0{% else %}1{% endif %}"><button class="button" type="submit">{% if plan.email_reminders %}Stop email reminders{% else %}Email the client reminders too{% endif %}</button></form>{% endif %}<form method="post" action="{% url 'plan_cancel' invoice.pk %}" data-confirm="Cancel this payment plan? Its open reminders will be removed.">{% csrf_token %}<button class="button danger" type="submit">Cancel plan</button></form></div>{% endif %}
         {% elif can_take_payment %}
@@ -82,11 +82,11 @@
   </div>
   <aside class="detail-aside">
     <section class="panel facts"><h2>Details</h2><dl>
-      <dt>Bill to</dt><dd>{{ invoice.contact }}</dd>
-      <dt>Matter</dt><dd>{{ invoice.matter.matter_number|default:"—" }}</dd>
+      <dt>Bill to</dt><dd><a href="{% url 'contact_detail' invoice.contact.pk %}">{{ invoice.contact }}</a></dd>
+      <dt>Matter</dt><dd>{% if invoice.matter %}<a href="{% url 'matter_detail' invoice.matter.pk %}">{{ invoice.matter.matter_number }}</a>{% else %}—{% endif %}</dd>
       <dt>Issued</dt><dd>{{ invoice.issue_date|date:"M j, Y"|default:"Not yet" }}</dd>
       <dt>Due</dt><dd>{{ invoice.due_date|date:"M j, Y"|default:"—" }}</dd>
-      <dt>Created by</dt><dd>{{ invoice.created_by|default:"—" }}</dd>
+      <dt>Created by</dt><dd>{{ invoice.created_by.get_full_name|default:invoice.created_by|default:"—" }}</dd>
     </dl></section>
     <form method="post" action="{% url 'invoice_notes' invoice.pk %}" class="panel stacked-form">{% csrf_token %}
       <div><h2>Notes</h2></div>
@@ -94,7 +94,7 @@
       <div class="form-actions"><button class="button" type="submit">Save notes</button></div>
     </form>
     {% if user.is_superuser and can_take_payment %}
-      <form method="post" action="{% url 'invoice_void' invoice.pk %}" class="panel stacked-form" data-confirm="Void this invoice?">{% csrf_token %}
+      <form method="post" action="{% url 'invoice_void' invoice.pk %}" class="panel stacked-form" data-confirm="Void {{ invoice.number|default:"this invoice" }}? Its time can be billed again. This can't be undone.">{% csrf_token %}
         <div><h2>Void invoice</h2><p class="muted">Allowed when no payments remain. Its time can then be billed again.</p></div>
         <div class="field"><label for="void-reason">Reason</label><input id="void-reason" name="reason" required></div>
         <div class="form-actions"><button class="button danger" type="submit">Void invoice</button></div>

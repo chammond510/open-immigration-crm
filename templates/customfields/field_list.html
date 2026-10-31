@@ -6,7 +6,7 @@
 {% for group in groups %}
 <section class="panel flush-panel"><div class="section-heading table-note"><div><h2>{{ group.label }}</h2></div><div class="actions"><a class="button" href="{% url 'custom_field_create' %}?for={{ group.key }}">Add a field</a></div></div>
   {% if group.fields %}<div class="table-wrap"><table><thead><tr><th>Field</th><th>Key</th><th>Type</th><th>Required</th><th>Status</th></tr></thead><tbody>
-    {% for field in group.fields %}<tr><td><a class="primary-link" href="{% url 'custom_field_update' field.pk %}">{{ field.label }}</a>{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</td><td><span class="mono">{{ field.key }}</span></td><td>{{ field.get_field_type_display }}</td><td>{{ field.required|yesno:"Yes,No" }}</td><td><span class="badge {% if field.is_active %}active{% else %}closed{% endif %}">{% if field.is_active %}Active{% else %}Inactive{% endif %}</span></td></tr>{% endfor %}
+    {% for field in group.fields %}<tr><td><a class="primary-link" href="{% url 'custom_field_update' field.pk %}">{{ field.label }}</a>{% if field.help_text %}<small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>{% endif %}</td><td><span class="mono">{{ field.key }}</span></td><td>{{ field.get_field_type_display }}</td><td>{{ field.required|yesno:"Yes,No" }}</td><td><span class="badge {% if field.is_active %}active{% else %}closed{% endif %}">{% if field.is_active %}Active{% else %}Inactive{% endif %}</span></td></tr>{% endfor %}
   </tbody></table></div>{% else %}<div class="empty-state compact"><p>No custom fields for {{ group.label|lower }}.</p></div>{% endif %}
 </section>
 {% endfor %}

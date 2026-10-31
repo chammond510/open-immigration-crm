@@ -7,7 +7,7 @@
     {% csrf_token %}
     {% for error in form.non_field_errors %}<div class="message error">{{ error }}</div>{% endfor %}
     <div class="form-grid">
-      {% for field in form %}<div class="field {% if field.name == 'choices' %}full-field{% endif %}">{% if field.field.widget.input_type == "checkbox" %}<label class="check-label wrap" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}{% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% endif %}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</div>{% endfor %}
+      {% for field in form %}<div class="field {% if field.name == 'choices' %}full-field{% endif %}">{% if field.field.widget.input_type == "checkbox" %}<label class="check-label wrap" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}{% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small id="{{ field.auto_id }}_helptext">{{ field.help_text }}</small>{% endif %}{% endif %}{% if field.errors %}<div class="field-error" id="{{ field.auto_id }}_error">{{ field.errors|join:" " }}</div>{% endif %}</div>{% endfor %}
     </div>
     <div class="form-actions"><button class="button primary" type="submit">Save field</button><a class="button" href="{% url 'custom_field_list' %}">Cancel</a></div>
   </form>

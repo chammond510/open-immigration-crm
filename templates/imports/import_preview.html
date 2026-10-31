@@ -27,5 +27,5 @@
     </tbody></table></div>{% else %}<div class="empty-state compact"><p>No rows will be imported.</p></div>{% endif %}
   </section>
 </div>
-<form method="post" action="{% url 'import_discard' spreadsheet.pk %}" class="form-actions">{% csrf_token %}<button class="button danger" type="submit">Cancel the import</button></form>
+<form method="post" action="{% url 'import_discard' spreadsheet.pk %}" class="form-actions" data-confirm="Cancel this import and delete the uploaded file? Nothing has been imported yet.">{% csrf_token %}<button class="button danger" type="submit">Cancel the import</button></form>
 {% endblock %}

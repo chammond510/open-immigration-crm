@@ -2,8 +2,8 @@
 {% load connect_tags %}
 {% block title %}AI features · Open Immigration CRM{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">Account</p><h1>AI features</h1><p>AI features use an AI model the firm connects: its own account with a model provider, or a model running on the firm's own computer. Everything here is off until a superuser turns it on, and every request is logged below with the connection that paid for it.</p></div></div>
-{% if not ai_settings.enabled %}<div class="privacy-note">AI features are off, so nothing is sent to an AI model. {% if user.is_superuser %}Turn them on under AI settings.{% else %}A superuser can turn them on.{% endif %}</div>{% endif %}
+<div class="page-heading"><div><p class="eyebrow">Settings</p><h1>AI features</h1><p>AI features use an AI model the firm connects: its own account with a model provider, or a model running on the firm's own computer. Everything here is off until a superuser turns it on, and every request is logged below with the connection that paid for it.</p></div></div>
+{% if not ai_settings.enabled %}<div class="privacy-note note-neutral">AI features are off, so nothing is sent to an AI model. {% if user.is_superuser %}Turn them on below.{% else %}A superuser can turn them on.{% endif %}</div>{% endif %}
 <div class="page-stack">
   <div class="two-column">
     {% if user.is_superuser %}
