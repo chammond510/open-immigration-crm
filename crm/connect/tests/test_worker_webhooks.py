@@ -343,6 +343,10 @@ class RunWorkerCommandTests(TestCase):
             from django.core.management import call_command
 
             call_command("run_worker", worker_id="test-worker")
+            # The scheduler has stopped before the fakes are removed, so it never
+            # reaches the real tick, which would write outside the test's transaction.
+            names = [thread.name for thread in threading.enumerate()]
+            self.assertNotIn("connector-scheduler", names)
         self.assertTrue(ticked.is_set())
 
 

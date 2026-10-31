@@ -40,6 +40,8 @@ class Command(BaseCommand):
             call_command("db_worker")
         finally:
             stop.set()
+            # Let a tick under way finish before returning, so none runs after shutdown.
+            scheduler.join(timeout=60)
 
     def schedule(self, worker_id, stop):
         while not stop.is_set():
