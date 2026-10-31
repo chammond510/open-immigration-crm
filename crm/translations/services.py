@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from crm.ai import translation as ai_translation
 from crm.ai.client import AIUnavailable, ai_connections
 from crm.ai.models import AISettings
+from crm.comms.sharing import withheld_reason
 from crm.connect import policy
 from crm.connect.base import Capability
 from crm.connect.models import OutboundRequest
@@ -133,6 +134,9 @@ def save(translator, language, results, keys, *, actor, **record):
 
 
 def translate_communication(communication, translator, language, *, actor):
+    reason = withheld_reason(communication)
+    if reason:
+        raise TranslationUnavailable(f"{reason} A superuser can allow it on the connection.")
     fields = [
         (name, getattr(communication, name).strip())
         for name in ("subject", "summary")

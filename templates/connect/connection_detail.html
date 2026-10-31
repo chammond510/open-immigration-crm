@@ -80,6 +80,12 @@
         <div class="form-actions"><button class="button" type="submit">Save settings</button></div>
       </form>
     {% endif %}
+    {% if connector.sharing_limits and not disconnected %}
+      <section class="panel stacked-form">
+        <div><h2>AI and translation</h2><p class="muted">{% if connection.ai_use_allowed %}A superuser allowed AI features, the MCP server, and translation to read this connection's messages.{% else %}This connection's messages are kept out of AI features, the MCP server, and translation.{% endif %} {{ connector.sharing_limits }}</p></div>
+        {% if user.is_superuser %}<form method="post" action="{% url 'connection_ai_use' connection.pk %}"{% if not connection.ai_use_allowed %} data-confirm="Let AI features, the MCP server, and translation read messages from {{ connection.label }}? Check the provider's terms with the firm's lawyer first."{% endif %}>{% csrf_token %}<input type="hidden" name="allowed" value="{% if connection.ai_use_allowed %}no{% else %}yes{% endif %}"><div class="form-actions"><button class="button" type="submit">{% if connection.ai_use_allowed %}Keep them out again{% else %}Allow AI and translation{% endif %}</button></div></form>{% endif %}
+      </section>
+    {% endif %}
     {% if webhooks and can_manage and not disconnected %}
       <form method="post" action="{% url 'connection_webhooks' connection.pk %}" class="panel stacked-form" {% if webhooks_on %}data-confirm="The current webhook address and secret will stop working. Continue?"{% endif %}>
         {% csrf_token %}

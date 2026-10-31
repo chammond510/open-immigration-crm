@@ -6,7 +6,7 @@ This is separate from [AI assistants (MCP)](MCP.md), which let staff use the CRM
 
 ## Features
 
-Each feature is off until a superuser ticks it in **AI features**. Whatever a feature writes is labelled as an AI draft for attorney review. The CRM records each feature sends are built in [`crm/ai/records.py`](../crm/ai/records.py). They hold text written by clients and others, so the instructions sent with them say to treat that text as data, never as instructions. The background features and the assistant need the [worker](DEPLOYMENT.md#connector-worker) running.
+Each feature is off until a superuser ticks it in **AI features**. Whatever a feature writes is labelled as an AI draft for attorney review. The CRM records each feature sends are built in [`crm/ai/records.py`](../crm/ai/records.py). They hold text written by clients and others, so the instructions sent with them say to treat that text as data, never as instructions. Messages from a connection whose provider's terms limit sharing, such as WhatsApp Business, are left out of every feature here, including translation, unless a superuser allows it on the connection's page. The background features and the assistant need the [worker](DEPLOYMENT.md#connector-worker) running.
 
 - **Consult prep memos.** A consult is an open appointment with a contact at the Inquiry or Consultation stage, or one with "consult" in its title.
   - **What it does.** It drafts an internal memo for the attorney: who the person is and what they seem to want, the known facts that matter, questions to ask and documents to request, and what is missing.

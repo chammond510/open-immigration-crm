@@ -375,6 +375,32 @@ def connection_settings(request, pk):
     return redirect("connection_detail", pk=pk)
 
 
+@staff_required
+@require_POST
+def connection_ai_use(request, pk):
+    """Allow AI features and translation to read a connection's messages, or keep them out."""
+    require_superuser(request.user)
+    connection = managed_connection_or_404(request, pk)
+    cls = connection.connector_class
+    if cls is None or not cls.sharing_limits:
+        raise Http404
+    connection.ai_use_allowed = request.POST.get("allowed") == "yes"
+    connection.save(update_fields=["ai_use_allowed", "updated_at"])
+    record_audit(
+        request.user,
+        "connection.ai_use_allowed" if connection.ai_use_allowed else "connection.ai_use_withheld",
+        connection,
+    )
+    messages.success(
+        request,
+        "AI features, the MCP server, and translation may now read this connection's messages."
+        if connection.ai_use_allowed
+        else "This connection's messages are kept out of AI features, the MCP server, and "
+        "translation again.",
+    )
+    return redirect("connection_detail", pk=pk)
+
+
 def config_form(request, connection, data=None):
     """The connection's settings form, for those who manage it, while it is connected."""
     cls = connection.connector_class

@@ -14,6 +14,7 @@ urlpatterns = [
     path("<uuid:pk>/test/", pages.connection_test, name="connection_test"),
     path("<uuid:pk>/sync/", pages.connection_sync, name="connection_sync"),
     path("<uuid:pk>/settings/", pages.connection_settings, name="connection_settings"),
+    path("<uuid:pk>/ai-use/", pages.connection_ai_use, name="connection_ai_use"),
     path("<uuid:pk>/config/", pages.connection_config, name="connection_config"),
     path("<uuid:pk>/webhooks/", pages.connection_webhooks, name="connection_webhooks"),
     path("<uuid:pk>/disconnect/", pages.connection_disconnect, name="connection_disconnect"),

@@ -340,6 +340,11 @@ class Connector:
     # contact's last message, such as a 24-hour customer-service window: how long.
     # Outside it, staff send one of ``message_templates()`` with ``send_template``.
     reply_window: timedelta | None = None
+    # For providers whose terms limit sharing what they bring in with other services: a
+    # short note of why. Core then keeps the communications this connector brings in
+    # out of AI features, the MCP server, and translation, unless a superuser allows
+    # it for the connection.
+    sharing_limits = ""
     # For legal research: what a search can cover, as (value, label) pairs, the first
     # being the default. Core passes the chosen value as the search's ``scope``.
     search_scopes: tuple[tuple[str, str], ...] = ()

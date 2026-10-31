@@ -16,6 +16,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from crm.comms.models import Communication
+from crm.comms.sharing import shareable
 from crm.models import WorkItem
 
 from . import features
@@ -109,8 +110,10 @@ def expire(now=None):
 def new_communications(since, until):
     """Communications to review, oldest first, and where the next run starts."""
     items = list(
-        Communication.objects.filter(
-            created_at__gt=since, created_at__lte=until, contact__isnull=False
+        shareable(
+            Communication.objects.filter(
+                created_at__gt=since, created_at__lte=until, contact__isnull=False
+            )
         )
         .exclude(subject="", summary="")
         .select_related("contact", "contact__assigned_to", "matter", "matter__assigned_to")

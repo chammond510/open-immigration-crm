@@ -7,7 +7,9 @@
   <small class="muted">Made by a machine. Check it against the original before relying on it.</small>
 </div>
 {% endfor %}
-{% if form %}
+{% if form and withheld %}
+<small class="muted">Not offered for translation. {{ withheld }}</small>
+{% elif form %}
 <details class="inline-add translate-form">
   <summary>Translate</summary>
   <form method="post" action="{% if kind == 'submission' %}{% url 'translate_submission' record.pk %}{% else %}{% url 'translate_communication' record.pk %}{% endif %}" class="compact-form">

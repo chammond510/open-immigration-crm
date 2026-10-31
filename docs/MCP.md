@@ -14,7 +14,7 @@ The server is **off** on a new installation. A superuser turns it on under **AI 
   - contact and matter summaries, including a matter's saved legal authorities;
   - upcoming work;
   - USCIS notices;
-  - communications;
+  - communications, except messages from a connection whose provider's terms limit sharing them, such as WhatsApp Business, unless a superuser allows it on the connection's page;
   - your time;
   - the operating summary;
   - invoices, for staff with billing access.
