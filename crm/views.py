@@ -661,7 +661,13 @@ def work_create(request):
     return render(
         request,
         "crm/form_page.html",
-        {"form": form, "title": "New work item", "submit_label": "Create item"},
+        {
+            "form": form,
+            "title": "New work item",
+            "submit_label": "Create item",
+            "prompt_capability": "video",
+            "prompt_purpose": "to make a meeting for each of your appointments",
+        },
     )
 
 

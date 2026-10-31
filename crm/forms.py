@@ -166,10 +166,15 @@ class WorkItemForm(forms.ModelForm):
             "matter",
             "assigned_to",
             "scheduled_for",
+            "meeting_url",
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 3}),
             "scheduled_for": DATETIME_INPUT,
+        }
+        help_texts = {
+            "meeting_url": "For an appointment. Left blank, a video meeting is made when the "
+            "assigned staff member has connected one.",
         }
 
     def __init__(self, *args, **kwargs):

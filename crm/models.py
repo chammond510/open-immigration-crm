@@ -8,6 +8,7 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from .fields import EncryptedTextField
+from .validators import validate_https
 
 
 class FirmProfile(models.Model):
@@ -344,6 +345,11 @@ class WorkItem(models.Model):
         related_name="assigned_work_items",
     )
     scheduled_for = models.DateTimeField(null=True, blank=True, db_index=True)
+    # For appointments: the video meeting's join link, pasted by staff or made by a
+    # video meeting connection (see crm/meetings.py).
+    meeting_url = models.URLField(
+        "Video meeting link", max_length=2000, blank=True, validators=[validate_https]
+    )
     is_completed = models.BooleanField(default=False, db_index=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

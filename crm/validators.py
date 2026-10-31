@@ -57,3 +57,9 @@ def validate_document(uploaded_file):
     if detected != ALLOWED_DOCUMENT_TYPES[extension]:
         raise ValidationError("The file contents do not match its extension.")
     return detected
+
+
+def validate_https(value):
+    """Links staff open from the CRM, such as a video meeting's, must use HTTPS."""
+    if value and not value.lower().startswith("https://"):
+        raise ValidationError("Enter an address that starts with https://.")

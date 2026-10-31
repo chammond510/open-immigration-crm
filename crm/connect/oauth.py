@@ -140,11 +140,11 @@ def pasted_params(cls, pasted):
     return dict(parse_qsl(given.query))
 
 
-def post_form(url, data):
+def post_form(url, data, headers=None):
     """POST a form to a provider's token endpoint over HTTPS and return its JSON answer."""
     client = ProviderClient(
         name="The provider",
-        headers={"Accept": "application/json"},
+        headers={"Accept": "application/json", **(headers or {})},
         retries=1,
         max_bytes=TOKEN_RESPONSE_MAX_BYTES,
     )
@@ -157,6 +157,22 @@ def post_form(url, data):
     if not isinstance(tokens, dict):
         raise ConnectorError("The provider's sign-in response was not understood.")
     return tokens
+
+
+def basic_header(app):
+    """The firm's app's ID and secret as an HTTP Basic ``Authorization`` value."""
+    pair = f"{quote(app.client_id, safe='')}:{quote(app.client_secret, safe='')}"
+    return "Basic " + base64.b64encode(pair.encode()).decode()
+
+
+def token_request(cls, app, data):
+    """POST to the firm's app's token endpoint, with the app's ID and secret as it asks."""
+    headers = {}
+    if cls.auth.token_auth == "basic":
+        headers["Authorization"] = basic_header(app)
+    else:
+        data = {**data, "client_id": app.client_id, "client_secret": app.client_secret}
+    return post_form(app_url(cls.auth.token_url, app), data, headers)
 
 
 def stored_tokens(tokens, previous=None):
@@ -213,13 +229,12 @@ def access_token(connection):
                 failure = "Sign in again to keep this connection working."
             else:
                 try:
-                    tokens = post_form(
-                        app_url(cls.auth.token_url, app),
+                    tokens = token_request(
+                        cls,
+                        app,
                         {
                             "grant_type": "refresh_token",
                             "refresh_token": credentials["refresh_token"],
-                            "client_id": app.client_id,
-                            "client_secret": app.client_secret,
                         },
                     )
                 except TokenRefused:
@@ -273,14 +288,13 @@ def finish(request, params=None):
         connection.save()
         return connection
     app = ConnectorApp.objects.get(connector_key=cls.key)
-    tokens = post_form(
-        app_url(cls.auth.token_url, app),
+    tokens = token_request(
+        cls,
+        app,
         {
             "grant_type": "authorization_code",
             "code": params["code"],
             "redirect_uri": callback_url(request),
-            "client_id": app.client_id,
-            "client_secret": app.client_secret,
             "code_verifier": pending["verifier"],
         },
     )

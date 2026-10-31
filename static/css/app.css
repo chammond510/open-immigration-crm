@@ -297,7 +297,7 @@ td.wrap { white-space: normal; min-width: 220px; }
   .dashboard-grid { grid-template-columns: 1fr 1fr; }
   .span-three { grid-column: span 2; }
   .work-row { grid-template-columns: 28px 8px minmax(200px, 1fr) 160px; }
-  .work-row > span { display: none; }
+  .work-row > span:not(.kind-dot) { display: none; }
 }
 
 @media (max-width: 720px) {
