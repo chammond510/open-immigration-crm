@@ -29,7 +29,7 @@ from .forms import (
     ProviderSecretForm,
 )
 from .models import Connection, ConnectorApp
-from .registry import registry
+from .registry import API_ACCESS, registry
 from .scheduler import worker_is_running
 from .services import (
     acknowledge_data_flows,
@@ -182,6 +182,7 @@ def connector_detail(request, key):
         "monogram": monogram(entry.name),
         "maturity_label": Maturity(entry.maturity).label,
         "works_through": works_through(entry),
+        "api_access": API_ACCESS.get(entry.api_access, ""),
     }
     if cls is None:
         return render(request, "connect/connector_detail.html", context)

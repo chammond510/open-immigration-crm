@@ -12,7 +12,12 @@
     <h2>Not built yet</h2>
     <p class="muted">No connector for {{ entry.name }} exists yet. Until one does, use the CRM's manual tools for this work.</p>
     {% endif %}
-    <p><a class="primary-link" href="https://github.com/chammond510/open-immigration-crm/blob/main/connectors/README.md">How to build a connector</a></p>
+    <h3>Building it</h3>
+    <dl class="summary-list">
+      {% if entry.docs_url %}<dt>Developer documentation</dt><dd><a class="primary-link" href="{{ entry.docs_url }}" target="_blank" rel="noopener noreferrer">{{ entry.name }}'s documentation</a></dd>{% endif %}
+      {% if api_access %}<dt>API access</dt><dd>{{ api_access }}</dd>{% endif %}
+    </dl>
+    <p>Anyone can build a connector, as a package of its own or in the CRM's repository. Start with <code>python manage.py startconnector</code> and the <a class="primary-link" href="https://github.com/chammond510/open-immigration-crm/blob/main/docs/CONNECTOR_SDK.md">connector SDK guide</a>.</p>
   </section>
 {% else %}
 <div class="detail-grid">

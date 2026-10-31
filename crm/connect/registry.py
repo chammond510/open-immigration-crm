@@ -37,6 +37,18 @@ class CatalogEntry:
     connector: type[Connector] | None = None
     # For a wanted provider: the key of an installed connector it already works through.
     works_through: str = ""
+    # For a wanted provider: its developer documentation, and how its API is opened up.
+    docs_url: str = ""
+    api_access: str = ""
+
+
+# How a wanted provider's API is opened up to a connector's author.
+API_ACCESS = {
+    "open": "Anyone with an account can get credentials.",
+    "approval": "The provider approves an app before it can be used with firms' accounts.",
+    "partner": "Only for the provider's partners.",
+    "none": "No public API.",
+}
 
 
 def api_version_problem(version):
@@ -232,6 +244,12 @@ def read_catalog_file(path):
             raise ImproperlyConfigured(f"Catalog entry {item!r} needs a valid key and a name.")
         if item.get("works_through") and not KEY_PATTERN.match(item["works_through"]):
             raise ImproperlyConfigured(f"Catalog entry {key!r} has an invalid works_through key.")
+        if item.get("docs_url") and not str(item["docs_url"]).startswith("https://"):
+            raise ImproperlyConfigured(f"Catalog entry {key!r} needs an https:// docs_url.")
+        if item.get("api_access", "") not in ("", *API_ACCESS):
+            raise ImproperlyConfigured(
+                f"Catalog entry {key!r} has api_access other than {', '.join(API_ACCESS)}."
+            )
         unknown = set(capabilities) - set(Capability.values)
         if not capabilities or unknown:
             raise ImproperlyConfigured(
@@ -245,6 +263,8 @@ def read_catalog_file(path):
                 maturity=Maturity.WANTED,
                 description=item.get("description", ""),
                 works_through=item.get("works_through", ""),
+                docs_url=item.get("docs_url", ""),
+                api_access=item.get("api_access", ""),
             )
         )
     return entries

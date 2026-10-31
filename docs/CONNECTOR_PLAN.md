@@ -581,7 +581,7 @@ current documentation when its PR is built and ships as Beta, and live checks st
 | PR | Scope |
 |---|---|
 | 5.1 Connector SDK (done) | The path for connectors built outside this repository. A guide (`docs/CONNECTOR_SDK.md`): what a connector package may import (`crm.connect.base`, `records`, `http`, `testing`, `registry`), the manifest, the contract tests, and the `open_immigration_crm.connectors` entry point. A connector API version, checked when the registry loads a package, so an installation refuses a package written for a newer interface instead of failing later. `manage.py startconnector` writes a package skeleton for one capability: `pyproject.toml` with the entry point, the connector with its manifest, a contract test with a fake transport, and a README. CI installs a sample package from `examples/` and checks that the registry loads it through the entry point. |
-| 5.2 Wanted catalog | Each wanted entry gets a one-line description of what it would do, a link to the provider's developer documentation, and, where an installed connector already serves it, `works_through`. A wanted provider's page links to the SDK guide. |
+| 5.2 Wanted catalog (done) | All 61 wanted entries have a one-line description of what the connector would do, a link to the provider's developer documentation, and how its API is opened up (`api_access`: open to any account, approval of an app, partners only, or no public API), all checked on 2026-10-30. Headnote alone has no developer documentation to link. Entries for providers that now have connectors (IMAP and SMTP email, Stripe, BIA Edge, CourtListener, the website form, and a second Cal.com) were removed, and a test keeps installed connectors out of the catalog, apart from a flagged one such as ChatGPT plan, which shows as wanted while its flag is off. **Works through**: WordPress forms through the website form connector; Azure OpenAI and Gemini through the OpenAI-compatible endpoint connector, which both document; Okta and JumpCloud through OpenID Connect. Amazon Bedrock and Vertex AI were left out: Bedrock's endpoint has no model list for the connection check, and Vertex AI takes an hour-long OAuth token rather than a key. A wanted provider's page has a **Building it** section with the documentation link, the API access, and `startconnector` and the SDK guide. |
 | 5.3 Automation recipes | `docs/recipes/`: n8n workflows to import, and steps for Zapier and Make, that check the outbound webhooks' Standard Webhooks signature before acting, and that send website-form leads (4.6) and create work through the REST API. Tests check that each recipe names real event types and API paths. |
 | 5.4 Spreadsheet import | The by-hand migration path the catalog promises: import contacts and matters from CSV, with downloadable templates, column mapping, a preview, matching existing contacts by email or phone, and a report of every row skipped and why. Nothing is saved until staff confirm. |
 | 5.5 Clio Manage importer | First migration connector, against a new migration interface: contacts, matters, and their links, read through Clio's public API (v4, in the firm's region) and filed through the same matching as 5.4. One-way and read-only: nothing is changed in Clio. Each record is imported once, so a second run adds only what is new. |
@@ -594,8 +594,10 @@ Decided 2026-10-31:
 - Order: the contributor path first (5.1 to 5.3), since it is what Phase 5 is measured by. Then
   each new capability's manual path in core before its first connector (5.4 before 5.5, 5.6 and
   5.7 with theirs), and WhatsApp last.
-- Importers for Docketwise, INSZoom, MyCase, and LawLogix wait for each system's export format or
-  API documentation; until then, their catalog entries say to use the spreadsheet import (5.4).
+- Importers for other systems follow 5.5 where an API exists and a firm with access can check
+  one: Docketwise and MyCase publish APIs that need the vendor's approval, INSZoom offers one to
+  subscribing firms, and LawLogix publishes none (checked 2026-10-30). None documents an export
+  format, so until then their catalog entries say to use the spreadsheet import (5.4).
 - Engagements stay deferred, and the hosted broker stays Phase 6.
 
 ## Testing
