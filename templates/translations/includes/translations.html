@@ -1,0 +1,21 @@
+{% load translation_tags %}
+{% for translation, answers in found %}
+<div class="machine-translation">
+  <p class="eyebrow">Machine translation into {{ translation.language|language_label }}{% if translation.source_language %} from {{ translation.source_language|language_label }}{% endif %} · {{ translation.translator }}{% if translation.by_ai %} (AI){% endif %} · {{ translation.created_at|date:"M j, Y" }}</p>
+  {% if kind == "submission" %}{% for label, text in answers %}<p><strong>{{ label }}</strong><br>{{ text|linebreaksbr }}</p>{% endfor %}
+  {% else %}{% if translation.content.subject %}<p><strong>{{ translation.content.subject }}</strong></p>{% endif %}{% if translation.content.summary %}<p>{{ translation.content.summary|linebreaksbr }}</p>{% endif %}{% endif %}
+  <small class="muted">Made by a machine. Check it against the original before relying on it.</small>
+</div>
+{% endfor %}
+{% if form %}
+<details class="inline-add translate-form">
+  <summary>Translate</summary>
+  <form method="post" action="{% if kind == 'submission' %}{% url 'translate_submission' record.pk %}{% else %}{% url 'translate_communication' record.pk %}{% endif %}" class="compact-form">
+    {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+    {% if form.options|length > 1 %}<label>{{ form.translator.label }} {{ form.translator }}</label>{% else %}{% for key in form.options %}<input type="hidden" name="translator" value="{{ key }}">{% endfor %}{% endif %}
+    <label>{{ form.language.label }} {{ form.language }}</label>
+    <button class="button small" type="submit">Translate</button>
+  </form>
+  <small class="muted">The text is sent to {% if form.options|length > 1 %}the service you choose{% else %}{% for key, option in form.options.items %}{{ option.label }}{% endfor %}{% endif %}. The translation is kept beside the original.</small>
+</details>
+{% endif %}

@@ -16,7 +16,9 @@ def communications_panel(context, contact=None, matter=None):
     """Recent communications and an inline log form for a contact or matter page."""
     owner = matter or contact
     communications = (
-        owner.communications.select_related("logged_by", "source_connection")
+        owner.communications.select_related("logged_by", "source_connection").prefetch_related(
+            "translations"
+        )
         if owner
         else Communication.objects.none()
     )

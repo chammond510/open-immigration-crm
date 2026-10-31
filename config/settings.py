@@ -105,6 +105,7 @@ INSTALLED_APPS = [
     "crm.ai.apps.AiConfig",
     "crm.research.apps.ResearchConfig",
     "crm.signatures.apps.SignaturesConfig",
+    "crm.translations.apps.TranslationsConfig",
     "crm.imports.apps.ImportsConfig",
 ]
 

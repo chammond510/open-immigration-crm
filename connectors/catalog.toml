@@ -347,14 +347,6 @@ docs_url = "https://docs.cloud.google.com/gemini-enterprise-agent-platform"
 api_access = "open"
 
 [[connector]]
-key = "deepl"
-name = "DeepL"
-capabilities = ["translation"]
-description = "Translate client messages and intake answers with DeepL."
-docs_url = "https://developers.deepl.com/docs"
-api_access = "open"
-
-[[connector]]
 key = "google_translation"
 name = "Google Cloud Translation"
 capabilities = ["translation"]
