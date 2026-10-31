@@ -425,9 +425,9 @@ has a working manual path:
 | 0. Boundary | Docs and check scripts listed above | Release gate passes under the new rules |
 | 1. Foundation | Encryption, TOTP, worker and scheduler, core tables, registry and manifests, `catalog.toml`, Connections UI, API-key and BYO-OAuth flows, webhooks, outbound policy, data-flow acknowledgment, an `example` connector, and the contract test harness | The example connector can be connected, receive a signed webhook, sync, attempt a preview-mode send and disconnect, all audited. No vendor code yet. |
 | 2. Manual-first features (done) | The features above except engagements, each with its empty state; see "Phase 2 plan" | Every capability's "Connect your ..." prompt sits beside a working manual path |
-| 3. Port the firm's adapters, plus AI access | Google, Microsoft 365, Dialpad, Twilio (texting), Calendly, LawPay, OpenAI, Anthropic, USCIS Case Status and BIA Edge, rewritten against the interfaces with firm-specific behavior removed. AI access: the MCP server, OpenRouter, the OpenAI-compatible endpoint, and the ChatGPT plan connector behind a Beta flag | Each connector passes its contract tests on recorded fixtures and has its data flows filled in. A staff member can work with the CRM from Claude through the MCP server. |
-| 4. Second adapters | IMAP/SMTP, Twilio voice, Dialpad texting, Stripe, Cal.com, Documenso, Zoom, CourtListener, Google Drive and OneDrive/SharePoint, the website-form webhook, OIDC sign-in and SMTP system email | No interface needed a vendor-specific escape hatch; any interface fixes were made in core and the first adapter was updated |
-| 5. Ecosystem | Connector SDK guide and template, entry-point packages, filled-out Wanted catalog, n8n/Zapier/Make recipes, migration importers, WhatsApp, shipping, translation | An outside contributor can ship a Beta connector without touching `crm/` |
+| 3. Port the firm's adapters, plus AI access (done) | Google, Microsoft 365, Dialpad, Twilio (texting), Calendly, LawPay, OpenAI, Anthropic, USCIS Case Status and BIA Edge, rewritten against the interfaces with firm-specific behavior removed. AI access: the MCP server, OpenRouter, the OpenAI-compatible endpoint, and the ChatGPT plan connector behind a Beta flag | Each connector passes its contract tests on recorded fixtures and has its data flows filled in. A staff member can work with the CRM from Claude through the MCP server. |
+| 4. Second adapters (done) | IMAP/SMTP, Twilio voice, Dialpad texting, Stripe, Cal.com, Documenso, Zoom, CourtListener, Google Drive and OneDrive/SharePoint, the website-form webhook, OIDC sign-in and SMTP system email | No interface needed a vendor-specific escape hatch; any interface fixes were made in core and the first adapter was updated |
+| 5. Ecosystem | Connector SDK guide and template, entry-point packages, filled-out Wanted catalog, n8n/Zapier/Make recipes, migration importers, WhatsApp, shipping, translation; see "Phase 5 plan" | An outside contributor can ship a Beta connector without touching `crm/` |
 | 6. Broker | Hosted OAuth broker and webhook relay | Starts after Phase 4 (see "Decisions") |
 
 ## Phase 2 plan
@@ -555,6 +555,48 @@ Decided 2026-10-30:
   because it is the largest.
 - Each PR adds a contract test for its capability's interface where one is missing, so the
   next provider of that capability is held to the same rules.
+
+Outcome (2026-10-31): Phase 4 is done. No connector needed a vendor-specific escape hatch; each
+gap a provider exposed was fixed in core, for every provider of that capability:
+- Payments: a connector says which accounts it takes payments into (`deposit_accounts()`), and a
+  provider-issued webhook secret can be stored by `register_webhook()` (4.3).
+- OAuth: `OAuthAuth.token_auth`, for providers that want the app's ID and secret in an HTTP
+  Basic header (4.9).
+- Catalog: `works_through`, so a wanted provider can point to the connector that already serves
+  it (4.7).
+- The connection page lists every connection's scheduled runs, and warns of a stopped worker for
+  any connection whose work runs there (4.11).
+- New core features with their manual paths and contract tests: leads (4.6), system email (4.7),
+  staff sign-in (4.8), video meetings (4.9), e-signature (4.10), and document storage (4.11),
+  which a second provider then used unchanged (4.12).
+
+## Phase 5 plan
+
+Phase 5 opens the CRM to connectors built outside this repository, fills in the manual paths
+still missing from core, and adds the providers the catalog lists for migration, translation,
+shipping, and WhatsApp. It is done when an outside contributor can ship a Beta connector as
+their own package without touching `crm/`. As in Phase 4, each provider is checked against its
+current documentation when its PR is built and ships as Beta, and live checks stay by hand.
+
+| PR | Scope |
+|---|---|
+| 5.1 Connector SDK (done) | The path for connectors built outside this repository. A guide (`docs/CONNECTOR_SDK.md`): what a connector package may import (`crm.connect.base`, `records`, `http`, `testing`, `registry`), the manifest, the contract tests, and the `open_immigration_crm.connectors` entry point. A connector API version, checked when the registry loads a package, so an installation refuses a package written for a newer interface instead of failing later. `manage.py startconnector` writes a package skeleton for one capability: `pyproject.toml` with the entry point, the connector with its manifest, a contract test with a fake transport, and a README. CI installs a sample package from `examples/` and checks that the registry loads it through the entry point. |
+| 5.2 Wanted catalog | Each wanted entry gets a one-line description of what it would do, a link to the provider's developer documentation, and, where an installed connector already serves it, `works_through`. A wanted provider's page links to the SDK guide. |
+| 5.3 Automation recipes | `docs/recipes/`: n8n workflows to import, and steps for Zapier and Make, that check the outbound webhooks' Standard Webhooks signature before acting, and that send website-form leads (4.6) and create work through the REST API. Tests check that each recipe names real event types and API paths. |
+| 5.4 Spreadsheet import | The by-hand migration path the catalog promises: import contacts and matters from CSV, with downloadable templates, column mapping, a preview, matching existing contacts by email or phone, and a report of every row skipped and why. Nothing is saved until staff confirm. |
+| 5.5 Clio Manage importer | First migration connector, against a new migration interface: contacts, matters, and their links, read through Clio's public API (v4, in the firm's region) and filed through the same matching as 5.4. One-way and read-only: nothing is changed in Clio. Each record is imported once, so a second run adds only what is new. |
+| 5.6 Translation | Core: a **Translate** action on communications and intake submissions, through a new `translate` action and the outbound policy; translations are labeled as machine translations and kept beside, never instead of, the original. First connector: DeepL (Free and Pro). With AI features on, the firm's AI connection can translate too. |
+| 5.7 Shipments and USPS tracking | Core: shipments on a matter, such as a filing package (carrier, tracking number, what was sent, when, and delivery), entered by hand. First connector: USPS tracking, with delivery and exceptions noted on the matter. |
+| 5.8 UPS and FedEx tracking | Second and third shipping connectors, against the interface from 5.7. |
+| 5.9 WhatsApp Business | A second texting channel through Meta's WhatsApp Business Platform: messages in and out on contact pages, within WhatsApp's customer-service window, with message templates outside it, and opt-out handled as for texts. Last, because it needs Meta's business verification and template approval before a firm can use it. |
+
+Decided 2026-10-31:
+- Order: the contributor path first (5.1 to 5.3), since it is what Phase 5 is measured by. Then
+  each new capability's manual path in core before its first connector (5.4 before 5.5, 5.6 and
+  5.7 with theirs), and WhatsApp last.
+- Importers for Docketwise, INSZoom, MyCase, and LawLogix wait for each system's export format or
+  API documentation; until then, their catalog entries say to use the spreadsheet import (5.4).
+- Engagements stay deferred, and the hosted broker stays Phase 6.
 
 ## Testing
 

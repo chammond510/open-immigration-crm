@@ -51,6 +51,12 @@ jobs:
       - run: python manage.py collectstatic --noinput
       - run: coverage run manage.py test
       - run: coverage report
+      # A connector built outside this repository: written by startconnector, installed as
+      # its own package, loaded through its entry point, and tested from this checkout.
+      - run: python manage.py startconnector ci_fictional --name "CI Fictional" --capability translation --directory "$RUNNER_TEMP"
+      - run: pip install "$RUNNER_TEMP/open-immigration-crm-ci-fictional"
+      - run: python manage.py shell -c "from crm.connect.registry import registry; assert registry.get('ci_fictional'), registry.load_errors"
+      - run: python manage.py test oicrm_ci_fictional
       - run: python manage.py check --deploy
         env:
           SECURE_SSL_REDIRECT: "True"

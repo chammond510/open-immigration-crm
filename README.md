@@ -69,7 +69,7 @@ The connector framework, background worker, webhooks, and Connections page are i
 - **Google Drive** (Beta) copies each matter's documents, one way, into a folder for the matter on the firm's Drive, ideally a shared drive, renames the folder with the matter, and moves deleted documents' copies to the trash (see [the setup guide](connectors/google_drive/README.md)). The CRM stays the record; nothing is read back.
 - **OneDrive and SharePoint** (Beta) does the same through Microsoft Graph, into a folder in a SharePoint document library or OneDrive the firm chooses (see [the setup guide](connectors/onedrive_sharepoint/README.md)).
 
-The catalog lists the other providers people have asked for as Wanted.
+The catalog lists the other providers people have asked for as Wanted. Anyone can build one as a package of their own; see [the connector SDK guide](docs/CONNECTOR_SDK.md).
 
 ## Quick start with Docker
 
