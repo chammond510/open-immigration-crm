@@ -309,7 +309,8 @@ STORAGES = {
     },
 }
 
-MEDIA_ROOT = BASE_DIR / "media"
+# scripts/try.sh points this at trial/media, so a trial keeps its uploads to itself.
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
 MEDIA_URL = "/protected-media/"
 FILE_UPLOAD_PERMISSIONS = 0o600
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o700

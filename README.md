@@ -4,6 +4,8 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 
 > **Early release:** evaluate carefully before storing real client information. The operators of each installation are responsible for security, backups, retention, professional-responsibility compliance, and the legal content they create.
 
+To look around first, with fictional records, see [Try it on your computer](#try-it-on-your-computer).
+
 ## What it includes
 
 - Staff-only contacts and a simple contact pipeline
@@ -80,6 +82,34 @@ The connector framework, background worker, webhooks, and Connections page are i
 
 The catalog lists the other providers people have asked for as Wanted. Anyone can build one as a package of their own; see [the connector SDK guide](docs/CONNECTOR_SDK.md).
 
+## Try it on your computer
+
+On a Mac or a Linux computer, you can try the CRM with fictional records in a few minutes. Nothing else needs installing first.
+
+1. Get the project: choose the green **Code** button on this page, then **Download ZIP**, and unzip it.
+2. Open Terminal, go to the unzipped folder, and run:
+
+   ```bash
+   sh scripts/try.sh
+   ```
+
+The first run sets everything up, which takes a minute or two. Each run then opens the CRM in your browser and shows the username and password, which are also saved in `trial/login.txt`. Run the same command whenever you want the CRM again, and press Control-C in Terminal to stop it.
+
+- **Python.** The CRM needs Python 3.12. If the computer doesn't have it, the script offers to install [uv](https://docs.astral.sh/uv/), which downloads Python into your home folder. No administrator password is needed.
+- **What stays where.** Everything stays in the project folder: the database, uploads, and sign-in details in `trial/`, and Python's packages in `.venv/`.
+- **Who can reach it.** It runs in development mode, and only this computer can reach it.
+- **Starting over.** `sh scripts/try.sh --reset` deletes the trial and starts over. `--help` lists the other options.
+
+Don't put real client information in a trial. For that, set up a server; see the next section and [Deployment](docs/DEPLOYMENT.md).
+
+**With an AI assistant.** An assistant that can run commands on your computer, such as Claude Code (the Code tab of the Claude desktop app), can set the trial up for you. Ask it to:
+
+> Download https://github.com/chammond510/open-immigration-crm and run `scripts/try.sh --yes`, so I can try the CRM.
+
+`--yes` lets the script install uv without asking. An assistant that can only chat can't do this, because the CRM runs on your own computer.
+
+**Windows.** Run the script inside WSL (Windows Subsystem for Linux). It doesn't run in PowerShell.
+
 ## Quick start with Docker
 
 Requirements: Docker with Compose.
@@ -116,6 +146,7 @@ pip install -r requirements-dev.lock
 export DEBUG=true  # development mode is opt-in; without it the app refuses to start unconfigured
 python manage.py migrate
 python manage.py bootstrap_admin --username admin --password 'use-a-unique-long-password'
+python manage.py seed_demo --username admin  # optional fictional records
 python manage.py runserver
 ```
 
