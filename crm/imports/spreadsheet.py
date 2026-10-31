@@ -15,15 +15,19 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from crm.connect.models import ExternalRef
+from crm.connect.refs import find as find_ref
+from crm.connect.refs import link as link_ref
 from crm.customfields.forms import PREFIX as CUSTOM_PREFIX
 from crm.customfields.models import CustomField, active_fields
 from crm.forms import ContactForm, MatterForm
 from crm.matching import normalize_email, normalize_phone
-from crm.models import Activity, Contact, Matter
+from crm.models import Activity, Contact, Matter, MatterParty
 from crm.services import add_activity, audit
 
 from .models import SpreadsheetImport
@@ -345,6 +349,9 @@ class RowPlan:
     contact_form: ContactForm | None = None
     matter_form: MatterForm | None = None
     reason: str = ""
+    # For an import from another system: the row's contact, matter, and other parties
+    # there, as {"contact": id, "matter": id, "parties": [[id, role], ...]}.
+    refs: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -459,6 +466,19 @@ class Planner:
             assigned_to=self.options.get("assigned_to") or "",
         )
         self.seen = {}  # email or phone -> number of the row that adds that contact
+        # For an import from another system: its record IDs, and those imported before.
+        self.connection = spreadsheet.connection
+        self.refs = spreadsheet.refs or {}
+        self.ref_rows = {}  # the other system's contact ID -> the row that adds it
+        self.known_refs = {}  # the other system's contact ID -> a contact already in the CRM
+        self.imported_matters = set(
+            ExternalRef.objects.filter(
+                connection=self.connection,
+                content_type=ContentType.objects.get_for_model(Matter),
+            ).values_list("external_id", flat=True)
+            if self.connection
+            else ()
+        )
         self.receipts = {
             receipt_key(number)
             for number in Matter.objects.exclude(receipt_number="").values_list(
@@ -488,6 +508,12 @@ class Planner:
             if not first:
                 first, last = last, ""
         row = RowPlan(number, " ".join(filter(None, (first, last))) or f"Row {number}")
+        row.refs = self.refs.get(str(number), {})
+        if row.refs.get("skip"):
+            return self.skip(row, row.refs["skip"])
+        if row.refs.get("matter") in self.imported_matters:
+            return self.skip(row, "This matter was imported before.")
+        contact_ref = row.refs.get("contact", "")
         email, phone = normalize_email(cell.get("email")), normalize_phone(cell.get("phone"))
         keys = [key for key in (email, phone) if key]
         has_matter = any(value for column, value in values.items() if column.record == "matter")
@@ -511,16 +537,25 @@ class Planner:
             target[column.form_field] = converted
         contact_data.update(first_name=first, last_name=last)
 
-        earlier = next((self.seen[key] for key in keys if key in self.seen), None)
+        earlier = self.ref_rows.get(contact_ref) or next(
+            (self.seen[key] for key in keys if key in self.seen), None
+        )
         if earlier:
             row.same_as = earlier
         else:
+            row.contact = self.known_refs.get(contact_ref) or self.linked_contact(contact_ref)
+        if not (row.contact or row.same_as):
             found = self.known_contacts(email, phone)
             if len(found) > 1:
                 return self.skip(
                     row, "Its email or phone matches more than one contact in the CRM."
                 )
             row.contact = found[0] if found else None
+        if row.contact and contact_ref:
+            self.known_refs[contact_ref] = row.contact
+        if (row.contact or row.same_as) and not has_matter and self.connection:
+            # From another system, a contact the CRM already has is linked, not skipped.
+            return row
         if (row.contact or row.same_as) and not has_matter:
             if row.same_as:
                 return self.skip(
@@ -552,7 +587,14 @@ class Planner:
         if row.contact_form:
             for key in keys:
                 self.seen.setdefault(key, number)
+            if contact_ref:
+                self.ref_rows.setdefault(contact_ref, number)
         return row
+
+    def linked_contact(self, contact_ref):
+        if not (self.connection and contact_ref):
+            return None
+        return find_ref(self.connection, Contact, contact_ref)[0]
 
     def skip(self, row, reason):
         row.contact_form = row.matter_form = None
@@ -590,11 +632,12 @@ def plan_import(spreadsheet):
 def run_import(spreadsheet, request):
     """Save every row the plan accepts, in one transaction, and keep the report."""
     with transaction.atomic():
-        locked = SpreadsheetImport.objects.select_for_update().get(pk=spreadsheet.pk)
+        locked = SpreadsheetImport.objects.select_for_update().filter(pk=spreadsheet.pk).get()
         if locked.status == SpreadsheetImport.Status.IMPORTED or locked.content is None:
             return locked
         plan = plan_import(locked)
-        added = {}
+        connection = locked.connection
+        added, matters = {}, []
         for row in plan.rows:
             if row.reason:
                 continue
@@ -604,9 +647,11 @@ def run_import(spreadsheet, request):
                 add_activity(
                     request=request,
                     contact=contact,
-                    subject="Contact imported from a spreadsheet",
+                    subject=f"Contact imported from {locked.source}",
                     kind=Activity.Kind.SYSTEM,
                 )
+            if connection and row.refs.get("contact"):
+                link_ref(connection, contact, row.refs["contact"])
             if row.matter_form:
                 matter = row.matter_form.save(commit=False)
                 matter.primary_contact = contact
@@ -615,14 +660,26 @@ def run_import(spreadsheet, request):
                     request=request,
                     matter=matter,
                     contact=contact,
-                    subject=f"Matter {matter.matter_number} imported from a spreadsheet",
+                    subject=f"Matter {matter.matter_number} imported from {locked.source}",
                     kind=Activity.Kind.SYSTEM,
                 )
+                if connection and row.refs.get("matter"):
+                    link_ref(connection, matter, row.refs["matter"])
+                    matters.append((matter, row.refs.get("parties", [])))
+        parties = sum(add_parties(connection, matter, links) for matter, links in matters)
         locked.status = SpreadsheetImport.Status.IMPORTED
         locked.imported_at = timezone.now()
+        # A fetched import has no uploader; it is recorded as the work of whoever confirms.
+        locked.created_by = locked.created_by or request.user
         locked.contacts_created = len(plan.new_contacts)
         locked.matters_created = len(plan.new_matters)
         locked.skipped = [{"row": row.number, "reason": row.reason} for row in plan.skipped]
+        if connection:
+            locked.options = {
+                **locked.options,
+                "contacts_linked": len({row.contact.pk for row in plan.rows if row.contact}),
+                "parties_added": parties,
+            }
         locked.save()
         audit(
             request,
@@ -630,11 +687,25 @@ def run_import(spreadsheet, request):
             locked,
             detail=(
                 f"{counted(locked.contacts_created, 'contact')} and "
-                f"{counted(locked.matters_created, 'matter')} from a spreadsheet; "
+                f"{counted(locked.matters_created, 'matter')} from {locked.source}; "
                 f"{counted(len(locked.skipped), 'row')} skipped"
             ),
         )
     return locked
+
+
+def add_parties(connection, matter, links):
+    """Add the matter's other contacts from the other system, where they were imported."""
+    added = 0
+    for contact_ref, role in links:
+        contact, _ = find_ref(connection, Contact, contact_ref)
+        if contact is None or contact == matter.primary_contact:
+            continue
+        _, made = MatterParty.objects.get_or_create(
+            matter=matter, contact=contact, role=(role or "Related contact")[:120]
+        )
+        added += made
+    return added
 
 
 def purge_uploads(sender=None, now=None, **kwargs):
@@ -642,5 +713,5 @@ def purge_uploads(sender=None, now=None, **kwargs):
     cutoff = (now or timezone.now()) - KEEP_UPLOAD
     old = SpreadsheetImport.objects.filter(created_at__lt=cutoff)
     old.filter(status=SpreadsheetImport.Status.PREPARING).delete()
-    old.filter(content__isnull=False).update(content=None)
+    old.filter(content__isnull=False).update(content=None, refs=None)
     return 0

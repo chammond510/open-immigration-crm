@@ -130,9 +130,14 @@ class ConnectorAppForm(forms.Form):
     def __init__(self, *args, connector=None, **kwargs):
         super().__init__(*args, **kwargs)
         for setting in getattr(connector.auth, "app_fields", ()) if connector else ():
-            field = forms.CharField(
-                max_length=255, label=setting.label, help_text=setting.help_text
-            )
+            if setting.choices:
+                field = forms.ChoiceField(
+                    choices=setting.choices, label=setting.label, help_text=setting.help_text
+                )
+            else:
+                field = forms.CharField(
+                    max_length=255, label=setting.label, help_text=setting.help_text
+                )
             field.initial = (self.initial or {}).get(setting.name, setting.default)
             if setting.validate:
                 field.validators.append(setting.validate)

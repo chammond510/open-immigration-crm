@@ -12,6 +12,7 @@ urlpatterns = [
     path("<uuid:pk>/sign-in/paste/", pages.connection_oauth_paste, name="connection_oauth_paste"),
     path("<uuid:pk>/acknowledge/", pages.connection_acknowledge, name="connection_acknowledge"),
     path("<uuid:pk>/test/", pages.connection_test, name="connection_test"),
+    path("<uuid:pk>/sync/", pages.connection_sync, name="connection_sync"),
     path("<uuid:pk>/settings/", pages.connection_settings, name="connection_settings"),
     path("<uuid:pk>/config/", pages.connection_config, name="connection_config"),
     path("<uuid:pk>/webhooks/", pages.connection_webhooks, name="connection_webhooks"),

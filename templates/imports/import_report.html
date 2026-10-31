@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% block title %}{{ spreadsheet.filename }} · Import from a spreadsheet · Open Immigration CRM{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>{{ spreadsheet.filename }}</h1><p>Imported {{ spreadsheet.imported_at|date:"M j, Y g:i a" }}{% if spreadsheet.created_by %} by {{ spreadsheet.created_by.get_full_name|default:spreadsheet.created_by.username }}{% endif %}.</p></div><div class="actions"><a class="button" href="{% url 'import_list' %}">All imports</a></div></div>
+<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>{{ spreadsheet.filename }}</h1><p>Imported {{ spreadsheet.imported_at|date:"M j, Y, g:i A" }}{% if spreadsheet.created_by %} by {{ spreadsheet.created_by.get_full_name|default:spreadsheet.created_by.username }}{% endif %}.</p></div><div class="actions"><a class="button" href="{% url 'import_list' %}">All imports</a></div></div>
 <div class="page-stack">
   <div class="metrics">
     <a href="{% url 'contact_list' %}"><strong>{{ spreadsheet.contacts_created }}</strong><span>Contacts added</span></a>
     <a href="{% url 'matter_list' %}"><strong>{{ spreadsheet.matters_created }}</strong><span>Matters added</span></a>
     <a href="#skipped"><strong>{{ spreadsheet.skipped|length }}</strong><span>Rows skipped</span></a>
   </div>
+  {% if spreadsheet.connection %}<p>From {{ spreadsheet.source }}: {{ spreadsheet.options.contacts_linked|default:0 }} contact{{ spreadsheet.options.contacts_linked|default:0|pluralize }} already in the CRM linked, and {{ spreadsheet.options.parties_added|default:0 }} matter part{{ spreadsheet.options.parties_added|default:0|pluralize:"y,ies" }} added. The next fetch brings only what is new.</p>{% endif %}
   <section class="panel flush-panel" id="skipped">
     <div class="section-heading table-note"><div><h2>Skipped rows</h2>{% if spreadsheet.content is not None %}<p>The file is deleted a day after upload. Until then, download the skipped rows to fix them and import them again.</p>{% else %}<p>The uploaded file has been deleted; the row numbers and reasons are kept.</p>{% endif %}</div>{% if spreadsheet.skipped and spreadsheet.content is not None %}<div class="actions"><a class="button" href="{% url 'import_skipped' spreadsheet.pk %}">Download the skipped rows</a></div>{% endif %}</div>
     {% if spreadsheet.skipped %}<div class="table-wrap"><table><thead><tr><th>Row</th><th>Reason</th></tr></thead><tbody>

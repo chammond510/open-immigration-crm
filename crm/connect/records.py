@@ -3,12 +3,15 @@
 Connectors return these from ``sync()`` and ``handle_webhook()``. Core features
 store them: calls, texts, and emails become communications, calendar events and
 bookings become appointments, payments are recorded on invoices, case status
-readings are recorded on matters, and leads become contacts. ``problems()`` lists
-what is wrong with a record; the contract tests require it to be empty.
+readings are recorded on matters, leads become contacts, and contacts and matters
+from a previous practice system become an import staff review and confirm.
+``problems()`` lists what is wrong with a record; the contract tests require it to
+be empty.
 """
 
 import re
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from .base import Capability, Record
@@ -250,6 +253,76 @@ class SignatureRecord(TypedRecord):
         return problems
 
 
+MATTER_STATUSES = ("open", "pending", "closed")
+
+
+@dataclass(frozen=True, kw_only=True)
+class ContactRecord(TypedRecord):
+    """A person from the firm's previous practice system, to import once.
+
+    ``occurred_at`` is when the provider last changed it. A company, which the CRM's
+    contacts cannot hold, has ``company`` set and is reported rather than imported.
+    """
+
+    kind: str = "contact"
+    first_name: str = ""
+    last_name: str = ""
+    company: str = ""
+    email: str = ""
+    phone: str = ""
+    date_of_birth: object = None  # A date, if known.
+    address_line1: str = ""
+    address_line2: str = ""
+    city: str = ""
+    region: str = ""
+    postal_code: str = ""
+    country: str = ""
+
+    def problems(self):
+        problems = super().problems()
+        if not (self.first_name or self.last_name or self.company):
+            problems.append("a name or company is required")
+        if self.date_of_birth is not None and not isinstance(self.date_of_birth, date):
+            problems.append("date_of_birth must be a date")
+        return problems
+
+
+@dataclass(frozen=True, kw_only=True)
+class MatterRecord(TypedRecord):
+    """A matter from the firm's previous practice system, to import once.
+
+    ``client`` is the ``external_id`` of its client's ContactRecord, and ``parties`` the
+    other linked contacts as (that contact's ``external_id``, role) pairs. ``occurred_at``
+    is when the provider last changed it.
+    """
+
+    kind: str = "matter"
+    client: str
+    title: str
+    number: str = ""  # The provider's own matter number, kept in the description.
+    case_type: str = ""  # A CRM case type, where the practice area names one.
+    practice_area: str = ""
+    status: str = "open"
+    opened_on: object = None
+    description: str = ""
+    responsible_email: str = ""  # The responsible staff member, matched by email.
+    parties: tuple = ()
+
+    def problems(self):
+        problems = super().problems()
+        if not self.client:
+            problems.append("client is required")
+        if not self.title:
+            problems.append("title is required")
+        if self.status not in MATTER_STATUSES:
+            problems.append(f"status must be one of {', '.join(MATTER_STATUSES)}")
+        if self.opened_on is not None and not isinstance(self.opened_on, date):
+            problems.append("opened_on must be a date")
+        if any(len(party) != 2 or not party[0] for party in self.parties):
+            problems.append("each party must be a (contact external_id, role) pair")
+        return problems
+
+
 RECORD_TYPES = {
     Capability.PHONE: (CallRecord,),
     Capability.TEXTING: (TextRecord,),
@@ -260,4 +333,5 @@ RECORD_TYPES = {
     Capability.CASE_STATUS: (CaseStatusRecord,),
     Capability.LEAD_CAPTURE: (LeadRecord,),
     Capability.ESIGNATURE: (SignatureRecord,),
+    Capability.MIGRATION: (ContactRecord, MatterRecord),
 }

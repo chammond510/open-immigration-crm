@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Match columns · Import from a spreadsheet · Open Immigration CRM{% endblock %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>Match columns</h1><p>{{ spreadsheet.filename }}: {{ spreadsheet.row_count }} rows. Choose the field each column fills; columns you don't need stay "Don't import". Nothing is saved until you confirm on the next page.</p></div></div>
+<div class="page-heading"><div><p class="eyebrow">Import from a spreadsheet</p><h1>Match columns</h1><p>{{ spreadsheet.filename }}: {{ spreadsheet.row_count }} rows. Choose the field each column fills; columns you don't need stay "Don't import". Nothing is saved until you confirm on the next page.</p>{% if spreadsheet.connection %}<p>These rows come from {{ spreadsheet.source }}. A client's status and stage follow its matters; the defaults below apply to the other contacts.</p>{% endif %}</div></div>
 <form method="post" class="page-stack">
   {% csrf_token %}
   {% if form.non_field_errors %}<div class="message error">{{ form.non_field_errors }}</div>{% endif %}

@@ -26,20 +26,41 @@ def sync_is_due(connection, capability, interval, now):
     return last.created_at <= now - interval
 
 
+def queue_sync(connection, capability):
+    with transaction.atomic():
+        run = SyncRun.objects.create(connection=connection, capability=capability)
+        transaction.on_commit(lambda run_id=run.pk: run_sync.enqueue(run_id))
+    return run
+
+
 def queue_due_syncs(now=None):
     """Queue one sync per due capability of each active connection; return how many."""
     now = now or timezone.now()
     queued = 0
     for connection in Connection.objects.filter(status=Connection.Status.ACTIVE):
         cls = connection.connector_class
-        if cls is None:
+        if cls is None or cls.sync_interval is None:
             continue
         for capability in sorted(set(connection.enabled_capabilities) & set(cls.sync_capabilities)):
-            if not sync_is_due(connection, capability, cls.sync_interval, now):
-                continue
-            with transaction.atomic():
-                run = SyncRun.objects.create(connection=connection, capability=capability)
-                transaction.on_commit(lambda run_id=run.pk: run_sync.enqueue(run_id))
+            if sync_is_due(connection, capability, cls.sync_interval, now):
+                queue_sync(connection, capability)
+                queued += 1
+    return queued
+
+
+def start_syncs(connection, now=None):
+    """Queue a sync of each capability the connection syncs, as staff asked, unless one is
+    already under way; return how many were queued."""
+    now = now or timezone.now()
+    cls = connection.connector_class
+    if cls is None or connection.status != Connection.Status.ACTIVE:
+        return 0
+    queued = 0
+    for capability in sorted(set(connection.enabled_capabilities) & set(cls.sync_capabilities)):
+        last = SyncRun.objects.filter(connection=connection, capability=capability).first()
+        busy = last and last.status in (SyncRun.Status.QUEUED, SyncRun.Status.RUNNING)
+        if not busy or last.created_at <= now - STALE_RUN_AFTER:
+            queue_sync(connection, capability)
             queued += 1
     return queued
 
