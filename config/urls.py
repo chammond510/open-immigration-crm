@@ -48,6 +48,7 @@ urlpatterns = [
     path("billing/", include("crm.billing.urls")),
     path("notices/", include("crm.notices.urls")),
     path("research/", include("crm.research.urls")),
+    path("signatures/", include("crm.signatures.urls")),
     # Token-authenticated JSON API; see docs/API.md.
     path("api/", include("crm.api.urls")),
     path("settings/api/", include("crm.api.page_urls")),
