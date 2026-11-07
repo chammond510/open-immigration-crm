@@ -10,6 +10,8 @@ from urllib.parse import quote, urlencode
 
 import segno
 from django.conf import settings
+from django.contrib.auth import SESSION_KEY
+from django.contrib.sessions.models import Session
 from django.db import transaction
 from django.utils import timezone
 
@@ -192,7 +194,13 @@ def check_second_factor(user, code):
 
 @transaction.atomic
 def reset_two_factor(user):
-    """Remove a user's device and recovery codes so they can enroll again."""
+    """Remove the device and recovery codes and revoke this user's database sessions."""
     deleted, _ = TwoFactorDevice.objects.filter(user=user).delete()
     RecoveryCode.objects.filter(user=user).delete()
+    if deleted:
+        # The application uses Django's database session backend. Delete the whole
+        # session, not just its MFA flag, so optional-MFA installations also sign out.
+        for session in Session.objects.filter(expire_date__gt=timezone.now()).iterator():
+            if session.get_decoded().get(SESSION_KEY) == str(user.pk):
+                session.delete()
     return bool(deleted)

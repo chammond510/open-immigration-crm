@@ -114,8 +114,11 @@ def store_one(connection, record):
         # Email between staff members is internal, not client correspondence.
         return None
     contact = match_contact(record.remote)
-    if not contact and not existing and (connection.config or {}).get("unmatched") == "skip":
-        # The connection is set to keep only records from known contacts.
+    unmatched = (connection.config or {}).get("unmatched")
+    if not contact and not existing and (
+        unmatched == "skip" or (isinstance(record, EmailRecord) and unmatched != "keep")
+    ):
+        # Unmatched email is private unless the firm explicitly chooses to keep it.
         return None
     # Never undo a link staff made by hand when the provider sends the record again.
     if contact or not (existing and existing.contact_id):

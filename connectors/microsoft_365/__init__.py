@@ -144,7 +144,7 @@ class Microsoft365Connector(Connector):
                 ("keep", "Keep it in Needs matching, to link or add as a contact"),
                 ("skip", "Leave it out of the CRM"),
             ),
-            default="keep",
+            default="skip",
             help_text="Email between staff members is always left out.",
         ),
     )

@@ -38,7 +38,7 @@ The system can hold names, contact information, birth dates, addresses, national
 - **No malware scanner.** File signature validation is not antivirus. Add a scanning/quarantine layer before enabling uploads in a higher-risk environment.
 - **No immutable audit store.** A server/database administrator can alter audit rows. Export logs to protected external monitoring if you require tamper resistance.
 - **No automated retention or legal hold.** The firm must define and execute its own retention, preservation, and deletion policy.
-- **No communication delivery unless the firm connects it.** Staff copy intake links into a separately approved communication channel. If the firm connects an email delivery service, staff can have the CRM email a new intake link to the contact's address on file instead; the link is still never stored or logged.
+- **No communication delivery unless the firm connects it.** Staff copy intake links into a separately approved communication channel. If the firm connects an email delivery service, staff can have the CRM email a new intake link to the contact's address on file instead; the application does not persist the raw link or include it in its configured HTTP logs; proxy and hosting logs must be configured the same way.
 - **No trust ledger.** Billing records which account each payment was deposited to and which invoice lines are advances, but it does not reconcile a trust account. Keep trust accounting in a system built for it.
 - **No legal correctness controls.** Checklists and intake questions are firm-authored; the software does not validate legal content.
 
@@ -60,7 +60,7 @@ The system can hold names, contact information, birth dates, addresses, national
 
 The connector framework and Connections page are in place, with Beta connectors for USCIS Case Status, Twilio, Dialpad, Calendly, Google Workspace, Microsoft 365, and LawPay. Controls in place:
 - Only people who manage connections and AI (superusers and the Managing partner preset) can create firm-wide connections, acknowledge data flows, change outbound settings, or enter OAuth app credentials.
-- Staff manage only their own personal connections.
+- Staff manage only their own personal connections. Syncing waits for a connection manager to approve the current data flows; queued jobs recheck approval before reading provider data. The same approval requirement applies to webhook registration, receipt, and processing. New mailbox connections exclude unmatched email by default.
 - A personal connection, such as a staff member's own mailbox and calendar, sends only what its owner sends. The one thing it does on its own is keep the owner's records in step on the owner's account, such as putting their appointments on their calendar. It never runs the firm's automations or sends a message by itself.
 - OAuth sign-in uses PKCE and a single-use, expiring state value.
 - OAuth client secrets, tokens, and API keys are stored encrypted and never displayed.
@@ -114,7 +114,7 @@ An API token is a bearer credential that acts as one staff member without two-fa
 - **Connection managers only by default.** Only people who manage connections and AI can create or use tokens unless one of them allows staff tokens.
 - **Limited.** Every token is scoped to the records it needs, expires within a year, and can be revoked at once.
 - **Hashed.** Only a SHA-256 hash of each token is stored.
-- **Logged.** Every request is logged, without query strings or bodies.
+- **Logged.** Authenticated requests within the rate limit are logged, without query strings or bodies. Unauthenticated and rate-limited traffic cannot grow the database log. Expiring counters in a bounded cache limit each client before authentication; use reverse-proxy rate limits too.
 - **Two-factor rule.** When the firm requires two-factor sign-in, tokens of users who have not set it up are refused.
 
 Store tokens in the automation tool's secret store, give each tool its own token, and revoke any token that may have leaked.

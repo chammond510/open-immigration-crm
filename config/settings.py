@@ -6,6 +6,7 @@ provide its own secret, hosts, database, and TLS-facing configuration.
 
 import base64
 import binascii
+import ipaddress
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -114,6 +115,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "crm.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -122,7 +124,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "crm.middleware.TwoFactorMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "crm.middleware.SecurityHeadersMiddleware",
     "axes.middleware.AxesMiddleware",
 ]
 
@@ -130,6 +131,21 @@ AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
+
+# Request/server/security diagnostics otherwise include complete URLs, even when
+# access logging is safe. Keep status and exception type, without request data.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"private_http": {"()": "crm.logging.PrivateRequestFormatter"}},
+    "handlers": {
+        "private_http": {"class": "logging.StreamHandler", "formatter": "private_http"},
+    },
+    "loggers": {
+        name: {"handlers": ["private_http"], "level": "INFO", "propagate": False}
+        for name in ("django.request", "django.server", "django.security")
+    },
+}
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
@@ -194,12 +210,26 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# Lock a username+address pair after repeated sign-in failures. Operators can
+# Only these immediate peers may supply a forwarded address. Never trust a
+# header merely because it exists. A trusted proxy must append/replace the
+# client's address and be the only way to reach the application's private port.
+try:
+    TRUSTED_PROXY_NETWORKS = tuple(
+        ipaddress.ip_network(value.strip(), strict=False)
+        for value in os.environ.get("TRUSTED_PROXY_NETWORKS", "").split(",")
+        if value.strip()
+    )
+except ValueError as exc:
+    raise ImproperlyConfigured(
+        "TRUSTED_PROXY_NETWORKS must contain IP addresses or CIDRs."
+    ) from exc
+
+# Lock an account after repeated sign-in failures, even across addresses. Operators can
 # tune the limits or clear a lockout with `python manage.py axes_reset`.
 AXES_ENABLED = env_bool("AXES_ENABLED", True)
 AXES_FAILURE_LIMIT = int(os.environ.get("AXES_FAILURE_LIMIT", "5"))
 AXES_COOLOFF_TIME = timedelta(minutes=int(os.environ.get("AXES_COOLOFF_MINUTES", "15")))
-AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+AXES_LOCKOUT_PARAMETERS = ["username", ["username", "ip_address"]]
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = "registration/locked_out.html"
 AXES_CLIENT_IP_CALLABLE = "crm.services.client_ip"
@@ -228,6 +258,9 @@ CONNECTOR_WEBHOOK_MAX_BYTES = int(os.environ.get("CONNECTOR_WEBHOOK_MAX_BYTES", 
 # REST API (/api/v1/). It stays off until someone who manages connections and AI
 # turns it on under API access.
 API_HOURLY_LIMIT = int(os.environ.get("API_HOURLY_LIMIT", "1000"))
+# Per-client admission limit before database authentication; shared when using a
+# shared cache, otherwise per worker. Enforce aggregate limits at the reverse proxy too.
+API_REQUESTS_PER_MINUTE = int(os.environ.get("API_REQUESTS_PER_MINUTE", "300"))
 
 # MCP server (/mcp) for Claude and ChatGPT, with django-oauth-toolkit as its
 # authorization server. It stays off until someone who manages connections and AI

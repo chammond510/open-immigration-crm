@@ -279,6 +279,9 @@ def two_factor_disable(request):
         and request.user.check_password(form.cleaned_data["password"])
     ):
         reset_two_factor(request.user)
+        # This request just rechecked both credentials. Retain its sign-in under
+        # a fresh session key while every other session stays revoked.
+        request.session.cycle_key()
         request.session.pop(SESSION_VERIFIED_KEY, None)
         audit(request, "user.two_factor_disabled", request.user)
         messages.success(request, "Two-factor sign-in is off for your account.")

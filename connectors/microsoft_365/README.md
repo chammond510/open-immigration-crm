@@ -64,3 +64,5 @@ A sign-in stays valid while it is used. Microsoft ends it after 90 days without 
 Microsoft Graph allows 10,000 requests per mailbox in 10 minutes, and four at a time. When it answers 429, the CRM waits as long as `Retry-After` asks.
 
 The steps and limits above are from Microsoft's documentation as of October 30, 2026.
+
+New connections exclude email from people who are not contacts by default. Choosing **Keep it in Needs matching** makes that email visible to the firm's staff. Syncing begins only after a connection manager approves the data flows. Existing explicit keep settings are preserved on upgrade.

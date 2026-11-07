@@ -10,6 +10,7 @@ from crm.connect import http
 from crm.connect.base import ConnectorError
 from crm.connect.models import Connection, SyncRun
 from crm.connect.records import ShipmentRecord
+from crm.connect.services import acknowledge_data_flows
 from crm.connect.tasks import run_sync
 from crm.connect.testing import ConnectorContract
 from crm.models import Activity
@@ -252,6 +253,7 @@ class UspsTests(FakeUspsMixin, TestCase):
             credentials=CREDENTIALS,
         )
         run = SyncRun.objects.create(connection=connection, capability="shipping")
+        acknowledge_data_flows(connection, self.admin)
         run_sync.call(run.pk)
         run.refresh_from_db()
         self.assertEqual((run.status, run.records_received), ("succeeded", 2))

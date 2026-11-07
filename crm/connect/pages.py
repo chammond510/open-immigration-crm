@@ -344,6 +344,9 @@ def connection_test(request, pk):
 @require_POST
 def connection_sync(request, pk):
     connection = managed_connection_or_404(request, pk)
+    if not connection.data_flows_acknowledged:
+        messages.error(request, "A connection manager must review its data flows before syncing.")
+        return redirect("connection_detail", pk=pk)
     if start_syncs(connection):
         record_audit(request.user, "connection.sync_started", connection)
         messages.success(request, "Sync started. The background worker runs it shortly.")

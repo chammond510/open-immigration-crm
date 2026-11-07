@@ -1,4 +1,5 @@
 import io
+import ipaddress
 import zipfile
 from datetime import timedelta
 
@@ -77,6 +78,7 @@ class ModelTests(TestCase):
         invite.revoked_at = timezone.now()
         self.assertFalse(invite.is_active)
 
+    @override_settings(TRUSTED_PROXY_NETWORKS=(ipaddress.ip_network("127.0.0.1/32"),))
     def test_audit_and_activity_services(self):
         request = RequestFactory().get("/", HTTP_X_FORWARDED_FOR="198.51.100.1, 203.0.113.4")
         request.user = self.user
@@ -88,12 +90,13 @@ class ModelTests(TestCase):
         activity = add_activity(request=request, subject="Called", contact=self.contact)
         self.assertEqual(activity.created_by, self.user)
 
+    @override_settings(TRUSTED_PROXY_NETWORKS=(ipaddress.ip_network("127.0.0.1/32"),))
     def test_invalid_proxy_address_is_not_persisted(self):
         request = RequestFactory().get("/", HTTP_X_FORWARDED_FOR="not-an-ip")
         request.user = self.user
-        self.assertIsNone(client_ip(request))
+        self.assertEqual(client_ip(request), "127.0.0.1")
         audit(request, "contact.viewed", self.contact)
-        self.assertIsNone(self.user.open_immigration_audit_logs.get().ip_address)
+        self.assertEqual(self.user.open_immigration_audit_logs.get().ip_address, "127.0.0.1")
 
 
 class FormTests(TestCase):

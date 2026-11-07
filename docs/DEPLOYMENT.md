@@ -63,7 +63,7 @@ python manage.py migrate --noinput
 python manage.py check --deploy
 ```
 
-Then start `gunicorn config.wsgi:application` (the included `scripts/start.sh` does this). Run migrations once as a release job—not independently in every web process. Check `/health/` through the private load-balancer path; it intentionally reveals only `ok` and does not test every dependency.
+Then start `./scripts/start.sh`, which loads the Gunicorn configuration that keeps sensitive request data out of logs. Run migrations once as a release job—not independently in every web process. Check `/health/` through the private load-balancer path; it intentionally reveals only `ok` and does not test every dependency.
 
 Create the first administrator before the service is reachable by anyone but you. Two paths:
 
@@ -131,13 +131,13 @@ The overview opens on the signed-in person's own work, matters, and contacts. **
 
 ## Sign-in lockout
 
-Repeated failed sign-ins lock the username and client address pair for a cooling-off period (default: five failures, fifteen minutes; tune with `AXES_FAILURE_LIMIT` and `AXES_COOLOFF_MINUTES`). Clear a lockout early with:
+Repeated failed sign-ins lock the account across client addresses for a cooling-off period (default: five failures, fifteen minutes; tune with `AXES_FAILURE_LIMIT` and `AXES_COOLOFF_MINUTES`). Clear a lockout early with:
 
 ```bash
 python manage.py axes_reset
 ```
 
-Lockout tracking uses the same proxy-aware client address as the audit log, so the reverse proxy must append the real client address to `X-Forwarded-For`. Lockout slows online guessing; it does not replace two-factor sign-in or network-layer access controls.
+Set `TRUSTED_PROXY_NETWORKS` to the immediate proxy IPs or narrow CIDRs, separated by commas. It is empty by default: forwarded addresses from untrusted peers are ignored. The trusted proxy must append or replace `X-Forwarded-For` with the real client address, and direct access to the application port must be blocked. Trusted hops are stripped from the right; caller-supplied addresses to the left of the first untrusted hop are ignored. Invalid chains fall back to the socket peer. Never trust all addresses (`0.0.0.0/0` or `::/0`). Account lockout applies even if the source address changes. It does not replace two-factor sign-in or network-layer access controls.
 
 ## Two-factor sign-in
 
@@ -149,7 +149,7 @@ If someone loses their phone and their recovery codes, someone who manages staff
 python manage.py reset_two_factor <username>
 ```
 
-They can then sign in with their password and set it up again. Each path is recorded in the audit log.
+A reset deletes all of that user's database-backed sign-in sessions, including previously verified sessions. They must sign in with their password and set it up again when required. Other users stay signed in. Each reset path is recorded in the audit log. Keep Django's default database session backend; alternate session stores require their own revocation implementation.
 
 ## Connector worker
 
@@ -181,7 +181,8 @@ The JSON API at `/api/v1/` is off until someone who manages connections and AI t
 - **Tokens.** Each token acts as one staff member. Only people who manage connections and AI can create tokens unless one of them turns on **Let staff create their own tokens**.
 - **Exposure.** Tools that run in the cloud, such as Zapier, must reach `/api/` over HTTPS. Expose that path at the reverse proxy only if the firm uses such a tool. Self-hosted tools like n8n can call the CRM on the private network instead.
 - **Limits.** Each token is limited to `API_HOURLY_LIMIT` requests an hour (default 1000). Bodies over 256 KB are refused.
-- **Request log.** Every request is logged. Old rows can be removed with `python manage.py prune_api_log --days 365`.
+- **Request log.** Authenticated requests within the token's rate limit are logged, including permission refusals. Anonymous, invalid-token, disabled-API, and rate-limited requests do not create database log rows. Schedule `python manage.py prune_api_log --days 365` for retention.
+- **Admission limit.** `API_REQUESTS_PER_MINUTE` (default 300 per client address) caps API endpoint requests before token lookup. Client addresses are derived only from trusted proxies and stored as keyed hashes in expiring cache keys. The default memory cache bounds its entry count and makes the limit per worker; a shared cache makes it shared. Keep the cache size bounded. Set per-client and aggregate limits at the reverse proxy as well.
 
 ## Phone numbers
 
@@ -216,3 +217,11 @@ Terminate TLS at the proxy and forward only to the private Gunicorn port. Preser
 ## Upgrade and rollback
 
 Read release notes and back up first. Releases that add two-factor sign-in require `FIELD_ENCRYPTION_KEYS`; set it before upgrading, or the application will not start. Database migrations may be one-way. Prefer roll-forward with a corrective release; if rollback is required, restore both database and media from the same pre-upgrade recovery point. Never restore one without the other.
+
+## Confidential responses and logs
+
+Dynamic responses, including intake, authentication redirects, authenticator secrets, and recovery codes, use `Cache-Control: no-store`; WhiteNoise static assets retain normal caching. The browser referrer policy is `no-referrer`.
+
+The supplied Gunicorn launcher loads `config.gunicorn`, which logs only the socket peer, time, method, response status, size, and duration. It omits request paths, query strings, referrers, and other request headers. Django request/security logs and the trial server also omit request content; HTTP failures retain their status and exception type rather than raw exception messages. Apply the same exclusions to reverse-proxy, CDN, and hosting access logs: intake, invitation, password-reset, OAuth callback, and webhook URLs can contain credentials, and searches can contain client data. Custom server launchers must load this configuration too. Restrict and review existing logs, and revoke any still-valid links exposed there.
+
+After upgrading, personal connections whose data flows have never been approved will stop syncing until a connection manager reviews them. Workers recheck approval and enabled capabilities when queued sync work starts. Webhook registration, receipt, and queued processing also require current approval; held webhook events keep their encrypted payload for review/retry. New mailbox connections default to excluding unmatched email; existing explicit `keep` settings are retained. Review those settings and previously imported unmatched mail before wider staff access.

@@ -15,7 +15,12 @@ from crm.connect.base import ConnectorError, WebhookEnvelope
 from crm.connect.models import Connection, SyncRun, WebhookEvent, WorkerHeartbeat
 from crm.connect.registry import registry
 from crm.connect.scheduler import queue_due_syncs, tick, worker_is_running
-from crm.connect.services import create_connection, disconnect, enable_webhooks
+from crm.connect.services import (
+    acknowledge_data_flows,
+    create_connection,
+    disconnect,
+    enable_webhooks,
+)
 from crm.connect.signals import records_received
 from crm.connect.tasks import process_webhook_event, run_sync
 from crm.tests.factories import make_user
@@ -39,13 +44,15 @@ def event_body(event_id="evt-1", body="Fictional reply"):
 
 
 def make_connection(user):
-    return create_connection(
+    connection = create_connection(
         "example",
         label="Example",
         created_by=user,
         capabilities=["texting"],
         credentials={"api_key": "example-fictional-key"},
     )
+    acknowledge_data_flows(connection, user)
+    return connection
 
 
 def enqueued(task):
@@ -68,6 +75,13 @@ class EnableWebhooksTests(TestCase):
     def setUp(self):
         self.user = make_user()
         self.connection = make_connection(self.user)
+
+    def test_approval_is_required_before_enabling_webhooks(self):
+        self.connection.data_flows_version = None
+        with self.assertRaisesMessage(ValidationError, "review its data flows"):
+            enable_webhooks(self.connection, self.user)
+        self.connection.refresh_from_db()
+        self.assertIsNone(self.connection.webhook_token_hash)
 
     def test_token_is_hashed_secret_is_encrypted_and_rotation_works(self):
         token, secret = enable_webhooks(self.connection, self.user)
@@ -160,6 +174,14 @@ class WebhookEndpointTests(TestCase):
         )
         self.assertEqual(WebhookEvent.objects.count(), 0)
 
+    def test_old_webhook_urls_cannot_bypass_data_flow_review(self):
+        Connection.objects.filter(pk=self.connection.pk).update(data_flows_version=None)
+        self.assertEqual(self.deliver(event_body()).status_code, 404)
+        self.assertFalse(WebhookEvent.objects.exists())
+        self.connection.refresh_from_db()
+        acknowledge_data_flows(self.connection, self.user)
+        self.assertEqual(self.deliver(event_body()).status_code, 200)
+
     def test_inactive_or_webhookless_connections_are_not_found(self):
         Connection.objects.filter(pk=self.connection.pk).update(status=Connection.Status.PAUSED)
         self.assertEqual(self.deliver(event_body()).status_code, 404)
@@ -217,6 +239,27 @@ class WebhookProcessingTests(TestCase):
         missing.refresh_from_db()
         self.assertIn("not installed", missing.error)
         process_webhook_event.call(999999)
+
+    def test_queued_events_recheck_approval_and_connection_status(self):
+        for changes in (
+            {"data_flows_version": None},
+            {"data_flows_version": ExampleConnector.data_flows.version - 1},
+            {"status": Connection.Status.PAUSED},
+            {"status": Connection.Status.DISCONNECTED},
+        ):
+            with self.subTest(changes=changes):
+                Connection.objects.filter(pk=self.connection.pk).update(
+                    data_flows_version=ExampleConnector.data_flows.version,
+                    status=Connection.Status.ACTIVE,
+                )
+                Connection.objects.filter(pk=self.connection.pk).update(**changes)
+                event = self.event(event_id=f"held-{WebhookEvent.objects.count()}")
+                with mock.patch.object(ExampleConnector, "handle_webhook") as handle:
+                    process_webhook_event.call(event.pk)
+                    handle.assert_not_called()
+                event.refresh_from_db()
+                self.assertEqual(event.status, WebhookEvent.Status.FAILED)
+                self.assertEqual(self.received.calls, [])
 
 
 class SchedulerTests(TestCase):

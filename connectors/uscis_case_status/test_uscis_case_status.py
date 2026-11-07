@@ -12,7 +12,7 @@ from crm.connect import http, lookups
 from crm.connect.base import ConnectorError
 from crm.connect.models import Connection, SyncRun
 from crm.connect.records import NOT_FOUND, UNAVAILABLE
-from crm.connect.services import create_connection
+from crm.connect.services import acknowledge_data_flows, create_connection
 from crm.connect.tasks import run_sync
 from crm.connect.testing import ConnectorContract
 from crm.models import WorkItem
@@ -297,6 +297,7 @@ class ProductionChecksTests(FakeUSCISMixin, TestCase):
             credentials=dict(CREDENTIALS),
             config={"environment": PRODUCTION, "production_url": "https://api.uscis.gov"},
         )
+        acknowledge_data_flows(self.connection, make_user("manager"))
         self.matters = [
             make_matter(
                 make_contact(first_name=name, email=f"{name.lower()}@example.test"),
