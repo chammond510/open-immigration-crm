@@ -1,5 +1,6 @@
 import json
 
+from django.core.cache import cache
 from django.test import TestCase
 
 from crm.api.models import ApiSettings, ApiToken
@@ -9,6 +10,8 @@ from crm.tests.factories import make_user
 
 class ApiTestCase(TestCase):
     def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
         ApiSettings.objects.update_or_create(pk=1, defaults={"enabled": True})
         self.user = make_user()
 

@@ -3,6 +3,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import redirect
 from django.urls import Resolver404, resolve
+from django.utils.cache import patch_cache_control
 
 from .two_factor import SESSION_VERIFIED_KEY, confirmed_device, firm_requires_two_factor
 
@@ -65,6 +66,10 @@ class SecurityHeadersMiddleware:
         response = self.get_response(request)
         response.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-        response.setdefault("Referrer-Policy", "same-origin")
+        response.setdefault("Referrer-Policy", "no-referrer")
         response.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+        # Static assets are served by WhiteNoise before this middleware. All
+        # dynamic responses may contain client data, intake tokens, or MFA secrets.
+        if "no-store" not in response.get("Cache-Control", "").lower():
+            patch_cache_control(response, private=True, no_store=True)
         return response

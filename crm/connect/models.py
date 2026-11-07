@@ -101,6 +101,24 @@ class Connection(models.Model):
             and self.data_flows_version >= cls.data_flows.version
         )
 
+    def can_sync(self, capability):
+        """Approval applies to reading provider data as well as sending it."""
+        cls = self.connector_class
+        return (
+            self.status == self.Status.ACTIVE
+            and self.data_flows_acknowledged
+            and capability in self.enabled_capabilities
+            and capability in cls.sync_capabilities
+        )
+
+    @property
+    def can_receive_webhooks(self):
+        return (
+            self.status in (self.Status.ACTIVE, self.Status.NEEDS_ATTENTION)
+            and self.data_flows_acknowledged
+            and self.connector_class.webhooks is not None
+        )
+
 
 class OutboundRequest(models.Model):
     """Every attempt to send something out through a connection, and what the policy decided."""

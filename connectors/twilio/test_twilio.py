@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 from urllib.parse import parse_qs, urlencode
 
@@ -6,7 +6,6 @@ import httpx
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
-from django.utils import timezone
 
 from crm.comms.models import Communication
 from crm.comms.texting import send_text
@@ -338,6 +337,10 @@ class TwilioWebhookTests(FakeTwilioMixin, TestCase):
 class TwilioCallTests(FakeTwilioMixin, TestCase):
     def setUp(self):
         super().setUp()
+        # Keep the dated call fixtures inside the initial seven-day backfill.
+        self.now = datetime(2026, 10, 31, 15, 0, tzinfo=UTC)
+        clock = self.enterContext(mock.patch("connectors.twilio.datetime", wraps=datetime))
+        clock.now.return_value = self.now
         self.admin = make_user()
         self.contact = make_contact(self.admin, phone="202-555-0144")
         self.connection = create_connection(
@@ -394,7 +397,7 @@ class TwilioCallTests(FakeTwilioMixin, TestCase):
         )
         self.assertEqual(run.cursor_after, {"since": "Fri, 30 Oct 2026 15:00:00 +0000"})
         params = [r.url.params for r in self.twilio.requests if r.url.path.endswith("/Calls.json")]
-        first_day = (timezone.now() - timedelta(days=7, hours=2)).strftime("%Y-%m-%d")
+        first_day = (self.now - timedelta(days=7, hours=2)).strftime("%Y-%m-%d")
         self.assertEqual(params[0]["StartTime>"], first_day)
         self.assertTrue(params[1].get("PageToken"))
         # Later syncs go back over the last two hours from where the last one stopped.

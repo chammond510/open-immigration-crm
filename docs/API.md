@@ -137,7 +137,7 @@ Errors return a status code and a JSON body:
 
 Each token can make `API_HOURLY_LIMIT` requests an hour (default 1000).
 
-Every request is logged, including refused ones. The log records the token, user, method, path, status, duration, and client address.
+Authenticated requests within the hourly limit are logged, including permission refusals. The log records the token, user, method, path, status, duration, and client address. Missing, invalid, expired, or revoked credentials, requests while the API is off, and rate-limited requests do not create database rows. A preauthentication admission limit of `API_REQUESTS_PER_MINUTE` (default 300 per client address) bounds token lookups. Expiring cache keys use a keyed hash of the trusted client address; the default memory cache bounds the total number of entries. One caller does not consume another caller's quota. It is per worker with the default cache; also configure aggregate and per-client limits at the reverse proxy.
 - It does not store query strings, because searches can contain client names.
 - Request bodies are not stored.
 - People who manage connections and AI see everyone's latest requests on the API access page; other staff see their own. The full log is under Administration.

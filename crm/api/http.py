@@ -10,10 +10,12 @@ from functools import wraps
 
 from django import forms
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import RequestDataTooBig, ValidationError
 from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 from django.utils.dateparse import parse_date, parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 
@@ -52,8 +54,8 @@ class ApiError(Exception):
 
 
 def authenticate(request):
-    api_settings = ApiSettings.load()
-    if not api_settings.enabled:
+    api_settings = ApiSettings.objects.filter(pk=1, enabled=True).first()
+    if api_settings is None:
         raise ApiError(
             403,
             "api_disabled",
@@ -73,7 +75,6 @@ def authenticate(request):
     )
     if token is None:
         raise ApiError(401, "invalid_token", "The token is not recognized.")
-    request.api_token = token
     if token.revoked_at:
         raise ApiError(401, "token_revoked", "The token was revoked.")
     if token.is_expired:
@@ -93,7 +94,29 @@ def authenticate(request):
             "two_factor_required",
             "The firm requires two-factor sign-in. Set it up before using this token.",
         )
+    request.api_token = token
     return token
+
+
+def check_admission_limit(request):
+    """Throttle each trusted client address before database authentication.
+
+    Keys expire and Django's default memory cache bounds its entry count. Do not
+    use a global quota: one anonymous caller could otherwise deny all valid clients.
+    The proxy must also cap public traffic across workers and client addresses.
+    """
+    address = salted_hmac("crm.api.admission", client_ip(request) or "unknown").hexdigest()
+    key = f"crm:api:admission:{int(time.time()) // 60}:{address}"
+    if cache.add(key, 1, timeout=120):
+        count = 1
+    else:
+        try:
+            count = cache.incr(key)
+        except ValueError:
+            # Eviction or expiry during increment: refuse rather than fail open.
+            count = settings.API_REQUESTS_PER_MINUTE + 1
+    if count > settings.API_REQUESTS_PER_MINUTE:
+        raise ApiError(429, "rate_limited", "Too many API requests. Try again in a minute.")
 
 
 def require_scope(token, resource, method):
@@ -135,6 +158,7 @@ def endpoint(resource=None, methods=("GET",)):
             started = time.monotonic()
             request.api_token = None
             try:
+                check_admission_limit(request)
                 if request.method not in methods:
                     raise ApiError(
                         405,
@@ -142,9 +166,9 @@ def endpoint(resource=None, methods=("GET",)):
                         f"Use {' or '.join(methods)} here.",
                     )
                 token = authenticate(request)
+                check_hourly_limit(token)
                 if resource:
                     require_scope(token, resource, request.method)
-                check_hourly_limit(token)
                 mark_used(request, token)
                 request.user = token.user
                 if request.method == "GET":
@@ -162,15 +186,19 @@ def endpoint(resource=None, methods=("GET",)):
                 logger.exception("API request failed")
                 response = ApiError(500, "server_error", "The request failed.").response()
             token = request.api_token
-            ApiRequestLog.objects.create(
-                token=token,
-                user=token.user if token else None,
-                method=request.method[:10],
-                path=request.path[:255],
-                status_code=response.status_code,
-                duration_ms=int((time.monotonic() - started) * 1000),
-                ip_address=client_ip(request),
-            )
+            # Unauthenticated callers cannot grow the database. Refusals for valid
+            # tokens (such as missing scope) still count toward their hourly limit;
+            # repeated 429s cannot grow the log after that limit is reached.
+            if token is not None and response.status_code != 429:
+                ApiRequestLog.objects.create(
+                    token=token,
+                    user=token.user,
+                    method=request.method[:10],
+                    path=request.path[:255],
+                    status_code=response.status_code,
+                    duration_ms=int((time.monotonic() - started) * 1000),
+                    ip_address=client_ip(request),
+                )
             if response.status_code == 405:
                 response["Allow"] = ", ".join(methods)
             if response.status_code == 429:

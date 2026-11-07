@@ -116,7 +116,7 @@ class ApiToken(models.Model):
 
 
 class ApiRequestLog(models.Model):
-    """One row per API request, including refused ones.
+    """Authenticated API requests, including refusals within the token's rate limit.
 
     The query string is not stored, since searches can contain client names.
     """

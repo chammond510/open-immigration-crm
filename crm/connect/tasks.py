@@ -4,7 +4,7 @@ from django.utils import timezone
 from django_tasks import task
 
 from .base import ConnectorError
-from .models import Connection, SyncRun, WebhookEvent
+from .models import SyncRun, WebhookEvent
 from .signals import records_received
 
 
@@ -32,12 +32,13 @@ def run_sync(sync_run_id):
     if run is None or run.status != SyncRun.Status.QUEUED:
         return
     connection = run.connection
-    connector = connection.connector()
-    if connector is None or connection.status != Connection.Status.ACTIVE:
+    # Recheck after queueing: approval, capabilities, or status may have changed.
+    if not connection.can_sync(run.capability):
         run.status = SyncRun.Status.SKIPPED
         run.finished_at = timezone.now()
         run.save(update_fields=["status", "finished_at"])
         return
+    connector = connection.connector()
     previous = (
         SyncRun.objects.filter(
             connection=connection, capability=run.capability, status=SyncRun.Status.SUCCEEDED
@@ -85,6 +86,10 @@ def process_webhook_event(event_id):
     try:
         if connector is None:
             raise ConnectorError("This connection's connector is not installed.")
+        if not event.connection.can_receive_webhooks:
+            raise ConnectorError(
+                "The connection is paused, disconnected, or awaiting data-flow review."
+            )
         records = connector.handle_webhook(event.capability, event.payload or {})
         records_received.send(
             sender=connector.__class__,

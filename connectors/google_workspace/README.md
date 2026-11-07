@@ -53,3 +53,5 @@ A staff member's sign-in stops working if they change their Google password, whi
 Gmail allows 6,000 quota units a minute per user, and reading one message costs 20. The connector spaces its requests to stay under that; a sync reads at most 2,000 messages. Google Calendar allows 600 requests a minute per user.
 
 The steps and limits above are from Google's documentation as of October 30, 2026.
+
+New connections exclude email from people who are not contacts by default. Choosing **Keep it in Needs matching** makes that email visible to the firm's staff. Syncing begins only after a connection manager approves the data flows. Existing explicit keep settings are preserved on upgrade.

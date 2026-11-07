@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest import mock
 
 from django.contrib.auth.models import Permission
 from django.test import override_settings
@@ -69,8 +70,7 @@ class AuthenticationTests(ApiTestCase):
         token, raw_token = self.issue()
         ApiToken.objects.filter(pk=token.pk).update(expires_at=timezone.now() - timedelta(1))
         self.assertEqual(error_code(self.api("get", "/api/v1/", token=raw_token)), "token_expired")
-        self.assertEqual(ApiRequestLog.objects.filter(status_code=401).count(), 5)
-        self.assertEqual(ApiRequestLog.objects.filter(token=token).count(), 1)
+        self.assertEqual(ApiRequestLog.objects.count(), 0)
 
     def test_a_session_cookie_is_not_enough(self):
         self.client.force_login(self.user)
@@ -130,6 +130,54 @@ class AuthenticationTests(ApiTestCase):
         response = self.api("get", "/api/v1/")
         self.assertEqual((response.status_code, error_code(response)), (429, "rate_limited"))
         self.assertEqual(response["Retry-After"], "60")
+        for _ in range(5):
+            self.assertEqual(self.api("get", "/api/v1/").status_code, 429)
+        self.assertEqual(ApiRequestLog.objects.count(), 2)
+
+    @override_settings(API_REQUESTS_PER_MINUTE=3)
+    def test_anonymous_requests_are_bounded_before_database_authentication(self):
+        for i in range(3):
+            self.assertEqual(
+                self.client.get("/api/v1/", HTTP_X_FORWARDED_FOR=f"203.0.113.{i}").status_code,
+                401,
+            )
+        with mock.patch("crm.api.http.authenticate") as authenticate:
+            response = self.client.get("/api/v1/")
+            self.assertEqual(response.status_code, 429)
+            self.assertEqual(response["Retry-After"], "60")
+            authenticate.assert_not_called()
+        self.assertFalse(ApiRequestLog.objects.exists())
+
+    @override_settings(API_REQUESTS_PER_MINUTE=2)
+    def test_one_anonymous_client_cannot_use_another_clients_budget(self):
+        for _ in range(2):
+            self.assertEqual(
+                self.client.get("/api/v1/", REMOTE_ADDR="198.51.100.1").status_code, 401
+            )
+        self.assertEqual(
+            self.client.get("/api/v1/", REMOTE_ADDR="198.51.100.1").status_code, 429
+        )
+        self.assertEqual(
+            self.api("get", "/api/v1/", REMOTE_ADDR="198.51.100.2").status_code, 200
+        )
+        self.assertEqual(ApiRequestLog.objects.count(), 1)
+
+    def test_disabled_api_and_invalid_credentials_do_not_create_log_rows(self):
+        ApiSettings.objects.all().delete()
+        for _ in range(12):
+            self.assertEqual(self.client.get("/api/v1/").status_code, 403)
+        self.assertFalse(ApiSettings.objects.exists())
+        self.assertFalse(ApiRequestLog.objects.exists())
+
+    @override_settings(API_HOURLY_LIMIT=2)
+    def test_scope_refusals_cannot_bypass_the_hourly_log_limit(self):
+        _, raw_token = self.issue("contacts:read")
+        statuses = [
+            self.api("get", "/api/v1/matters/", token=raw_token).status_code
+            for _ in range(5)
+        ]
+        self.assertEqual(statuses, [403, 403, 429, 429, 429])
+        self.assertEqual(ApiRequestLog.objects.count(), 2)
 
     def test_methods_paths_and_bodies(self):
         response = self.api("delete", "/api/v1/contacts/")

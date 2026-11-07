@@ -27,6 +27,8 @@ def sync_is_due(connection, capability, interval, now):
 
 
 def queue_sync(connection, capability):
+    if not connection.can_sync(capability):
+        return None
     with transaction.atomic():
         run = SyncRun.objects.create(connection=connection, capability=capability)
         transaction.on_commit(lambda run_id=run.pk: run_sync.enqueue(run_id))
@@ -43,8 +45,8 @@ def queue_due_syncs(now=None):
             continue
         for capability in sorted(set(connection.enabled_capabilities) & set(cls.sync_capabilities)):
             if sync_is_due(connection, capability, cls.sync_interval, now):
-                queue_sync(connection, capability)
-                queued += 1
+                if queue_sync(connection, capability) is not None:
+                    queued += 1
     return queued
 
 
@@ -60,8 +62,8 @@ def start_syncs(connection, now=None):
         last = SyncRun.objects.filter(connection=connection, capability=capability).first()
         busy = last and last.status in (SyncRun.Status.QUEUED, SyncRun.Status.RUNNING)
         if not busy or last.created_at <= now - STALE_RUN_AFTER:
-            queue_sync(connection, capability)
-            queued += 1
+            if queue_sync(connection, capability) is not None:
+                queued += 1
     return queued
 
 

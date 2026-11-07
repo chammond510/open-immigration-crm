@@ -21,7 +21,7 @@ cryptography==50.0.2
     #   jwcrypto
 dj-database-url==3.1.2
     # via -r requirements.in
-django==5.2.17
+django==5.2.19
     # via
     #   -r requirements.in
     #   dj-database-url
@@ -59,14 +59,14 @@ idna==3.20
     #   requests
 jwcrypto==1.6.1
     # via django-oauth-toolkit
-oauthlib==4.0.0
-    # via django-oauth-toolkit
+oauthlib==4.0.1
+    # via
+    #   -r requirements.in
+    #   django-oauth-toolkit
 packaging==26.3
     # via gunicorn
 phonenumbers==9.0.41
-    # via
-    #  
-    #   -r requirements.in
+    # via -r requirements.in
 psycopg==3.2.13
     # via -r requirements.in
 psycopg-binary==3.2.13 ; implementation_name != 'pypy'

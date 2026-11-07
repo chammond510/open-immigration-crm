@@ -21,3 +21,5 @@ For Gmail or Outlook, use the **Google Workspace** or **Microsoft 365** connecto
 5. If your sent folder has an unusual name, enter it under **Sent folder**. Otherwise the folder your server marks as Sent is used.
 
 Each staff member connects their own mailbox; nobody else can send from it.
+
+New connections exclude email from people who are not contacts by default. Choosing **Keep it in Needs matching** makes that email visible to the firm's staff. Syncing begins only after a connection manager approves the data flows. Existing explicit keep settings are preserved on upgrade.

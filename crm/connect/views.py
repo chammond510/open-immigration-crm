@@ -31,7 +31,7 @@ def receive_webhook(request, token):
     connection = Connection.objects.filter(
         webhook_token_hash=token_hash, status__in=ACCEPTING_STATUSES
     ).first()
-    connector = connection.connector() if connection else None
+    connector = connection.connector() if connection and connection.can_receive_webhooks else None
     if connector is None or connector.webhooks is None:
         return plain(404, "not found")
     body = request.body

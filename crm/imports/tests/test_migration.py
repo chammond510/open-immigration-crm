@@ -10,6 +10,7 @@ from crm.connect.models import Connection, ConnectorApp, SyncRun
 from crm.connect.records import ContactRecord, MatterRecord
 from crm.connect.registry import registry
 from crm.connect.scheduler import queue_due_syncs
+from crm.connect.services import acknowledge_data_flows
 from crm.connect.signals import records_received
 from crm.imports import migration
 from crm.imports.models import SpreadsheetImport
@@ -66,6 +67,7 @@ class MigrationCase(TestCase):
             enabled_capabilities=["migration"],
             credentials={"access_token": "fictional"},
         )
+        acknowledge_data_flows(self.connection, self.admin)
 
     def fetch(self, records):
         records_received.send(

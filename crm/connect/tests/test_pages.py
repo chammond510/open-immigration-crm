@@ -395,6 +395,7 @@ class ConnectionManagementTests(TestCase):
         self.assertContains(self.client.get(response.url), "rejected this API key")
 
     def test_webhook_address_and_secret_are_shown_once(self):
+        acknowledge_data_flows(self.connection, self.admin)
         self.client.force_login(self.admin)
         page = self.client.post(self.url("connection_webhooks"))
         self.assertContains(page, "http://testserver/hooks/")
@@ -406,6 +407,7 @@ class ConnectionManagementTests(TestCase):
         self.assertNotContains(detail, self.connection.webhook_secret)
 
     def test_provider_issued_secrets(self):
+        acknowledge_data_flows(self.connection, self.admin)
         self.client.force_login(self.admin)
         spec = replace(ExampleConnector.webhooks, secret_source="provider")
         with mock.patch.object(ExampleConnector, "webhooks", spec):
