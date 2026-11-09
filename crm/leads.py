@@ -7,16 +7,12 @@ the message, the form's other answers, and its tracking values. An existing cont
 is never changed otherwise.
 """
 
-import logging
-
 from crm.connect.records import LeadRecord
 from crm.connect.signals import records_received
 from crm.matching import match_contact, normalize_email, normalize_phone
 
 from .appointments import lead_source
 from .models import Activity, Contact
-
-logger = logging.getLogger(__name__)
 
 
 def lead_contact(connection, record):
@@ -65,11 +61,7 @@ def store_records(sender, connection, capability, records, **kwargs):
     for record in records:
         if not isinstance(record, LeadRecord):
             continue
-        try:
-            store_lead(connection, record)
-        except Exception:
-            # The record holds a person's details, so log only what identifies it.
-            logger.exception("Could not store a lead from connection %s", connection.pk)
+        store_lead(connection, record)
 
 
 def connect():

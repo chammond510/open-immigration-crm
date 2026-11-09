@@ -50,6 +50,20 @@ class ScheduleMathTests(TestCase):
         )
         self.assertEqual(sum(split_amount(Decimal("1675.00"), 7)), Decimal("1675.00"))
 
+    def test_small_installments_stay_positive_and_sum_to_the_balance(self):
+        for total, count in (("1.00", 60), ("10.00", 60), ("0.06", 6), ("0.10", 6)):
+            with self.subTest(total=total, count=count):
+                amounts = split_amount(Decimal(total), count)
+                self.assertEqual(len(amounts), count)
+                self.assertEqual(sum(amounts), Decimal(total))
+                self.assertGreaterEqual(min(amounts), Decimal("0.01"))
+                self.assertLessEqual(max(amounts) - min(amounts), Decimal("0.01"))
+                self.assertEqual(amounts, sorted(amounts))
+
+    def test_too_many_installments_are_rejected(self):
+        with self.assertRaisesMessage(ValidationError, "at least 0.01"):
+            split_amount(Decimal("0.02"), 3)
+
 
 class PaymentPlanServiceTests(TestCase):
     def setUp(self):
@@ -116,6 +130,29 @@ class PaymentPlanServiceTests(TestCase):
         self.assertEqual(plan.status, PaymentPlan.Status.ACTIVE)
         self.assertFalse(WorkItem.objects.get(pk=reminders[3].pk).is_completed)
 
+    def test_deposit_is_not_applied_again_to_the_remaining_balance(self):
+        deposit = record_payment(self.invoice, self.user, amount="600", **payment())
+        plan = self.plan(count=2)
+        self.assertEqual([row["state"] for row in plan.schedule()], ["due", "due"])
+        self.assertEqual(plan.next_due()["installment"].amount, Decimal("300.00"))
+        next_payment = record_payment(self.invoice, self.user, amount="300", **payment())
+        self.assertEqual([row["state"] for row in plan.schedule()], ["paid", "due"])
+        self.assertEqual(
+            list(plan.installments.values_list("reminder__is_completed", flat=True)),
+            [True, False],
+        )
+        void_payment(next_payment, self.user, "Fictional bounce")
+        self.assertEqual([row["state"] for row in plan.schedule()], ["due", "due"])
+        void_payment(deposit, self.user, "Fictional deposit refund")
+        self.assertEqual([row["applied"] for row in plan.schedule()], [Decimal("0.00")] * 2)
+
+    def test_invalid_split_leaves_no_plan_or_reminders(self):
+        record_payment(self.invoice, self.user, amount="1199.98", **payment())
+        with self.assertRaisesMessage(ValidationError, "at least 0.01"):
+            self.plan(count=3)
+        self.assertFalse(self.invoice.payment_plans.exists())
+        self.assertFalse(WorkItem.objects.filter(title__startswith="Payment reminder").exists())
+
     def test_overdue_installments(self):
         plan = self.plan()
         plan.installments.filter(sequence=1).update(
@@ -137,6 +174,8 @@ class PaymentPlanServiceTests(TestCase):
         self.assertEqual(
             [i.amount for i in replacement.installments.all()], [Decimal("300.00")] * 3
         )
+        self.assertEqual([row["state"] for row in replacement.schedule()], ["due"] * 3)
+        self.assertEqual(replacement.next_due()["installment"].sequence, 1)
 
     def test_voiding_the_invoice_cancels_its_plan(self):
         plan = self.plan()

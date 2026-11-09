@@ -456,6 +456,37 @@ class CalendarPushTests(GoogleTestCase):
         self.assertFalse(self.google.calls("PATCH"))
         self.assertFalse(self.google.calls("POST"))
 
+    def test_changing_to_a_task_removes_the_crm_calendar_event(self):
+        item = self.appointment()
+        with mock.patch("crm.appointments.push_appointment") as task:
+            with self.captureOnCommitCallbacks(execute=True):
+                item.kind = WorkItem.Kind.TASK
+                item.save(update_fields=["kind", "updated_at"])
+            task.enqueue.assert_called_once_with(item.pk)
+        push_appointment.call(item.pk)
+        self.assertNotIn("crm-event-1", self.google.events)
+        self.assertFalse(ExternalRef.objects.exists())
+
+    def test_deleting_converted_item_before_worker_runs_still_removes_event(self):
+        item = self.appointment()
+        item.kind = WorkItem.Kind.DEADLINE
+        item.save()
+        with mock.patch("crm.appointments.remove_appointment_event") as task:
+            with self.captureOnCommitCallbacks(execute=True):
+                item.delete()
+            task.enqueue.assert_called_once()
+            args = task.enqueue.call_args.args
+        remove_appointment_event.call(*args)
+        self.assertNotIn("crm-event-1", self.google.events)
+
+    def test_changing_imported_event_to_task_does_not_delete_provider_event(self):
+        self.google.events = {"client": calendar_event("client")}
+        self.sync("calendar")
+        item = WorkItem.objects.get(title="Consultation")
+        self.update(item, kind=WorkItem.Kind.TASK)
+        self.assertIn("client", self.google.events)
+        self.assertFalse(self.google.calls("DELETE"))
+
     def test_only_the_owners_appointments_go_on_their_calendar(self):
         self.appointment(assigned_to=self.admin)
         self.assertFalse(OutboundRequest.objects.exists())

@@ -52,6 +52,8 @@ def receive_webhook(request, token):
         return plain(400, "malformed event")
     if not envelope.event_id or envelope.capability not in connector.webhooks.capabilities:
         return plain(400, "malformed event")
+    if not connection.can_receive_webhook(envelope.capability):
+        return plain(403, "capability not enabled")
     try:
         with transaction.atomic():
             event = WebhookEvent.objects.create(

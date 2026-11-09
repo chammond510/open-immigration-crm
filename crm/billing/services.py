@@ -221,9 +221,12 @@ def installment_dates(first_due, count, frequency):
 
 
 def split_amount(total, count):
-    """Equal installments, with any leftover cents on the last one."""
-    each = money(total / count)
-    return [each] * (count - 1) + [money(total - each * (count - 1))]
+    """Positive installments differing by at most a cent, extra cents last."""
+    cents = int(money(total) * 100)
+    if count < 1 or cents < count:
+        raise ValidationError("Choose fewer installments; each must be at least 0.01.")
+    each, extra = divmod(cents, count)
+    return [money(Decimal(each) / 100)] * (count - extra) + [money(Decimal(each + 1) / 100)] * extra
 
 
 def reminder_moment(due_date, days_before):

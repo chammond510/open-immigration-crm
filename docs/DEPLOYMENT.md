@@ -218,6 +218,14 @@ Terminate TLS at the proxy and forward only to the private Gunicorn port. Preser
 
 Read release notes and back up first. Releases that add two-factor sign-in require `FIELD_ENCRYPTION_KEYS`; set it before upgrading, or the application will not start. Database migrations may be one-way. Prefer roll-forward with a corrective release; if rollback is required, restore both database and media from the same pre-upgrade recovery point. Never restore one without the other.
 
+The November 2026 billing and connector corrections require no schema migration:
+
+- Payment plans calculate installment status from the remaining invoice balance, including plans created after a deposit or replacing a canceled plan. Review staff reminders previously marked complete incorrectly, and replace any old schedule with zero or negative installments; existing installment amounts are preserved.
+- Incoming payments whose currency differs from the firm's billing currency are held out of the invoice and recorded as `payment.currency_mismatch` in the audit log. Review any earlier imports that used another currency; this update does not rewrite payment history.
+- Incoming webhook events must belong to an enabled capability, both at receipt and when the worker processes them. Review older imports if webhooks were enabled on a connection without that capability.
+- A storage failure rolls back the incoming batch and records a failure. Sync retries start from the last successful cursor; failed webhook events retain their encrypted payload for retry. Earlier events whose payload was already discarded need recovery from the provider, if available.
+- Editing an appointment into a task or deadline removes calendar events the CRM created. Provider-created events remain untouched. For an item converted before upgrading, save it again to request cleanup of its retained calendar link.
+
 ## Confidential responses and logs
 
 Dynamic responses, including intake, authentication redirects, authenticator secrets, and recovery codes, use `Cache-Control: no-store`; WhiteNoise static assets retain normal caching. The browser referrer policy is `no-referrer`.

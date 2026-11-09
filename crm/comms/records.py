@@ -5,7 +5,6 @@ without one and waits in the Needs matching list. Linking it by hand, or saving
 a contact with that number or address, links it and others like it.
 """
 
-import logging
 from datetime import timedelta
 
 from django.db.models.signals import post_delete, post_save
@@ -22,8 +21,6 @@ from .services import (
     record_communication,
     set_texting_opt_out,
 )
-
-logger = logging.getLogger(__name__)
 
 # Carrier keywords (CTIA): these replies opt a number out of texts, or back in.
 STOP_WORDS = {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"}
@@ -145,13 +142,7 @@ def store_records(sender, connection, capability, records, **kwargs):
     for record in records:
         if type(record) not in CHANNELS:
             continue
-        try:
-            store_one(connection, record)
-        except Exception:
-            # The provider record may hold client data, so log only what identifies it.
-            logger.exception(
-                "Could not store %s record from connection %s", record.kind, connection.pk
-            )
+        store_one(connection, record)
 
 
 def link_unmatched(contact):

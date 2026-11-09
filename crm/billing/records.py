@@ -6,7 +6,6 @@ operating only if the invoice has no advance (trust) lines; otherwise it waits
 for staff, since trust money must not be put in the wrong account.
 """
 
-import logging
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -17,10 +16,8 @@ from crm.connect.records import PaymentRecord
 from crm.connect.signals import records_received
 from crm.models import AuditLog
 
-from .models import Invoice, InvoiceLine, Payment
+from .models import BillingSettings, Invoice, InvoiceLine, Payment
 from .services import record_payment, void_payment
-
-logger = logging.getLogger(__name__)
 
 
 def note(connection, action, detail):
@@ -67,6 +64,15 @@ def store_one(connection, record):
             connection, "payment.unmatched", f"A {record.amount} payment named no invoice we have."
         )
         return
+    currency = BillingSettings.load().currency
+    if record.currency.strip().upper() != currency:
+        note(
+            connection,
+            "payment.currency_mismatch",
+            f"A payment in {record.currency} on {invoice.number} was not recorded. "
+            f"The firm bills in {currency}; review the payment with the processor.",
+        )
+        return
     account = deposit_account(record, invoice)
     if not account:
         note(
@@ -97,10 +103,7 @@ def store_records(sender, connection, capability, records, **kwargs):
     for record in records:
         if not isinstance(record, PaymentRecord):
             continue
-        try:
-            store_one(connection, record)
-        except Exception:
-            logger.exception("Could not store a payment record from connection %s", connection.pk)
+        store_one(connection, record)
 
 
 def connect():
