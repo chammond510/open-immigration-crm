@@ -5,12 +5,15 @@ from datetime import timedelta
 from unittest import mock
 
 from django.core.exceptions import ValidationError
+from django.db import OperationalError
 from django.db import connection as db_connection
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django_tasks_db.models import DBTaskResult
 
+from crm.comms import records as comm_records
+from crm.comms.models import Communication
 from crm.connect.base import ConnectorError, WebhookEnvelope
 from crm.connect.models import Connection, SyncRun, WebhookEvent, WorkerHeartbeat
 from crm.connect.registry import registry
@@ -79,6 +82,13 @@ class EnableWebhooksTests(TestCase):
     def test_approval_is_required_before_enabling_webhooks(self):
         self.connection.data_flows_version = None
         with self.assertRaisesMessage(ValidationError, "review its data flows"):
+            enable_webhooks(self.connection, self.user)
+        self.connection.refresh_from_db()
+        self.assertIsNone(self.connection.webhook_token_hash)
+
+    def test_an_enabled_webhook_capability_is_required(self):
+        self.connection.enabled_capabilities = []
+        with self.assertRaisesMessage(ValidationError, "Enable a capability"):
             enable_webhooks(self.connection, self.user)
         self.connection.refresh_from_db()
         self.assertIsNone(self.connection.webhook_token_hash)
@@ -194,6 +204,11 @@ class WebhookEndpointTests(TestCase):
         with mock.patch.object(ExampleConnector, "parse_webhook", return_value=wrong):
             self.assertEqual(self.deliver(event_body()).status_code, 400)
 
+    def test_events_for_disabled_capabilities_are_not_stored(self):
+        Connection.objects.filter(pk=self.connection.pk).update(enabled_capabilities=[])
+        self.assertEqual(self.deliver(event_body()).status_code, 403)
+        self.assertFalse(WebhookEvent.objects.exists())
+
 
 class WebhookProcessingTests(TestCase):
     def setUp(self):
@@ -239,6 +254,43 @@ class WebhookProcessingTests(TestCase):
         missing.refresh_from_db()
         self.assertIn("not installed", missing.error)
         process_webhook_event.call(999999)
+
+    def test_disabled_capability_is_rechecked_before_processing(self):
+        event = self.event()
+        Connection.objects.filter(pk=self.connection.pk).update(enabled_capabilities=[])
+        process_webhook_event.call(event.pk)
+        event.refresh_from_db()
+        self.assertEqual(event.status, WebhookEvent.Status.FAILED)
+        self.assertIn("capability enabled", event.error)
+        self.assertIsNotNone(event.payload)
+        self.assertFalse(Communication.objects.exists())
+        Connection.objects.filter(pk=self.connection.pk).update(enabled_capabilities=["texting"])
+        process_webhook_event.call(event.pk)
+        event.refresh_from_db()
+        self.assertEqual(event.status, WebhookEvent.Status.PROCESSED)
+        self.assertEqual(Communication.objects.count(), 1)
+
+    def test_storage_failure_keeps_payload_and_rolls_back_partial_record(self):
+        event = self.event()
+        original = comm_records.record_communication
+
+        def fail_after_save(**fields):
+            original(**fields)
+            raise OperationalError("synthetic private record")
+
+        with mock.patch.object(comm_records, "record_communication", side_effect=fail_after_save):
+            process_webhook_event.call(event.pk)
+        event.refresh_from_db()
+        self.assertEqual(event.status, WebhookEvent.Status.FAILED)
+        self.assertEqual(event.error, "Unexpected OperationalError")
+        self.assertIsNotNone(event.payload)
+        self.assertEqual(event.records_received, 0)
+        self.assertFalse(Communication.objects.exists())
+        process_webhook_event.call(event.pk)
+        event.refresh_from_db()
+        self.assertEqual(event.status, WebhookEvent.Status.PROCESSED)
+        self.assertIsNone(event.payload)
+        self.assertEqual(Communication.objects.count(), 1)
 
     def test_queued_events_recheck_approval_and_connection_status(self):
         for changes in (
@@ -362,6 +414,40 @@ class RunSyncTests(TestCase):
         run.refresh_from_db()
         self.assertEqual(run.status, SyncRun.Status.SKIPPED)
         self.assertEqual(self.received.calls, [])
+
+    def test_storage_failure_preserves_cursor_and_replays_the_entire_batch(self):
+        first = self.queue()
+        run_sync.call(first.pk)
+        original = comm_records.record_communication
+
+        def fail_after_second_save(**fields):
+            result = original(**fields)
+            if fields["external_id"] == "example-message-5":
+                raise OperationalError("synthetic private record")
+            return result
+
+        failed = self.queue()
+        with mock.patch.object(
+            comm_records, "record_communication", side_effect=fail_after_second_save
+        ):
+            run_sync.call(failed.pk)
+        failed.refresh_from_db()
+        self.assertEqual(failed.status, SyncRun.Status.FAILED)
+        self.assertEqual(failed.error, "Unexpected OperationalError")
+        self.assertEqual(failed.cursor_before, {"after": 3})
+        self.assertEqual(failed.cursor_after, {})
+        self.assertEqual(failed.records_received, 0)
+        self.assertEqual(Communication.objects.count(), 3)
+        retried = self.queue()
+        run_sync.call(retried.pk)
+        retried.refresh_from_db()
+        self.assertEqual(retried.status, SyncRun.Status.SUCCEEDED)
+        self.assertEqual(retried.cursor_before, {"after": 3})
+        self.assertEqual(retried.cursor_after, {"after": 6})
+        self.assertCountEqual(
+            Communication.objects.values_list("external_id", flat=True),
+            [f"example-message-{number}" for number in range(1, 7)],
+        )
 
 
 class RunWorkerCommandTests(TestCase):

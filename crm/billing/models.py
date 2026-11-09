@@ -318,9 +318,14 @@ class PaymentPlan(models.Model):
     def schedule(self):
         """Installments with the amount applied to each and a display status."""
         today = timezone.localdate()
-        remaining = self.invoice.amount_paid
+        installments = list(self.installments.all())
+        # Installments cover the balance at creation, after earlier payments.
+        # Comparing that fixed total to today's balance also handles replacement
+        # plans and voided payments, including plans made before this calculation.
+        total = sum((installment.amount for installment in installments), Decimal("0"))
+        remaining = max(Decimal("0"), total - self.invoice.balance)
         rows = []
-        for installment in self.installments.all():
+        for installment in installments:
             applied = min(remaining, installment.amount)
             remaining -= applied
             if applied >= installment.amount:

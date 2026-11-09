@@ -119,6 +119,13 @@ class Connection(models.Model):
             and self.connector_class.webhooks is not None
         )
 
+    def can_receive_webhook(self, capability):
+        return (
+            self.can_receive_webhooks
+            and capability in self.enabled_capabilities
+            and capability in self.connector_class.webhooks.capabilities
+        )
+
 
 class OutboundRequest(models.Model):
     """Every attempt to send something out through a connection, and what the policy decided."""

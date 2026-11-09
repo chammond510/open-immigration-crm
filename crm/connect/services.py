@@ -163,6 +163,8 @@ def enable_webhooks(connection, actor, provider_secret="", *, registering=False)
         raise ValidationError(
             "A connection manager must review its data flows before enabling webhooks."
         )
+    if not set(connection.enabled_capabilities) & set(cls.webhooks.capabilities):
+        raise ValidationError("Enable a capability that receives webhooks before setting them up.")
     registers = registering and bool(cls.webhooks.register_label)
     if cls.webhooks.secret_source == "provider" and not provider_secret and not registers:
         raise ValidationError(f"Paste the signing secret {cls.name} shows for this webhook.")

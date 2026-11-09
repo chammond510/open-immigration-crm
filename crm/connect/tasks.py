@@ -1,5 +1,6 @@
 """Background work for connections, run by the database-backed worker."""
 
+from django.db import transaction
 from django.utils import timezone
 from django_tasks import task
 
@@ -24,6 +25,22 @@ def mark_connection(connection, error=""):
     else:
         connection.last_success_at = now
         connection.save(update_fields=["last_success_at", "updated_at"])
+
+
+@transaction.atomic
+def store_records(connector, connection, capability, records, source):
+    """Commit a complete batch or leave it replayable from the same cursor/payload.
+
+    Receivers must propagate storage errors. The worker records a safe failure
+    outside this transaction, without advancing the cursor or deleting the payload.
+    """
+    records_received.send(
+        sender=connector.__class__,
+        connection=connection,
+        capability=capability,
+        records=records,
+        source=source,
+    )
 
 
 @task()
@@ -52,13 +69,7 @@ def run_sync(sync_run_id):
     run.save(update_fields=["cursor_before", "status", "started_at"])
     try:
         batch = connector.sync(run.capability, run.cursor_before)
-        records_received.send(
-            sender=connector.__class__,
-            connection=connection,
-            capability=run.capability,
-            records=batch.records,
-            source="sync",
-        )
+        store_records(connector, connection, run.capability, batch.records, "sync")
     except Exception as exc:
         run.status = SyncRun.Status.FAILED
         run.error = safe_error(exc)
@@ -90,14 +101,10 @@ def process_webhook_event(event_id):
             raise ConnectorError(
                 "The connection is paused, disconnected, or awaiting data-flow review."
             )
+        if not event.connection.can_receive_webhook(event.capability):
+            raise ConnectorError("This connection does not have this webhook capability enabled.")
         records = connector.handle_webhook(event.capability, event.payload or {})
-        records_received.send(
-            sender=connector.__class__,
-            connection=event.connection,
-            capability=event.capability,
-            records=records,
-            source="webhook",
-        )
+        store_records(connector, event.connection, event.capability, records, "webhook")
     except Exception as exc:
         event.status = WebhookEvent.Status.FAILED
         event.error = safe_error(exc)

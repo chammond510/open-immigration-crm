@@ -16,7 +16,6 @@ never changed without notice. Changes that came from a calendar are not sent bac
 """
 
 import contextvars
-import logging
 import re
 from datetime import timedelta
 
@@ -34,8 +33,6 @@ from crm.matching import match_contact, match_staff, normalize_email, normalize_
 
 from .customfields.models import CustomField
 from .models import Activity, Contact, WorkItem
-
-logger = logging.getLogger(__name__)
 
 DUPLICATE_WINDOW = timedelta(minutes=2)
 SAVE_EVENT, DELETE_EVENT = "save_event", "delete_event"
@@ -178,16 +175,10 @@ def store_records(sender, connection, capability, records, **kwargs):
     token = receiving.set(True)
     try:
         for record in records:
-            try:
-                if isinstance(record, CalendarEventRecord):
-                    store_event(connection, record)
-                elif isinstance(record, BookingRecord):
-                    store_booking(connection, record)
-            except Exception:
-                # The provider record may hold client data, so log only what identifies it.
-                logger.exception(
-                    "Could not store %s record from connection %s", record.kind, connection.pk
-                )
+            if isinstance(record, CalendarEventRecord):
+                store_event(connection, record)
+            elif isinstance(record, BookingRecord):
+                store_booking(connection, record)
     finally:
         receiving.reset(token)
 
@@ -241,14 +232,14 @@ def event_payload(item, event_id):
 @task()
 def push_appointment(item_id):
     """Put an appointment on its staff member's calendars, or take it off the others."""
-    item = (
-        WorkItem.objects.select_related("contact", "matter")
-        .filter(pk=item_id, kind=WorkItem.Kind.APPOINTMENT)
-        .first()
-    )
+    item = WorkItem.objects.select_related("contact", "matter").filter(pk=item_id).first()
     if item is None:
         return
-    wanted = {c.pk: c for c in calendar_connections(item.assigned_to)} if item.scheduled_for else {}
+    wanted = (
+        {c.pk: c for c in calendar_connections(item.assigned_to)}
+        if item.kind == WorkItem.Kind.APPOINTMENT and item.scheduled_for
+        else {}
+    )
     linked = {}
     for ref in event_refs(item):
         if ref.connection_id in wanted:
@@ -300,15 +291,15 @@ def remove_appointment_event(connection_id, event_id, item_pk):
 
 
 def appointment_saved(sender, instance, raw=False, **kwargs):
-    if raw or receiving.get() or instance.kind != WorkItem.Kind.APPOINTMENT:
+    if raw or receiving.get():
         return
-    if calendar_connections(instance.assigned_to) or event_refs(instance):
+    if (
+        instance.kind == WorkItem.Kind.APPOINTMENT and calendar_connections(instance.assigned_to)
+    ) or event_refs(instance):
         transaction.on_commit(lambda: push_appointment.enqueue(instance.pk))
 
 
 def appointment_deleted(sender, instance, **kwargs):
-    if instance.kind != WorkItem.Kind.APPOINTMENT:
-        return
     # Django clears the primary key after deleting, before the task is queued.
     item_pk = instance.pk
     for ref in event_refs(instance):

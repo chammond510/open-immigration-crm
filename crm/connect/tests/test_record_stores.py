@@ -166,10 +166,10 @@ class CommunicationStoreTests(StoreTestCase):
         lena.refresh_from_db()
         self.assertIsNone(lena.texting_opted_out_at)
 
-    def test_one_bad_record_does_not_stop_the_rest(self):
+    def test_storage_failure_stops_the_batch_and_reaches_the_worker(self):
         outcomes = [RuntimeError("boom"), Communication(channel="text")]
         with mock.patch("crm.comms.records.record_communication", side_effect=outcomes) as stored:
-            with self.assertLogs("crm.comms.records", "ERROR") as logs:
+            with self.assertRaisesMessage(RuntimeError, "boom"):
                 deliver(
                     self.connection,
                     TextRecord(
@@ -179,9 +179,8 @@ class CommunicationStoreTests(StoreTestCase):
                         external_id="t2", occurred_at=AT, direction="inbound", remote=NUMBER
                     ),
                 )
-        self.assertEqual(stored.call_count, 2)
-        # Logs name the record kind and connection, never the number or content.
-        self.assertNotIn(NUMBER, "".join(logs.output))
+        self.assertEqual(stored.call_count, 1)
+        self.assertFalse(Communication.objects.exists())
 
 
 class AppointmentStoreTests(StoreTestCase):

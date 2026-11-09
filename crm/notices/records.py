@@ -6,7 +6,6 @@ it or tell the client. A receipt number the source could not answer for is kept
 as a problem on the matter until a status is recorded for it.
 """
 
-import logging
 from dataclasses import replace
 
 from django.db import transaction
@@ -20,8 +19,6 @@ from .alerts import higher_priority, review_for
 from .models import CaseStatusCheck, CaseStatusProblem, normalize_receipt_number
 from .services import record_status
 from .tracking import receipt_matters
-
-logger = logging.getLogger(__name__)
 
 REVIEW_NOTE = "Review this update before telling the client what it means."
 
@@ -122,21 +119,15 @@ def store_records(sender, connection, capability, records, **kwargs):
     for record in records:
         if not isinstance(record, CaseStatusRecord):
             continue
-        try:
-            owners = receipt_matters() if owners is None else owners
-            record = replace(record, receipt_number=normalize_receipt_number(record.receipt_number))
-            matter = matter_for(record.receipt_number, owners)
-            if matter is None:
-                continue
-            if record.problem:
-                store_problem(matter, record, connection)
-            else:
-                store_reading(matter, record, connection)
-        except Exception:
-            # The record holds a receipt number, so log only what identifies the connection.
-            logger.exception(
-                "Could not store a case status record from connection %s", connection.pk
-            )
+        owners = receipt_matters() if owners is None else owners
+        record = replace(record, receipt_number=normalize_receipt_number(record.receipt_number))
+        matter = matter_for(record.receipt_number, owners)
+        if matter is None:
+            continue
+        if record.problem:
+            store_problem(matter, record, connection)
+        else:
+            store_reading(matter, record, connection)
 
 
 def connect():
