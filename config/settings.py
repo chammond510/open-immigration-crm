@@ -369,7 +369,11 @@ SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", not DEBUG)
 if env_bool("TRUST_X_FORWARDED_PROTO", False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_REFERRER_POLICY = "same-origin"
+# Referer never carries a path or query (intake, invitation and reset links hold
+# bearer tokens), but same-origin form posts keep a real Origin header. Under
+# "no-referrer" browsers send "Origin: null" on every form post, and Django's CSRF
+# check rejects it. Django's SecurityMiddleware applies this to every response.
+SECURE_REFERRER_POLICY = "strict-origin"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
 

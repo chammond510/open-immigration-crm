@@ -66,7 +66,6 @@ class SecurityHeadersMiddleware:
         response = self.get_response(request)
         response.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-        response.setdefault("Referrer-Policy", "no-referrer")
         response.setdefault("Cross-Origin-Resource-Policy", "same-origin")
         # Static assets are served by WhiteNoise before this middleware. All
         # dynamic responses may contain client data, intake tokens, or MFA secrets.

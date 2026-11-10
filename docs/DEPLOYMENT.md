@@ -228,7 +228,7 @@ The November 2026 billing and connector corrections require no schema migration:
 
 ## Confidential responses and logs
 
-Dynamic responses, including intake, authentication redirects, authenticator secrets, and recovery codes, use `Cache-Control: no-store`; WhiteNoise static assets retain normal caching. The browser referrer policy is `no-referrer`.
+Dynamic responses, including intake, authentication redirects, authenticator secrets, and recovery codes, use `Cache-Control: no-store`; WhiteNoise static assets retain normal caching. The browser referrer policy is `strict-origin`: a `Referer` header carries only the CRM's scheme and host, never a path or query, so intake, invitation, and reset tokens in page addresses are not sent to other sites or to the CRM's own proxy. It is not `no-referrer` because under that policy browsers send `Origin: null` on every form post, and Django's CSRF protection rejects it.
 
 The supplied Gunicorn launcher loads `config.gunicorn`, which logs only the socket peer, time, method, response status, size, and duration. It omits request paths, query strings, referrers, and other request headers. Django request/security logs and the trial server also omit request content; HTTP failures retain their status and exception type rather than raw exception messages. Apply the same exclusions to reverse-proxy, CDN, and hosting access logs: intake, invitation, password-reset, OAuth callback, and webhook URLs can contain credentials, and searches can contain client data. Custom server launchers must load this configuration too. Restrict and review existing logs, and revoke any still-valid links exposed there.
 
