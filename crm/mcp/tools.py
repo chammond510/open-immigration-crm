@@ -567,16 +567,27 @@ def save_authority(ctx, args):
         "saved_by": ctx.user,
     }
     form = form_values(AuthorityForm, data, list(data))
-    # The same link, or the same citation and name, is saved to a matter only once.
-    identity = (data["url"] or f"{citation}|{title}").strip().lower()
+    url = form.cleaned_data["url"]
+    # The same link is saved to a matter only once, however it was first saved: by
+    # hand, from a search, or by an assistant. A link is compared exactly as written,
+    # since its path may be case-sensitive. Without a link, the same citation and name
+    # count as the same authority.
+    if url:
+        identity, same = url, {"url": url}
+    else:
+        identity = f"{citation}|{title}".lower()
+        same = {"citation__iexact": citation, "title__iexact": title}
     external_id = "mcp:" + hashlib.sha256(identity.encode()).hexdigest()
     with writing(ctx), transaction.atomic():
-        authority, created = Authority.objects.get_or_create(
-            matter=matter,
-            connector_key="",
-            external_id=external_id,
-            defaults={**form.cleaned_data, **extra},
-        )
+        authority, created = matter.authorities.filter(**same).first(), False
+        if authority is None:
+            # The ID settles two assistants saving the same authority at once.
+            authority, created = Authority.objects.get_or_create(
+                matter=matter,
+                connector_key="",
+                external_id=external_id,
+                defaults={**form.cleaned_data, **extra},
+            )
         if created:
             ctx.audit("authority.saved", authority)
     result = {"saved": authority_brief(authority)}

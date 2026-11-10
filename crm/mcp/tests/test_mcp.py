@@ -545,6 +545,59 @@ class WriteToolTests(McpTestCase):
             self.assertIn(problem, refused["content"][0]["text"])
         self.assertEqual(Authority.objects.count(), 2)
 
+    def test_save_authority_recognizes_what_is_already_saved(self):
+        matter_id = str(self.matter.pk)
+        by_hand = Authority.objects.create(
+            matter=self.matter,
+            connector_key="",
+            external_id="fictional-by-hand",
+            title="Matter of Example",
+            url="https://example.test/decisions/A.pdf",
+            note="Added by hand.",
+        )
+        from_search = Authority.objects.create(
+            matter=self.matter,
+            connector_key="example_research",
+            external_id="case:7",
+            citation="7 Fict. Dec. 7",
+            title="Matter of Sample",
+        )
+        for arguments, already in (
+            ({"title": "x", "url": "https://example.test/decisions/A.pdf"}, by_hand),
+            ({"citation": "7 fict. dec. 7", "title": "matter of sample"}, from_search),
+        ):
+            result = self.call("save_authority", {"matter_id": matter_id, **arguments})
+            self.assertIn("already saved", result["structuredContent"]["note"])
+            self.assertEqual(result["structuredContent"]["saved"]["title"], already.title)
+        self.assertEqual(Authority.objects.count(), 2)
+        self.assertFalse(AuditLog.objects.filter(action="authority.saved").exists())
+        # A link's path may be case-sensitive, so a different case is a different link.
+        other = self.call(
+            "save_authority",
+            {"matter_id": matter_id, "title": "x", "url": "https://example.test/decisions/a.pdf"},
+        )
+        self.assertNotIn("note", other["structuredContent"])
+        # The same citation with a link is not the linkless record saved from a search.
+        linked = self.call(
+            "save_authority",
+            {
+                "matter_id": matter_id,
+                "citation": "7 Fict. Dec. 7",
+                "title": "Matter of Sample",
+                "url": "https://example.test/decisions/7.pdf",
+            },
+        )
+        self.assertNotIn("note", linked["structuredContent"])
+        self.assertEqual(Authority.objects.count(), 4)
+        # Another matter keeps its own copy.
+        elsewhere = make_matter(self.contact)
+        self.call(
+            "save_authority",
+            {"matter_id": str(elsewhere.pk), "url": "https://example.test/decisions/A.pdf",
+             "title": "x"},
+        )
+        self.assertEqual(elsewhere.authorities.count(), 1)
+
     def test_read_scope_tokens_get_no_write_tools(self):
         AccessToken.objects.filter(user=self.staff).update(scope="crm:read")
         names = [t["name"] for t in self.rpc("tools/list").json()["result"]["tools"]]

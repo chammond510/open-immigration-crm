@@ -25,7 +25,7 @@ The server is **off** on a new installation. Someone who manages connections and
 - **Saving legal authorities.** An assistant that also has a legal research connector, such as Passim, can save what it finds to a matter: the citation, the link, the source's note on its standing, the passage relied on, and why it matters.
   - The tool tells the assistant to save only what a research source returned in that conversation, with that source's link, and never from memory. The CRM cannot check this, so read an authority before relying on it.
   - The matter shows where each one came from, such as "from Passim, through Claude".
-  - The same link is saved to a matter only once.
+  - The same link is saved to a matter only once, including when staff already saved it by hand or from a search.
   - Upgrading adds this tool wherever write tools were already allowed.
 - **The log.** Every tool call is logged with who, which assistant, which tool, and whether it worked. What was asked and returned is not stored.
 
