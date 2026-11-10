@@ -133,6 +133,19 @@ class ManifestTests(SimpleTestCase):
         good = make_connector(**texting, **listed, reply_window=timedelta(hours=24))
         self.assertEqual(manifest_problems(good), [])
 
+    def test_sign_up_link_needs_https_and_a_label(self):
+        expected = "a sign-up link needs an https:// signup_url and a signup_label"
+        for overrides in (
+            {"signup_url": "https://provider.example.test/start"},
+            {"signup_label": "Try Fictional"},
+            {"signup_url": "http://provider.example.test/start", "signup_label": "Try Fictional"},
+        ):
+            self.assertIn(expected, manifest_problems(make_connector(**overrides)))
+        good = make_connector(
+            signup_url="https://provider.example.test/start", signup_label="Try Fictional"
+        )
+        self.assertEqual(manifest_problems(good), [])
+
     def test_oauth_urls_name_only_app_fields(self):
         def oauth(app_fields=(), token_auth="post"):
             return OAuthAuth(

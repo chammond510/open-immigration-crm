@@ -69,7 +69,7 @@ def envelope(*records, ok=True, errors=(), total=None):
 
 
 class FakeBIAEdge:
-    """BIA Edge's MCP server as documented: stateless, JSON answers, bearer keys."""
+    """Passim's MCP server as documented: stateless, JSON answers, bearer keys."""
 
     def __init__(self):
         self.requests = []
@@ -128,7 +128,7 @@ class BIAEdgeTests(FakeBIAEdgeMixin, TestCase):
         super().setUp()
         self.connection = Connection.objects.create(
             connector_key="bia_edge",
-            label="BIA Edge",
+            label="Passim",
             enabled_capabilities=["legal_research"],
             credentials={"api_key": KEY},
         )
@@ -196,7 +196,7 @@ class BIAEdgeTests(FakeBIAEdgeMixin, TestCase):
         self.assertEqual(len(self.search()["results"]), 1)
         self.slept.assert_called_once_with(0.5)
         self.bia.answers = [envelope(ok=False, errors=[busy])] * 2
-        with self.assertRaisesMessage(ConnectorError, "BIA Edge is busy right now."):
+        with self.assertRaisesMessage(ConnectorError, "Passim is busy right now."):
             self.search()
         quota = {"code": "daily_quota_exceeded"}
         self.bia.answers = [envelope(ok=False, errors=[quota])]
@@ -287,6 +287,23 @@ class MCPClientTests(TestCase):
 
 
 class BIAEdgeResearchPageTests(FakeBIAEdgeMixin, TestCase):
+    def test_sign_up_link_while_nothing_is_connected(self):
+        admin = make_user()
+        matter = make_matter(make_contact(admin), admin)
+        self.client.force_login(admin)
+        link = (
+            '<a href="https://account.passimai.com/billing/start?ref=crm" target="_blank" '
+            'rel="noopener noreferrer">Try Passim</a>'
+        )
+        page = self.client.get(reverse("matter_detail", args=[matter.pk]))
+        self.assertContains(page, "Connect your legal research service")
+        self.assertContains(page, f"No account yet? {link}", html=False)
+        page = self.client.get(reverse("connector_detail", args=["bia_edge"]))
+        self.assertContains(page, "Try Passim</a>")
+        self.assertContains(page, "made by this project&#x27;s maintainer")
+        page = self.client.get(reverse("connections"))
+        self.assertContains(page, "<strong>Passim</strong>")
+
     def test_searching_from_a_matter(self):
         admin = make_user()
         matter = make_matter(make_contact(admin), admin)
@@ -296,7 +313,7 @@ class BIAEdgeResearchPageTests(FakeBIAEdgeMixin, TestCase):
         self.client.post(
             reverse("connector_detail", args=["bia_edge"]),
             {
-                "label": "BIA Edge",
+                "label": "Passim",
                 "capabilities": ["legal_research"],
                 "credential_api_key": KEY,
                 "acknowledge": "on",
@@ -306,7 +323,8 @@ class BIAEdgeResearchPageTests(FakeBIAEdgeMixin, TestCase):
         self.assertEqual(connection.status, Connection.Status.ACTIVE)
         Connection.objects.filter(pk=connection.pk).update(preview_mode=False)
         page = self.client.get(reverse("matter_detail", args=[matter.pk]))
-        self.assertContains(page, "BIA Edge · Unpublished BIA and AAO decisions")
+        self.assertContains(page, "Passim · Unpublished BIA and AAO decisions")
+        self.assertNotContains(page, "Try Passim")
         self.bia.answers = [envelope(CASE, UNPUBLISHED)]
         response = self.client.post(
             reverse("research_search", args=[matter.pk]),

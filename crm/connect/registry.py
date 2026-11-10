@@ -140,6 +140,10 @@ def manifest_problems(cls):
         and cls.outbound_actions.get("deliver_event") != Capability.AUTOMATION
     ):
         problems.append("automation connectors must declare the deliver_event outbound action")
+    if bool(cls.signup_url) != bool(cls.signup_label) or (
+        cls.signup_url and not cls.signup_url.startswith("https://")
+    ):
+        problems.append("a sign-up link needs an https:// signup_url and a signup_label")
     if cls.reply_window is not None and (
         not cls.reply_window
         or cls.outbound_actions.get("send_template") != Capability.TEXTING

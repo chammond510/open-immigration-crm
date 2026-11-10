@@ -2,6 +2,7 @@ from django import template
 
 from ..base import CAPABILITY_NOUNS, Capability
 from ..models import Connection
+from ..registry import registry
 from ..services import connection_alerts, visible_connections
 
 register = template.Library()
@@ -12,6 +13,9 @@ def connect_prompt(context, capability, purpose=""):
     """Offer a capability's connectors beside a feature's manual path.
 
     Usage: {% connect_prompt "phone" "to log calls automatically" %}
+
+    While nothing is connected, connectors for the capability that name a sign-up
+    link are offered too, for a firm with no account anywhere yet.
     """
     user = context["request"].user
     connected = next(
@@ -27,6 +31,13 @@ def connect_prompt(context, capability, purpose=""):
         "noun": CAPABILITY_NOUNS.get(capability, Capability(capability).label.lower()),
         "purpose": purpose,
         "connected": connected,
+        "signups": []
+        if connected
+        else [
+            cls
+            for cls in registry.connectors()
+            if capability in cls.capabilities and cls.signup_url
+        ],
     }
 
 

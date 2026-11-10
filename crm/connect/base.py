@@ -354,6 +354,11 @@ class Connector:
     # they choose the connection, and where they manage that plan's usage.
     usage_label = ""
     usage_url = ""
+    # Where someone with no account at the provider can get one, and the link's words,
+    # such as "Try Example". Shown on the connector's page, and wherever a feature
+    # offers the connector's capability while nothing is connected for it.
+    signup_url = ""
+    signup_label = ""
     # A Beta flag: when set, the connector is offered only while the CONNECTOR_FLAGS
     # setting lists it. Turning the flag off again stops its connections from working.
     flag = ""
