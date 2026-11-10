@@ -1,6 +1,7 @@
 """The tools the MCP server offers. Each runs as the signed-in staff member, with that
 person's permissions, through the same forms and services as the web pages."""
 
+import hashlib
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -26,6 +27,8 @@ from crm.notices.services import latest_statuses, record_status
 from crm.reports import periods
 from crm.reports.metrics import build_report
 from crm.reports.serializers import report_data
+from crm.research.forms import AuthorityForm
+from crm.research.models import Authority
 from crm.search import CONTACT_SEARCH_FIELDS, MATTER_SEARCH_FIELDS, words_match
 from crm.services import audit
 
@@ -242,6 +245,19 @@ def notice_brief(notice):
     }
 
 
+def authority_brief(authority):
+    return {
+        "citation": authority.citation,
+        "title": authority.title,
+        "court": authority.court,
+        "decided": serializers.iso(authority.decided),
+        "standing": authority.standing,
+        "url": authority.url,
+        "source": authority.source,
+        "note": authority.note[:1000],
+    }
+
+
 def open_work(queryset):
     return [
         work_brief(item)
@@ -309,16 +325,7 @@ def get_matter(ctx, args):
             communication_brief(c) for c in shareable(matter.communications.all())[:5]
         ],
         "saved_authorities": [
-            {
-                "citation": authority.citation,
-                "title": authority.title,
-                "court": authority.court,
-                "decided": serializers.iso(authority.decided),
-                "standing": authority.standing,
-                "url": authority.url,
-                "note": authority.note[:1000],
-            }
-            for authority in matter.authorities.all()[:20]
+            authority_brief(authority) for authority in matter.authorities.all()[:20]
         ],
     }
 
@@ -534,6 +541,61 @@ def complete_work_item(ctx, args):
     return {"completed": work_brief(item)}
 
 
+def save_authority(ctx, args):
+    matter = record(args, "matter_id", Matter, required=True)
+    citation = text(args, "citation", limit=255)
+    title = text(args, "title", limit=500) or citation
+    if not title:
+        raise ToolError("Give a citation or a title.")
+    data = {
+        "citation": citation,
+        "title": title,
+        "court": text(args, "court", limit=255),
+        "decided": text(args, "decided", limit=10),
+        "url": text(args, "url", limit=1000),
+        "note": text(args, "note", limit=5000),
+    }
+    extra = {
+        "standing": text(args, "standing", limit=255),
+        "excerpt": text(args, "excerpt", limit=2000),
+        # Where the assistant says it found the authority, and the assistant that
+        # saved it, so staff can see it did not come from a search run in the CRM.
+        "source": ", through ".join(
+            part for part in (text(args, "source", limit=80), ctx.client_name[:30]) if part
+        )
+        or "an AI assistant",
+        "saved_by": ctx.user,
+    }
+    form = form_values(AuthorityForm, data, list(data))
+    url = form.cleaned_data["url"]
+    # The same link is saved to a matter only once, however it was first saved: by
+    # hand, from a search, or by an assistant. A link is compared exactly as written,
+    # since its path may be case-sensitive. Without a link, the same citation and name
+    # count as the same authority.
+    if url:
+        identity, same = url, {"url": url}
+    else:
+        identity = f"{citation}|{title}".lower()
+        same = {"citation__iexact": citation, "title__iexact": title}
+    external_id = "mcp:" + hashlib.sha256(identity.encode()).hexdigest()
+    with writing(ctx), transaction.atomic():
+        authority, created = matter.authorities.filter(**same).first(), False
+        if authority is None:
+            # The ID settles two assistants saving the same authority at once.
+            authority, created = Authority.objects.get_or_create(
+                matter=matter,
+                connector_key="",
+                external_id=external_id,
+                defaults={**form.cleaned_data, **extra},
+            )
+        if created:
+            ctx.audit("authority.saved", authority)
+    result = {"saved": authority_brief(authority)}
+    if not created:
+        result["note"] = "It was already saved to this matter."
+    return result
+
+
 ID = {"type": "string", "description": "A record ID from a search or list tool."}
 LIMIT = {"type": "integer", "minimum": 1, "maximum": MAX_LIMIT}
 
@@ -714,6 +776,42 @@ TOOLS = [
         complete_work_item,
         {"work_item_id": {"type": "string"}},
         ("work_item_id",),
+        write=True,
+    ),
+    Tool(
+        "save_authority",
+        "Save a legal authority",
+        "Save a case, statute, regulation, or other legal authority to a matter, with its "
+        "citation, its link, and a note on why it matters there. Save only an authority a "
+        "legal research source returned in this conversation, with the link exactly as "
+        "that source gave it. Never save one from memory.",
+        save_authority,
+        {
+            "matter_id": ID,
+            "citation": {"type": "string"},
+            "title": {"type": "string", "description": "The case or document name."},
+            "court": {"type": "string"},
+            "decided": {"type": "string", "description": "The date decided, as YYYY-MM-DD."},
+            "url": {
+                "type": "string",
+                "description": "The https link the research source returned.",
+            },
+            "standing": {
+                "type": "string",
+                "description": "The source's own words on its weight or treatment, such as "
+                "precedential, not precedential, or use with caution.",
+            },
+            "excerpt": {
+                "type": "string",
+                "description": "The passage relied on, quoted from the source.",
+            },
+            "note": {"type": "string", "description": "Why it matters to this matter."},
+            "source": {
+                "type": "string",
+                "description": "The research source it came from, by name.",
+            },
+        },
+        ("matter_id",),
         write=True,
     ),
 ]

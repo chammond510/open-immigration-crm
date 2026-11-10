@@ -18,10 +18,15 @@ The server is **off** on a new installation. Someone who manages connections and
   - your time;
   - the operating summary;
   - invoices, for staff with billing access.
-- **Writing.** Write tools are off until someone who manages connections and AI allows them: create a task, add a note, log a communication, record a status check, and mark work done.
+- **Writing.** Write tools are off until someone who manages connections and AI allows them: create a task, add a note, log a communication, record a status check, save a legal authority to a matter, and mark work done.
   - Each write tool is marked as not read-only, so Claude and ChatGPT ask the person before running it.
   - Nothing can be deleted through MCP.
   - Changes are audited as coming through MCP, with the assistant's name.
+- **Saving legal authorities.** An assistant that also has a legal research connector, such as Passim, can save what it finds to a matter: the citation, the link, the source's note on its standing, the passage relied on, and why it matters.
+  - The tool tells the assistant to save only what a research source returned in that conversation, with that source's link, and never from memory. The CRM cannot check this, so read an authority before relying on it.
+  - The matter shows where each one came from, such as "from Passim, through Claude".
+  - The same link is saved to a matter only once, including when staff already saved it by hand or from a search.
+  - Upgrading adds this tool wherever write tools were already allowed.
 - **The log.** Every tool call is logged with who, which assistant, which tool, and whether it worked. What was asked and returned is not stored.
 
 ## Connect Claude

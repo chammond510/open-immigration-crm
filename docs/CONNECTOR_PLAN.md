@@ -67,7 +67,7 @@ that already exist in the firm's private CRM and would be ported.
 | E-signature | Upload the signed copy | Send for signature; the signed PDF is filed automatically | Documenso | DocuSign, Dropbox Sign, Adobe Acrobat Sign, BoldSign |
 | AI models | — (off) | Firm-chosen model for drafts, summaries and prep memos | **OpenAI** and **Anthropic** (API keys), OpenRouter, any OpenAI-compatible endpoint (covers local models) | ChatGPT plan through Sign in with ChatGPT (Beta until OpenAI confirms), Azure OpenAI, Gemini, AWS Bedrock, Google Vertex AI |
 | Translation | — | Translate client messages and intake answers | — | DeepL, Google Cloud Translation, or an AI model |
-| Legal research | — | Authority search from a matter | **BIA Edge**, CourtListener | others |
+| Legal research | — | Authority search from a matter | **Passim** (first called BIA Edge), CourtListener | others |
 | Case status | Enter status by hand | Receipt numbers checked automatically, with alerts | **USCIS Case Status API** | Visa Bulletin (public data), USCIS processing times |
 | Shipping | Paste a tracking number | Delivery of filing packages tracked | — | USPS, FedEx, UPS |
 | Lead capture | Create leads by hand | Website and ad leads arrive as contacts | Signed website-form webhook | WordPress form plugins, Google and Meta lead forms, Google Local Services Ads |
@@ -162,7 +162,7 @@ capability.
 
 | Mode | Used for | New-user experience |
 |---|---|---|
-| API key or token | Dialpad, Twilio, Stripe, OpenAI, Anthropic, BIA Edge, Calendly | Paste a key, the CRM runs a test call, done |
+| API key or token | Dialpad, Twilio, Stripe, OpenAI, Anthropic, Passim, Calendly | Paste a key, the CRM runs a test call, done |
 | OAuth with the firm's own app | Google, Microsoft, Zoom, DocuSign, QuickBooks | A wizard shows the exact redirect URI and scopes to copy into the provider console, then "Sign in with …" |
 | Hosted connection broker (optional, later) | Same OAuth providers | One-click sign-in, built after Phase 4; see "Decisions" |
 | Per-user AI plan | ChatGPT plan through Sign in with ChatGPT | Each staff member clicks "Continue with ChatGPT"; see "AI access" |

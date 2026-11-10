@@ -75,6 +75,7 @@
       <dt>Connects</dt><dd>{% if connector.connection_scope == "user" %}Each staff member separately{% else %}The whole firm{% endif %}</dd>
       <dt>Receives webhooks</dt><dd>{% if connector.webhooks %}Yes; needs a public /hooks/ address{% else %}No{% endif %}</dd>
       <dt>Maintainers</dt><dd>{{ connector.maintainers|join:", "|default:"None named yet" }}</dd>
+      {% if connector.signup_url %}<dt>No account yet?</dt><dd><a class="primary-link" href="{{ connector.signup_url }}" target="_blank" rel="noopener noreferrer">{{ connector.signup_label }}</a></dd>{% endif %}
     </dl></section>
     {% if connector.hidden %}<p class="privacy-note note-neutral">This is a fictional connector for testing. It is listed only because hidden connectors are shown on this installation.</p>{% endif %}
   </aside>

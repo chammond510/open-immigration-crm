@@ -357,6 +357,7 @@ td.wrap { white-space: normal; min-width: 220px; }
 .connect-prompt a { color: var(--accent); font-weight: 650; white-space: nowrap; }
 .connect-prompt a:hover { color: var(--accent-dark); text-decoration: underline; text-underline-offset: 2px; }
 .connect-prompt .connect-link::after { content: " →"; }
+.connect-prompt .connect-signup { flex-basis: 100%; }
 .badge.maturity-ready, .badge.succeeded, .badge.sent, .badge.processed { background: var(--success-soft); color: var(--success); }
 .badge.maturity-beta, .badge.queued, .badge.running, .badge.previewed { background: var(--accent-soft); color: var(--accent-dark); }
 .badge.needs_attention, .badge.needs_reauth { background: var(--warning-soft); color: var(--warning); }

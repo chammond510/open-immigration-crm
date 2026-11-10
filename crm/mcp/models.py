@@ -15,8 +15,9 @@ class McpSettings(models.Model):
         "Allow write tools",
         default=False,
         help_text=(
-            "Assistants may add tasks, notes, communications, and status checks, after the "
-            "staff member confirms each one. Nothing can be deleted."
+            "Assistants may add tasks, notes, communications, status checks, and saved "
+            "legal authorities, after the staff member confirms each one. Nothing can be "
+            "deleted."
         ),
     )
     updated_at = models.DateTimeField(auto_now=True)

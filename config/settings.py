@@ -272,7 +272,10 @@ OAUTH2_PROVIDER_APPLICATION_MODEL = "oauth2_provider.Application"
 OAUTH2_PROVIDER = {
     "SCOPES": {
         "crm:read": "Read contacts, matters, work, notices, communications, and time",
-        "crm:write": "Add tasks, notes, communications, and status checks, if the firm allows it",
+        "crm:write": (
+            "Add tasks, notes, communications, status checks, and saved legal authorities, "
+            "if the firm allows it"
+        ),
     },
     "DEFAULT_SCOPES": ["crm:read", "crm:write"],
     "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,

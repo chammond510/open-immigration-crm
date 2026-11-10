@@ -1,9 +1,17 @@
-"""BIA Edge: immigration case law and authorities, searched from a matter.
+"""Passim: immigration case law and authorities, searched from a matter.
 
-BIA Edge offers its research through an MCP server, so the connector calls its tools
+Passim was first released as BIA Edge. The connector keeps the key ``bia_edge``, and
+the server's address and key prefix still carry the old name.
+
+Passim offers its research through an MCP server, so the connector calls its tools
 over MCP with the firm's own API key (``bia_live_…``), sent as a bearer token. Keys
-are issued to approved clients and need MCP access. The server is stateless, so each
-search is one request with no session.
+are issued on request and need MCP access; a subscription used in Claude or ChatGPT
+does not come with one. The server is stateless, so each search is one request with
+no session.
+
+Passim is made by this project's maintainer, and the connector's description says
+so. ``signup_url`` carries ``ref=crm``, a fixed tag that tells Passim a visitor came
+from a CRM page. It names no installation, firm, or person.
 
 Each scope maps to one tool: court and agency cases (``search_cases``), unpublished
 BIA and AAO decisions (``search_unpublished_cases``), statutes and regulations
@@ -11,10 +19,10 @@ BIA and AAO decisions (``search_unpublished_cases``), statutes and regulations
 Results come back as structured records. A busy or rate-limited answer comes back
 as a result with ``ok: false``, so the connector waits as told and tries once more.
 
-Links follow BIA Edge's presentation rules: only the official or preserved source
+Links follow Passim's presentation rules: only the official or preserved source
 links it returns are shown, and a record without one is shown without a link.
 
-Reference: the BIA Edge MCP server's structured output, schema version 2.0.
+Reference: the Passim MCP server's structured output, schema version 2.0.
 """
 
 import json
@@ -34,6 +42,7 @@ from crm.connect.registry import register
 
 MCP_URL = "https://mcp.biaedge.com/mcp"
 KEY_PREFIX = "bia_live_"
+SIGNUP_URL = "https://account.passimai.com/billing/start?ref=crm"
 # Scope -> (tool, extra arguments). The first scope is the default.
 SCOPES = {
     "": ("search_cases", {}),
@@ -55,19 +64,19 @@ VALIDITY = {
     "caution": "Use with caution",
     "superseded_in_same_matter": "Superseded in the same matter",
 }
-# Errors BIA Edge says are worth one more try, after the wait it gives.
+# Errors Passim says are worth one more try, after the wait it gives.
 RETRYABLE = {"rate_limited", "server_busy"}
 MAX_WAIT = 3
 ERRORS = {
-    "daily_quota_exceeded": "BIA Edge's daily limit for this key has been reached.",
-    "rate_limited": "BIA Edge is limiting requests right now. Try again in a minute.",
-    "server_busy": "BIA Edge is busy right now. Try again in a minute.",
+    "daily_quota_exceeded": "Passim's daily limit for this key has been reached.",
+    "rate_limited": "Passim is limiting requests right now. Try again in a minute.",
+    "server_busy": "Passim is busy right now. Try again in a minute.",
 }
 
 
 def check_key(key):
     if not str(key or "").startswith(KEY_PREFIX):
-        raise ConnectorError(f"A BIA Edge API key starts with {KEY_PREFIX}.")
+        raise ConnectorError(f"A Passim API key starts with {KEY_PREFIX}.")
 
 
 def text_content(result):
@@ -82,7 +91,7 @@ def text_content(result):
 
 
 def standing(record):
-    """What BIA Edge says about the authority's weight, in a few words."""
+    """What Passim says about the authority's weight, in a few words."""
     if record.get("validity_status") in VALIDITY:
         return VALIDITY[record["validity_status"]]
     authority = (record.get("metadata") or {}).get("authority") or {}
@@ -94,7 +103,7 @@ def standing(record):
 
 
 def result_from(record):
-    """One BIA Edge record in core's research result shape."""
+    """One Passim record in core's research result shape."""
     metadata = record.get("metadata") if isinstance(record.get("metadata"), dict) else {}
     identifier = (
         record.get("source_id")
@@ -119,10 +128,11 @@ def result_from(record):
 @register
 class BIAEdgeConnector(Connector):
     key = "bia_edge"
-    name = "BIA Edge"
+    name = "Passim"
     description = (
-        "Search immigration case law, unpublished decisions, statutes, and policy manuals "
-        "from a matter, and save the authorities that matter to it."
+        "Search Passim's immigration law library from a matter: case law, unpublished BIA "
+        "and AAO decisions, statutes, and policy manuals. Save the authorities that matter "
+        "to it. Passim was first called BIA Edge, and is made by this project's maintainer."
     )
     maturity = Maturity.BETA
     capabilities = frozenset({Capability.LEGAL_RESEARCH})
@@ -130,9 +140,10 @@ class BIAEdgeConnector(Connector):
         fields=(
             CredentialField(
                 "api_key",
-                "BIA Edge API key",
-                help_text=f"Starts with {KEY_PREFIX}. BIA Edge issues keys to approved "
-                "clients; the key needs MCP access.",
+                "Passim API key",
+                help_text=f"Starts with {KEY_PREFIX}. Passim issues API keys on request, "
+                "and the key needs MCP access. A subscription used in Claude or ChatGPT "
+                "does not come with one.",
             ),
         ),
         label="API key",
@@ -144,14 +155,16 @@ class BIAEdgeConnector(Connector):
     )
     outbound_actions = {"search_authorities": Capability.LEGAL_RESEARCH}
     search_scopes = LABELS
+    signup_url = SIGNUP_URL
+    signup_label = "Try Passim"
 
     def __init__(self, connection):
         super().__init__(connection)
         self.client = MCPClient(
             MCP_URL,
-            name="BIA Edge",
+            name="Passim",
             headers={"Authorization": f"Bearer {self.credentials.get('api_key', '')}"},
-            # BIA Edge gives each search up to 25 seconds; one retry stays under a minute.
+            # Passim gives each search up to 25 seconds; one retry stays under a minute.
             timeout=27,
             retries=1,
             stateless=True,
@@ -164,13 +177,13 @@ class BIAEdgeConnector(Connector):
         except ConnectorError as exc:
             if exc.status == 401:
                 raise ConnectorError(
-                    "BIA Edge did not accept the API key. Check that it is active and has MCP "
+                    "Passim did not accept the API key. Check that it is active and has MCP "
                     "access.",
                     status=401,
                 ) from None
             if exc.status is None and "did not answer in time" in str(exc):
                 raise ConnectorError(
-                    "BIA Edge did not answer in time. Try the search again in a moment, or "
+                    "Passim did not answer in time. Try the search again in a moment, or "
                     "narrow it.",
                 ) from None
             raise
@@ -178,7 +191,7 @@ class BIAEdgeConnector(Connector):
     def test_connection(self):
         tools = self.guarded(self.client.list_tools)
         if "search_cases" not in tools:
-            raise ConnectorError("This BIA Edge key cannot search cases.")
+            raise ConnectorError("This Passim key cannot search cases.")
 
     def search(self, tool, arguments):
         """Call a search tool and return its structured result, trying once more if told to."""
@@ -186,7 +199,7 @@ class BIAEdgeConnector(Connector):
             result = self.guarded(self.client.call_tool, tool, arguments)
             content = result.get("structuredContent") or text_content(result)
             if not isinstance(content, dict):
-                raise ConnectorError("BIA Edge sent an answer that was not understood.")
+                raise ConnectorError("Passim sent an answer that was not understood.")
             if content.get("ok", True):
                 return content
             error = (content.get("errors") or [{}])[0]
@@ -200,12 +213,12 @@ class BIAEdgeConnector(Connector):
                 continue
             raise ConnectorError(
                 ERRORS.get(code)
-                or f"BIA Edge could not run the search ({code or 'no reason given'})."
+                or f"Passim could not run the search ({code or 'no reason given'})."
             )
 
     def perform(self, action, payload):
         if action != "search_authorities":
-            raise ConnectorError(f"BIA Edge has no action named {action}.")
+            raise ConnectorError(f"Passim has no action named {action}.")
         query = str(payload.get("query") or "").strip()
         if not query:
             raise ConnectorError("Write what to search for.")
