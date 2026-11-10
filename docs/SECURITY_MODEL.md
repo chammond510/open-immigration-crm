@@ -121,4 +121,4 @@ Store tokens in the automation tool's secret store, give each tool its own token
 
 ## Intake link handling
 
-An intake URL is sensitive. Send it only to its intended recipient, keep expiry short, revoke it if misdirected, and do not place it in analytics or third-party link shorteners. When the CRM emails a link, it goes to the contact's email address on file, so check the address first; the email service the firm connects can see the link while delivering it. The default referrer policy and CSP reduce browser leakage, but the recipient's device and delivery channel remain outside this application's control.
+An intake URL is sensitive. Send it only to its intended recipient, keep expiry short, revoke it if misdirected, and do not place it in analytics or third-party link shorteners. When the CRM emails a link, it goes to the contact's email address on file, so check the address first; the email service the firm connects can see the link while delivering it. The `strict-origin` referrer policy (no path or query in any `Referer` header) and CSP reduce browser leakage, but the recipient's device and delivery channel remain outside this application's control.

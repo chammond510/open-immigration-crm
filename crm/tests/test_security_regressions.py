@@ -131,7 +131,7 @@ class SessionRevocationTests(TestCase):
 class PrivateResponseTests(TestCase):
     def assert_private(self, response):
         self.assertIn("no-store", response["Cache-Control"])
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "strict-origin")
 
     def test_client_data_setup_and_recovery_codes_cannot_be_cached(self):
         user = make_user()
@@ -157,6 +157,80 @@ class PrivateResponseTests(TestCase):
         enroll(user)
         self.client.force_login(user)  # No second step: middleware signs this session out.
         self.assert_private(self.client.get(reverse("dashboard")))
+
+
+class BrowserFormPostTests(TestCase):
+    """Browsers derive the Origin of a form post from the page's referrer policy.
+
+    Django's test client sends no Origin header, so these tests send the one a
+    browser would. Under "no-referrer" the Fetch standard sends "Origin: null" on
+    every form post, which Django's CSRF check rejects (the 403 found on 2026-11-10).
+    """
+
+    # Policies under which a browser sends "Origin: null" on a same-origin
+    # HTTPS form post (Fetch standard, "serializing a request origin").
+    NULL_ORIGIN_POLICIES = {"no-referrer"}
+
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=True)
+        self.user = make_user()
+
+    def csrf_token(self, url, **extra):
+        response = self.client.get(url, **extra)
+        self.assertNotIn(response["Referrer-Policy"], self.NULL_ORIGIN_POLICIES)
+        self.assertEqual(response["Referrer-Policy"], "strict-origin")
+        return response.cookies["csrftoken"].value
+
+    def sign_in(self, token, **extra):
+        return self.client.post(
+            reverse("login"),
+            {
+                "username": self.user.username,
+                "password": "Testing-Password-Only-42!",
+                "csrfmiddlewaretoken": token,
+            },
+            **extra,
+        )
+
+    def test_sign_in_with_the_browser_origin_succeeds(self):
+        token = self.csrf_token(reverse("login"))
+        response = self.sign_in(token, HTTP_ORIGIN="http://testserver")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.pk)
+
+    def test_sign_in_over_https_with_origin_or_origin_only_referer_succeeds(self):
+        token = self.csrf_token(reverse("login"), secure=True)
+        response = self.sign_in(token, secure=True, HTTP_ORIGIN="https://testserver")
+        self.assertEqual(response.status_code, 302)
+        self.client.logout()
+        # A browser that omits Origin sends a strict-origin Referer: no path.
+        token = self.csrf_token(reverse("login"), secure=True)
+        response = self.sign_in(token, secure=True, HTTP_REFERER="https://testserver/")
+        self.assertEqual(response.status_code, 302)
+
+    def test_null_origin_is_still_refused(self):
+        token = self.csrf_token(reverse("login"))
+        response = self.sign_in(token, HTTP_ORIGIN="null")
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_public_intake_with_the_browser_origin_succeeds(self):
+        form = IntakeForm.objects.create(name="Fictional intake")
+        invite, raw_token = IntakeInvite.issue(
+            intake_form=form,
+            contact=make_contact(self.user),
+            expires_at=timezone.now() + timedelta(days=1),
+        )
+        url = reverse("public_intake", args=[raw_token])
+        token = self.csrf_token(url)
+        response = self.client.post(
+            url,
+            {"email": "client@example.test", "csrfmiddlewaretoken": token},
+            HTTP_ORIGIN="http://testserver",
+        )
+        self.assertEqual(response.status_code, 200)
+        invite.refresh_from_db()
+        self.assertIsNotNone(invite.submitted_at)
 
 
 class AccessLogTests(SimpleTestCase):
