@@ -13,6 +13,7 @@ export DEBUG=true
 .venv/bin/coverage run manage.py test
 .venv/bin/coverage report
 .venv/bin/pip-audit --requirement requirements.lock --no-deps --disable-pip
+.venv/bin/pip-audit --requirement requirements-dev.lock --no-deps --disable-pip
 
 DEBUG=False \
 SECRET_KEY=release-check-secret-key-000000000000000000000000000000000000 \

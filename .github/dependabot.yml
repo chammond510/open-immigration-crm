@@ -3,8 +3,10 @@ updates:
   # No pip entry. requirements.lock and requirements-dev.lock are compiled by uv from the .in
   # files, and Dependabot cannot update them: it edited only the .in ranges, which changes
   # nothing that is installed, and it now fails outright on the "-c requirements.lock" line in
-  # requirements-dev.in. pip-audit in CI checks the pinned versions for advisories on every push
-  # and weekly. To refresh the pins, run the uv command in the header of each lock file.
+  # requirements-dev.in. pip-audit in CI checks both lock files for advisories on every push and
+  # weekly. To refresh pins, run the uv command in the header of each lock file with --upgrade,
+  # or --upgrade-package NAME for one package: without it uv keeps the existing pins.
+  # Compile requirements.lock first, because requirements-dev.in is constrained by it.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
