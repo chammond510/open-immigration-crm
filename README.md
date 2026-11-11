@@ -6,6 +6,16 @@ A focused, self-hosted practice workspace for small immigration law firms. Its c
 
 To look around first, with fictional records, see [Try it on your computer](#try-it-on-your-computer).
 
+## What it looks like
+
+These screens are from the trial, which holds only fictional records.
+
+![The practice overview: open matters, active contacts, overdue work, upcoming work, and the contact pipeline](docs/screenshots/overview.png)
+
+![A matter page: its checklist, USCIS notices, case status, details, other parties, and open work](docs/screenshots/matter.png)
+
+![The Connections page: services grouped by capability, each marked Beta or Wanted](docs/screenshots/connections.png)
+
 ## What it includes
 
 - Staff-only contacts and a simple contact pipeline
@@ -159,7 +169,7 @@ Run the complete local release gate with `./scripts/check_release.sh`.
 
 This application stores highly sensitive information. It provides authenticated staff access, optional or firm-required two-factor sign-in, login rate limiting with temporary lockout, encryption of stored secrets, secure-cookie production defaults, CSRF protection, browser security headers, hashed intake tokens, restricted file types, non-public document delivery, and audit events. It does **not** encrypt client records at the field level, and it does not provide tenant isolation, malware scanning, or a managed backup service. Sign-in through the firm's identity provider is available as an optional connector. Use full-disk/database encryption, a trusted private network when possible, and encrypted offsite backups.
 
-Read [Security model](docs/SECURITY_MODEL.md), [Privacy](docs/PRIVACY.md), and [Backup and restore](docs/BACKUP_RESTORE.md) before using real information. Report vulnerabilities privately under [SECURITY.md](SECURITY.md).
+Read [Security model](docs/SECURITY_MODEL.md), [Privacy](docs/PRIVACY.md), and [Backup and restore](docs/BACKUP_RESTORE.md) before using real information. What changed in each release is in the [changelog](CHANGELOG.md). Report vulnerabilities privately under [SECURITY.md](SECURITY.md).
 
 ## License
 

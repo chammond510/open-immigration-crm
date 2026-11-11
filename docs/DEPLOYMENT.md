@@ -216,7 +216,7 @@ Terminate TLS at the proxy and forward only to the private Gunicorn port. Preser
 
 ## Upgrade and rollback
 
-Read release notes and back up first. Releases that add two-factor sign-in require `FIELD_ENCRYPTION_KEYS`; set it before upgrading, or the application will not start. Database migrations may be one-way. Prefer roll-forward with a corrective release; if rollback is required, restore both database and media from the same pre-upgrade recovery point. Never restore one without the other.
+Read the release notes in the [changelog](../CHANGELOG.md) and back up first. Releases that add two-factor sign-in require `FIELD_ENCRYPTION_KEYS`; set it before upgrading, or the application will not start. Database migrations may be one-way. Prefer roll-forward with a corrective release; if rollback is required, restore both database and media from the same pre-upgrade recovery point. Never restore one without the other.
 
 The November 2026 billing and connector corrections require no schema migration:
 
