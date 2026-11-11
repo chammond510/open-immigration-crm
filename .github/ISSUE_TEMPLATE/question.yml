@@ -1,0 +1,28 @@
+name: Question
+description: Ask about installing, running, or using the CRM.
+title: "[Question]: "
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include client information, privileged material, credentials, or private intake links. Remove host names, tokens, and passwords from anything you paste."
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release tag or commit SHA, if you have the CRM running
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How are you running it?
+      options:
+        - The trial (scripts/try.sh)
+        - Docker Compose
+        - Another server setup
+        - Not running it yet

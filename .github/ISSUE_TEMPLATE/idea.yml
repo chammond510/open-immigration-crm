@@ -1,0 +1,34 @@
+name: Idea or request
+description: Suggest a feature, a connector, or a change to how something works.
+title: "[Idea]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include client information, privileged material, credentials, or private intake links. Describe examples with fictional people."
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The task at your firm, and where the CRM gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: For a connector, name the service and what it should bring in or send out.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Core (contacts, matters, work, documents, intake, billing)
+        - A connector to an outside service
+        - AI assistants, the API, or webhooks
+        - Installing, upgrading, or backups
+        - Something else
+    validations:
+      required: true

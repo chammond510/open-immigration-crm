@@ -4,7 +4,7 @@ Thank you for helping keep Open Immigration CRM small, legible, and safe.
 
 ## Product boundary
 
-Contributions to core should strengthen contacts, matters, work, documents, checklists, intake, portability, accessibility, security, or operations. Core stays provider-neutral: code that talks to an outside service belongs in a connector under `connectors/`, never in `crm/`. Read the [connector plan](docs/CONNECTOR_PLAN.md) before proposing one. Open a discussion first for a new capability (a new kind of service, rather than a new provider for an existing capability).
+Contributions to core should strengthen contacts, matters, work, documents, checklists, intake, portability, accessibility, security, or operations. Core stays provider-neutral: code that talks to an outside service belongs in a connector under `connectors/`, never in `crm/`. Read the [connector plan](docs/CONNECTOR_PLAN.md) before proposing one. Open an [idea or request](https://github.com/chammond510/open-immigration-crm/issues/new/choose) issue first for a new capability (a new kind of service, rather than a new provider for an existing capability).
 
 Shipped legal content (forms, filing strategies, case-type checklists, intake questions, or workflow templates) stays out of the project.
 
