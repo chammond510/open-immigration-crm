@@ -64,6 +64,7 @@ jobs:
         env:
           SECURE_SSL_REDIRECT: "True"
       - run: pip-audit --requirement requirements.lock --no-deps --disable-pip
+      - run: pip-audit --requirement requirements-dev.lock --no-deps --disable-pip
 
   container:
     runs-on: ubuntu-latest

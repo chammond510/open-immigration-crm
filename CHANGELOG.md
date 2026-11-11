@@ -2,6 +2,11 @@
 
 Releases are tagged on GitHub. Security fixes go to the latest tagged release (see [SECURITY.md](SECURITY.md)). Back up the database and the media volume before any upgrade, and read [Upgrade and rollback](docs/DEPLOYMENT.md#upgrade-and-rollback).
 
+## 0.2.1 (2026-11-11)
+
+- The container image is built on Python 3.12.16. It was on 3.12.11, five patch releases behind.
+- No application changes, and no migrations beyond those in 0.2.0. If you are upgrading from 0.1.0, follow the 0.2.0 notes below.
+
 ## 0.2.0 (2026-11-11)
 
 The first release since 0.1.0. It turns the core CRM into a practice workspace with optional connectors, and it carries every security fix made since August.

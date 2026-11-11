@@ -1,21 +1,12 @@
 version: 2
 updates:
-  # requirements.lock and requirements-dev.lock are compiled by uv from the .in files, and
-  # Dependabot edits only the .in files. So it proposes a change only when a new release falls
-  # outside a declared range, and skips major versions, which are upgrades someone plans (Django
-  # stays on its 5.2 long-term support line). Advisories against the pinned versions are caught
-  # by pip-audit in CI, which also runs weekly.
-  - package-ecosystem: pip
-    directory: "/"
-    schedule:
-      interval: weekly
-    versioning-strategy: increase-if-necessary
-    open-pull-requests-limit: 5
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "django"
-        update-types: ["version-update:semver-minor"]
+  # No pip entry. requirements.lock and requirements-dev.lock are compiled by uv from the .in
+  # files, and Dependabot cannot update them: it edited only the .in ranges, which changes
+  # nothing that is installed, and it now fails outright on the "-c requirements.lock" line in
+  # requirements-dev.in. pip-audit in CI checks both lock files for advisories on every push and
+  # weekly. To refresh pins, run the uv command in the header of each lock file with --upgrade,
+  # or --upgrade-package NAME for one package: without it uv keeps the existing pins.
+  # Compile requirements.lock first, because requirements-dev.in is constrained by it.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
